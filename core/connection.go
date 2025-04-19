@@ -26,6 +26,25 @@ func Read(conn net.Conn, v *any) error {
 	return nil
 }
 
+func ReadWithBuffer(conn net.Conn, v *any, bytes []byte) error {
+	err := conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Read(bytes)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, v)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func Write(conn net.Conn, v *any) error {
 	err := conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	if err != nil {
