@@ -71,28 +71,3 @@ func (s Tile) SetDoraTile() Tile {
 func (s Tile) SetTileNumber(num uint8) Tile {
 	return (s & (TileMask | SpecialMask)) | Tile(num)
 }
-
-func GetTileList() []Tile {
-	var TileList [34]Tile
-	for i := 0; i < 9; i++ {
-		TileList[i] = Tile(i + 1)
-	}
-
-	for i := 10; i < 19; i++ {
-		TileList[i] = Tile(i + 1)
-	}
-
-	for i := 20; i < 29; i++ {
-		TileList[i] = Tile(i + 1)
-	}
-
-	for i := 30; i < 34; i++ {
-		TileList[i] = Tile(i)
-	}
-
-	for i := 34; i < 37; i++ {
-		TileList[i] = Tile(i + 6)
-	}
-
-	return TileList[:]
-}
