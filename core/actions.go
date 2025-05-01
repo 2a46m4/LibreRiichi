@@ -11,7 +11,7 @@ const (
 	CHII
 )
 
-type ActionType int
+type ActionType uint8
 
 type PlayerAction struct {
 	Action     ActionType
