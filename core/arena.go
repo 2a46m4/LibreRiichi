@@ -1,33 +1,30 @@
 package core
 
-import "net"
-
 // A location where players gather. Controls the flow of the game
 type Arena struct {
-	Players     []net.Conn
+	Players     []ConnChan
 	Game        MahjongGame
-	JoinChannel chan net.Conn
+	JoinChannel chan ConnChan
 }
 
 func (arena Arena) Loop() {
 	for {
-		newRequest := <-arena.JoinChannel
-		err := arena.JoinArena(newRequest, true)
-		if err != nil {
-			// Send a error back to the request
-			continue
+		select {
+		case newRequest := <-arena.JoinChannel:
+			err := arena.JoinArena(newRequest, true)
+			if err != nil {
+				// Send a error back to the request
+				continue
+			}
+		default:
+			break
 		}
 
-		if len(arena.Players) == arena.Game.GetMaxPlayers() {
-			arena.StartArena()
-			arena.GameLoop()
-			arena.EndArena()
-		}
 	}
 }
 
 // Adds a player to the arena.
-func (arena *Arena) JoinArena(player net.Conn, joinAsPlayer bool) error {
+func (arena *Arena) JoinArena(player ConnChan, joinAsPlayer bool) error {
 	if !joinAsPlayer {
 		panic("NYI")
 	}

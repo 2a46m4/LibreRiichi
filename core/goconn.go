@@ -7,17 +7,21 @@ import (
 	"time"
 )
 
+// A channel wrapper for a connection
 type ConnChan struct {
 	DataChannel  chan any
 	CloseChannel chan any
 	WriteChannel chan []byte
+	connection   net.Conn
 }
 
+// Create a ConnChan from a connection
 func MakeChannel(conn net.Conn) ConnChan {
 	ret := ConnChan{
 		make(chan any, 0),
 		make(chan any, 0),
 		make(chan []byte, 0),
+		conn,
 	}
 
 	go func() {
@@ -34,6 +38,7 @@ func MakeChannel(conn net.Conn) ConnChan {
 			select {
 			case <-ret.CloseChannel:
 				close(ret.DataChannel)
+				conn.Close()
 				return
 			case toWrite := <-ret.WriteChannel:
 				conn.SetDeadline(time.Now().Add(time.Second))
