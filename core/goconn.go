@@ -18,9 +18,9 @@ type ConnChan struct {
 // Create a ConnChan from a connection
 func MakeChannel(conn net.Conn) ConnChan {
 	ret := ConnChan{
-		make(chan any, 0),
-		make(chan any, 0),
-		make(chan []byte, 0),
+		make(chan any),
+		make(chan any),
+		make(chan []byte),
 		conn,
 	}
 
@@ -53,6 +53,13 @@ func MakeChannel(conn net.Conn) ConnChan {
 	}()
 
 	return ret
+}
+
+// Send the data to all of the channels
+func Broadcast(data []byte, conns []ConnChan) {
+	for _, conn := range conns {
+		conn.WriteChannel <- data
+	}
 }
 
 // To be called by the data receiver when it's done
