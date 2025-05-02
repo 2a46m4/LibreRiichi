@@ -1,18 +1,19 @@
 package core
 
 type MahjongGame struct {
-	LiveWallIndex int
-	Players       []Player
+	Players []Player
 
-	Tiles [136]Tile
+	Tiles         [136]Tile
+	LiveWallIndex int
+	DeadWall      []Tile
 }
 
 func (MahjongGame) JoinArena(PlayerIdx int) error {
 	return nil
 }
 
-func StartNewGame() {
-
+func StartNewGame() error {
+	return nil
 }
 
 func RespondToAction(action PlayerAction) ([]ActionResult, bool) {
