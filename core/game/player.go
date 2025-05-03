@@ -13,12 +13,17 @@ type Player struct {
 	SeatWind Wind
 }
 
-func (player *Player) FreshHand(tiles []Tile) error {
+func (player *Player) FreshHand(tiles []Tile) {
 	if len(tiles) != 13 {
 		panic("Not equal to 13")
 	}
 
 	player.ClosedHand = make([]Tile, 14)
 	copy(player.ClosedHand, tiles)
-	return nil
+	player.Kans = nil
+	player.Pons = nil
+	player.Chiis = nil
+
+	player.InRiichi = false
+	player.HandOpen = false
 }

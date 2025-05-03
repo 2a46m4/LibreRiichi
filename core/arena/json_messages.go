@@ -5,7 +5,7 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/msg"
 )
 
-func PlayerJoined(player Player) Message {
+func PlayerJoined(player Agent) Message {
 	return Message{
 		MessageType: PlayerJoinedEvent,
 		Data:        player,

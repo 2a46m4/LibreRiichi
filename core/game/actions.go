@@ -14,9 +14,9 @@ const (
 )
 
 type PlayerAction struct {
-	Action     ActionType
-	FromPlayer uint8
-	On         any
+	Action     ActionType `json:"action_type"`
+	FromPlayer uint8      `json:"from_player"`
+	On         any        `json:"on"`
 }
 
 type SetupType uint8
@@ -24,8 +24,7 @@ type SetupType uint8
 const (
 	INITIAL_TILES SetupType = iota
 	DORA
-	STARTING_POINTS_SELF
-	STARTING_POINTS_OTHER
+	STARTING_POINTS
 	PLAYER_NUMBER
 	PLAYER_ORDER
 	ROUND_WIND

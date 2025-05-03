@@ -9,7 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
-type Player struct {
+// Agent represents a player that has joined the arena.
+type Agent struct {
 	Name       string        `json:"name"`
 	Id         uuid.UUID     `json:"id"`
 	Connection core.ConnChan `json:"-"`
@@ -17,10 +18,10 @@ type Player struct {
 
 // A location where players gather. Controls the flow of the game
 type Arena struct {
-	Players []Player
-	Game    game.MahjongGame
+	Agents []Agent
+	Game   game.MahjongGame
 
-	JoinChannel chan Player
+	JoinChannel chan Agent
 }
 
 func (arena Arena) Broadcast(data any) error {
@@ -29,7 +30,7 @@ func (arena Arena) Broadcast(data any) error {
 		return err
 	}
 
-	for _, player := range arena.Players {
+	for _, player := range arena.Agents {
 		player.Connection.WriteChannel <- marshalledData
 	}
 
@@ -58,7 +59,7 @@ func (arena Arena) Loop() {
 		}
 
 		// Check for new messages from players
-		for _, player := range arena.Players {
+		for _, player := range arena.Agents {
 			select {
 			case msgReceived := <-player.Connection.DataChannel:
 				if err, ok := msgReceived.(error); ok {
@@ -97,18 +98,18 @@ func (arena Arena) Loop() {
 	}
 }
 
-// Adds a player to the arena.
-func (arena *Arena) JoinArena(player Player, joinAsPlayer bool) error {
+// Adds an agnet to the arena.
+func (arena *Arena) JoinArena(agent Agent, joinAsPlayer bool) error {
 	if !joinAsPlayer {
 		panic("NYI")
 	}
 
-	err := arena.Game.JoinArena(len(arena.Players))
+	err := arena.Game.JoinArena(len(arena.Agents))
 	if err != nil {
 		return err
 	}
 
-	arena.Players = append(arena.Players, player)
+	arena.Agents = append(arena.Agents, agent)
 	return nil
 }
 
@@ -119,15 +120,64 @@ func (arena Arena) StartArena() error {
 		return err
 	}
 
-	for setup := range setup {
-
+	// Send over the data
+	for idx, setup := range setups {
+		data, err := json.Marshal(GameStarted(setup))
+		if err != nil {
+			panic(err)
+		}
+		arena.Agents[idx].Connection.WriteChannel <- data
 	}
 
-	return err
+	return nil
 }
 
 func (arena Arena) GameLoop() {
+	dataChannels := make([]chan any, len(arena.Agents))
+	for _, agent := range arena.Agents {
+		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
+	}
+	inputChannel := core.FanIn(dataChannels)
+	gameContinue := true
 
+	for gameContinue {
+	ReadInput:
+		select {
+		case input := <-inputChannel:
+			if err, ok := input.Data.(error); ok {
+				// Handle problematic connection here
+				panic(err)
+			}
+
+			var action game.PlayerAction
+			err := json.Unmarshal(input.Data.([]byte), action)
+			if err != nil {
+				goto ReadInput
+			}
+			if action.FromPlayer != uint8(input.I) {
+				goto ReadInput
+			}
+
+			var actionResults []game.ActionResult
+			actionResults, gameContinue = game.RespondToAction(action)
+
+			// Send the results to the players
+			for actionIdx, actionResult := range actionResults {
+				if actionResult.VisibleTo == game.GLOBAL {
+					for idx, agent := range arena.Agents {
+						data, err := json.Marshal(actionResult)
+						if err != nil {
+							panic(err)
+						}
+
+						agent.Connection.WriteChannel <- data
+					}
+				}
+			}
+
+		}
+
+	}
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

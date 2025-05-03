@@ -1,8 +1,8 @@
 package core
 
 type FanInResult[T any] struct {
-	i    int
-	data T
+	I    int
+	Data T
 }
 
 func FanIn[T any](channels []chan T) chan FanInResult[T] {

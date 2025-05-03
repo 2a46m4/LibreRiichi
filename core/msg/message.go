@@ -7,6 +7,7 @@ const (
 	GameStartedEvent
 
 	StartGameAction
+	PlayerAction
 	QuitAction
 )
 

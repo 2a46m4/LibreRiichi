@@ -14,9 +14,9 @@ const (
 	NorthTile Tile = 51
 
 	Sangenpai Tile = 52
-	White     Tile = 53
-	Red       Tile = 54
-	Green     Tile = 55
+	White     Tile = 52
+	Red       Tile = 53
+	Green     Tile = 54
 
 	DoraTile Tile = 64
 	RedTile  Tile = 128
@@ -45,7 +45,7 @@ func (s Tile) IsWind() bool {
 }
 
 func (s Tile) IsDragon() bool {
-	return s >= 52 && s <= 55
+	return s >= 52 && s <= 54
 }
 
 func (s Tile) IsManzu() bool {
@@ -70,4 +70,32 @@ func (s Tile) SetDoraTile() Tile {
 
 func (s Tile) SetTileNumber(num uint8) Tile {
 	return (s & (TileMask | SpecialMask)) | Tile(num)
+}
+
+// Return the list of tiles
+func GetTileList() []Tile {
+	tiles := make([]Tile, 136)
+	tileItr := 0
+	addFour := func(i Tile) {
+		for range 4 {
+			tiles[tileItr] = i
+			tileItr += 1
+		}
+
+	}
+
+	for i := Manzu; i < Manzu+10; i++ {
+		addFour(i)
+	}
+	for i := Pinzu; i < Pinzu+10; i++ {
+		addFour(i)
+	}
+	for i := Souzu; i < Souzu+10; i++ {
+		addFour(i)
+	}
+	for i := Kazehai; i <= Green; i++ {
+		addFour(i)
+	}
+
+	return tiles
 }
