@@ -158,7 +158,7 @@ func (arena Arena) GameLoop() {
 		}
 
 		var actionResults []game.ActionResult
-		actionResults, gameContinue = game.RespondToAction(action)
+		actionResults, gameContinue = arena.Game.RespondToAction(action)
 
 		// Send the results to the players
 		for _, actionResult := range actionResults {

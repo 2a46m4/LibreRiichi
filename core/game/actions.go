@@ -14,9 +14,10 @@ const (
 )
 
 type PlayerAction struct {
-	Action     ActionType `json:"action_type"`
-	FromPlayer uint8      `json:"from_player"`
-	On         any        `json:"on"`
+	Action          ActionType     `json:"action_type"`
+	FromPlayer      uint8          `json:"from_player"`
+	PotentialAction bool           `json:"potential_action"`
+	Data            map[string]any `json:"on"`
 }
 
 type SetupType uint8

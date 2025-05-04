@@ -53,7 +53,7 @@ func (player *Player) Draw(drawn Tile) error {
 	return nil
 }
 
-func (player *Player) Discard(discarded Tile) error {
+func (player *Player) Toss(discarded Tile) error {
 	if !player.ExtraTileInHand() {
 		return errors.New("Too little tiles in hand")
 	}
