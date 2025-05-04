@@ -7,14 +7,14 @@ import (
 
 func PlayerJoined(player Agent) Message {
 	return Message{
-		MessageType: PlayerJoinedEvent,
+		MessageType: PlayerJoinedEventType,
 		Data:        player,
 	}
 }
 
 func GameStarted(setup []Setup) Message {
 	return Message{
-		MessageType: GameStartedEvent,
+		MessageType: GameStartedEventType,
 		Data:        setup,
 	}
 }

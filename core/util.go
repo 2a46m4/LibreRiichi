@@ -26,3 +26,15 @@ func RotateArrayLeft[T any](array []T, by int) []T {
 	copy(array[len(array)-by:], temp)
 	return array
 }
+
+func Last[T any](array []T) T {
+	return array[len(array)-1]
+}
+
+func LastPtr[T any](array []T) *T {
+	return &array[len(array)-1]
+}
+
+func Pop[T any](array []T) (T, []T) {
+	return Last(array), array[:len(array)-1]
+}

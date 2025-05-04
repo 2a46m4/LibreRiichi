@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 )
@@ -84,7 +85,7 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 	}
 
 	for idx, player := range game.Players {
-		setup[idx] = make([]Setup, 7)
+		setup[idx] = make([]Setup, 0, 7)
 		setup[idx] = append(setup[idx],
 			Setup{
 				Type:     INITIAL_TILES,
@@ -129,12 +130,51 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 
 // Returns the updated game state and things to notify when a player action is taken
 // Additionally returns whether the game should continue
-func RespondToAction(action PlayerAction) ([]ActionResult, bool) {
+func (game MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
+	switch action.Action {
+	case CHII:
+		chiiData, ok := action.On.(map[string]any)
+		if !ok {
+			return nil, true
+		}
+		onTile, ok := chiiData["OnTile"].(int)
+		if !ok {
+			return nil, true
+		}
+		chiiSequence, ok := chiiData["ChiiSequence"].([]int)
+		if !ok {
+			return nil, true
+		}
+		err := game.Players[action.FromPlayer].Chii(
+			Tile(onTile),
+			[2]Tile{
+				Tile(chiiSequence[0]),
+				Tile(chiiSequence[1]),
+			})
+		if err != nil {
+			return nil, true
+		}
+
+		return []ActionResult{
+			ActionResult{action, GLOBAL},
+			ActionResult{action, GLOBAL},
+		}, true
+
+	case KAN:
+	case PON:
+	case RIICHI:
+	case RON:
+	case SKIP:
+	case TOSS:
+	case TSUMO:
+	default:
+		panic(fmt.Sprintf("unexpected core.ActionType: %#v", action.Action))
+	}
 	return nil, false
 }
 
 // Return the game results
-func GetGameResults() (GameResult, error) {
+func (MahjongGame) GetGameResults() (GameResult, error) {
 	return GameResult{}, nil
 }
 

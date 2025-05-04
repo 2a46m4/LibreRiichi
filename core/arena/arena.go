@@ -68,13 +68,13 @@ func (arena Arena) Loop() {
 				}
 
 				Message := msg.Message{}
-				err := json.Unmarshal(msgReceived.([]byte), Message)
+				err := json.Unmarshal(msgReceived.([]byte), &Message)
 				if err != nil {
 					panic(err)
 				}
 
 				switch Message.MessageType {
-				case msg.StartGameAction:
+				case msg.StartGameActionType:
 					err := arena.StartArena()
 					if err != nil {
 						continue
@@ -83,7 +83,7 @@ func (arena Arena) Loop() {
 					arena.GameLoop()
 					arena.EndArena()
 
-				case msg.QuitAction:
+				case msg.QuitActionType:
 					err := arena.EndArena()
 					if err != nil {
 						continue
@@ -142,48 +142,41 @@ func (arena Arena) GameLoop() {
 
 	for gameContinue {
 	ReadInput:
-		select {
-		case input := <-inputChannel:
-			if err, ok := input.Data.(error); ok {
-				// Handle problematic connection here
-				panic(err)
-			}
 
-			var action game.PlayerAction
-			err := json.Unmarshal(input.Data.([]byte), action)
-			if err != nil {
-				goto ReadInput
-			}
-			if action.FromPlayer != uint8(input.I) {
-				goto ReadInput
-			}
+		input := <-inputChannel
+		if err, ok := input.Data.(error); ok {
+			// Handle problematic connection here
+			panic(err)
+		}
 
-			var actionResults []game.ActionResult
-			actionResults, gameContinue = game.RespondToAction(action)
+		var action game.PlayerAction
+		err := json.Unmarshal(input.Data.([]byte), &action)
+		if err != nil {
+			goto ReadInput
+		}
+		if action.FromPlayer != uint8(input.I) {
+			goto ReadInput
+		}
 
-			// Send the results to the players
-			for _, actionResult := range actionResults {
-				if actionResult.VisibleTo == game.GLOBAL {
-					for _, agent := range arena.Agents {
-						data, err := json.Marshal(actionResult)
-						if err != nil {
-							panic(err)
-						}
+		var actionResults []game.ActionResult
+		actionResults, gameContinue = game.RespondToAction(action)
 
-						agent.Connection.WriteChannel <- data
-					}
-				} else {
+		// Send the results to the players
+		for _, actionResult := range actionResults {
+			if actionResult.VisibleTo == game.GLOBAL {
+				for _, agent := range arena.Agents {
 					data, err := json.Marshal(actionResult)
 					if err != nil {
 						panic(err)
 					}
-					arena.Agents[actionResult.VisibleTo].Connection.WriteChannel <- data
+
+					agent.Connection.WriteChannel <- data
 				}
 			}
-
 		}
-
 	}
+
+	arena.Game.GetGameResults()
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

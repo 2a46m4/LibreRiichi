@@ -3,12 +3,12 @@ package msg
 type MessageType uint8
 
 const (
-	PlayerJoinedEvent MessageType = iota
-	GameStartedEvent
+	PlayerJoinedEventType MessageType = iota
+	GameStartedEventType
 
-	StartGameAction
-	PlayerAction
-	QuitAction
+	StartGameActionType
+	PlayerActionType
+	QuitActionType
 )
 
 type Message struct {
