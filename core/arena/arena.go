@@ -141,7 +141,6 @@ func (arena Arena) GameLoop() {
 	gameContinue := true
 
 	for gameContinue {
-	ReadInput:
 
 		input := <-inputChannel
 		if err, ok := input.Data.(error); ok {
@@ -152,10 +151,10 @@ func (arena Arena) GameLoop() {
 		var action game.PlayerAction
 		err := json.Unmarshal(input.Data.([]byte), &action)
 		if err != nil {
-			goto ReadInput
+			continue
 		}
 		if action.FromPlayer != uint8(input.I) {
-			goto ReadInput
+			continue
 		}
 
 		var actionResults []game.ActionResult
