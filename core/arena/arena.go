@@ -162,9 +162,9 @@ func (arena Arena) GameLoop() {
 			actionResults, gameContinue = game.RespondToAction(action)
 
 			// Send the results to the players
-			for actionIdx, actionResult := range actionResults {
+			for _, actionResult := range actionResults {
 				if actionResult.VisibleTo == game.GLOBAL {
-					for idx, agent := range arena.Agents {
+					for _, agent := range arena.Agents {
 						data, err := json.Marshal(actionResult)
 						if err != nil {
 							panic(err)
@@ -172,6 +172,12 @@ func (arena Arena) GameLoop() {
 
 						agent.Connection.WriteChannel <- data
 					}
+				} else {
+					data, err := json.Marshal(actionResult)
+					if err != nil {
+						panic(err)
+					}
+					arena.Agents[actionResult.VisibleTo].Connection.WriteChannel <- data
 				}
 			}
 
