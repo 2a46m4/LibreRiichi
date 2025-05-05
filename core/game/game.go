@@ -230,9 +230,12 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 }
 
 // Checks the post-toss actions that can be made
-func (game *MahjongGame) checkPostTossActions() []ActionResult {
+func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
+	if !game.CurrentTurnPlayed {
+		return nil, errors.New("Current turn has not been played")
+	}
 	for idx := range 4 {
-
+		order := game.PlayerToOrder[idx]
 	}
 
 	return nil
