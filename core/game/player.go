@@ -68,18 +68,65 @@ func (player *Player) Toss(discarded Tile) error {
 	return errors.New("Tile not found")
 }
 
-func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
+func (player Player) GetPostTurnMoves(tossedTile Tile) []PlayerAction {
+	// Iterate through all possible combinations of Chii
+	tileNum := tossedTile.GetTileNumber()
+	moves := make([]PlayerAction, 0)
+	if tileNum < 7 { // 6, 7, 8
+		tiles := [3]Tile{tossedTile, tossedTile + 1, tossedTile + 2}
+		if player.TestChii(tiles) != nil {
+			moves = append(moves, PlayerAction(
+				ChiiAction{
+					Action:          CHII,
+					FromPlayer:      0,
+					PotentialAction: true,
+					Data: map[string]any{
+						"tiles": tiles,
+					},
+				},
+			))
+		}
+	}
+	if tileNum >= 0 {
+
+	}
+
+	return nil
+}
+
+func (player Player) TestChii(tiles [3]Tile) error {
 	if player.ExtraTileInHand() {
 		return errors.New("Player should not have extra tile in hand")
 	}
 
+	if tiles[1]-tiles[0] != 1 || tiles[2]-tiles[1] != 1 {
+		return errors.New("Tiles are not in a sequence")
+	}
+
+	exist := 0
+	for _, seq := range tiles {
+		for _, tile := range player.ClosedHand {
+			if tile == seq {
+				exist += 1
+			}
+		}
+	}
+	if exist != 3 {
+		return errors.New("Non suitable tiles")
+	}
+
+	return nil
+}
+
+func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 	tiles := [3]Tile{
 		onTile, chiiSequence[0], chiiSequence[1],
 	}
 	slices.Sort(tiles[:])
 
-	if tiles[1]-tiles[0] != 1 || tiles[2]-tiles[1] != 1 {
-		return errors.New("Tiles are not in a sequence")
+	err := player.TestChii(tiles)
+	if err != nil {
+		return err
 	}
 
 	indices := make([]int, 0, 3)

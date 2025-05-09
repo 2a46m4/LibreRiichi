@@ -234,11 +234,22 @@ func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
 	if !game.CurrentTurnPlayed {
 		return nil, errors.New("Current turn has not been played")
 	}
-	for idx := range 4 {
-		order := game.PlayerToOrder[idx]
+	if game.PostTurnPlayed {
+		return nil, errors.New("Post turn already played")
 	}
 
-	return nil
+	currentIdx := game.currentPlayerIdx()
+	currentOrder := game.PlayerToOrder[currentIdx]
+
+	for idx := range 4 {
+		order := game.PlayerToOrder[idx]
+
+		if game.nextPlayerIdx() == order {
+			game.Players[game.nextPlayerIdx()].TestChii()
+		}
+	}
+
+	return nil, nil
 }
 
 // Return the game results
