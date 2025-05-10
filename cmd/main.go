@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	core "codeberg.org/ijnakashiar/LibreRiichi/core/arena"
