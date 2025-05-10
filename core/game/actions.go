@@ -15,6 +15,7 @@ const (
 	PON
 	KAN
 	CHII
+	DRAW
 )
 
 type PlayerAction struct {
@@ -74,6 +75,12 @@ type ChiiData struct {
 
 func (ChiiData) actionDataImpl() {}
 
+type DrawData struct {
+	DrawnTile Tile `json:"drawn_tile"`
+}
+
+func (DrawData) actionDataImpl() {}
+
 func (action *PlayerAction) DecodeAction(rawData []byte) error {
 	var raw struct {
 		Action          ActionType      `json:"action_type"`
@@ -95,6 +102,7 @@ func (action *PlayerAction) DecodeAction(rawData []byte) error {
 		PonData{},
 		KanData{},
 		ChiiData{},
+		DrawData{},
 	}
 
 	action.Action = raw.Action
@@ -119,7 +127,7 @@ const (
 )
 
 type Setup struct {
-	Type     SetupType
-	ToPlayer uint8
-	Data     any
+	Type     SetupType `json:"setup_type"`
+	ToPlayer uint8     `json:"to_player"`
+	Data     any       `json:"data"`
 }

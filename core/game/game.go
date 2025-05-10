@@ -7,29 +7,40 @@ import (
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 )
 
+type MahjongState uint8
+
+const (
+	CURRENT_TURN MahjongState = iota
+	CURRENT_TURN_PLAYED
+	POST_TURN_PLAYED
+	GAME_ENDED
+)
+
 type MahjongGame struct {
 	Players []Player
 	// Maps Player Index → Order
 	PlayerToOrder []uint8
 	// Maps Order → Player Index
 	OrderToPlayer []uint8
-	// Current turn lasts until everyone has finished their possible actions
-	CurrentTurn        uint8
+
 	CurrentTurnActions []ActionResult
-	CurrentTurnPlayed  bool
 	PostTurnActions    []ActionResult
-	PostTurnPlayed     bool
 
-	RoundWind Wind
-	GameEnded bool
+	LiveWall []Tile
+	Dora     []Tile
+	UraDora  []Tile
+	KanDraw  []Tile
+	Tiles    [136]Tile
 
-	Tiles        [136]Tile
-	LiveWall     []Tile
-	Dora         []Tile
-	DoraRevealed int
-	UraDora      []Tile
-	KanDraw      []Tile
-	KansDrawn    int
+	// Current turn lasts until everyone has finished their possible actions
+	// CurrentTurnOrder is in range (0, 4)
+	CurrentTurnOrder uint8
+	GameState        MahjongState
+	RoundWind        Wind
+
+	TileIdx      uint8
+	DoraRevealed uint8
+	KansDrawn    uint8
 }
 
 // Sets up the game and the tiles
@@ -40,11 +51,10 @@ func (game *MahjongGame) setupGame() {
 	}
 	game.Tiles = [136]Tile(GetTileList())
 	core.PermuteArray(game.Tiles[:])
-	game.CurrentTurn = 0
-	game.CurrentTurnPlayed = false
+	game.CurrentTurnOrder = 0
+	game.GameState = CURRENT_TURN
 
-	game.RoundWind = South
-	game.GameEnded = false
+	game.RoundWind = East
 
 	tileItr := 0
 	for idx, order := range game.PlayerToOrder {
@@ -66,27 +76,63 @@ func (game *MahjongGame) setupGame() {
 	game.KansDrawn = 0
 	tileItr += 4
 	game.LiveWall = game.Tiles[tileItr:]
+	game.TileIdx = 0
 }
 
-func (game *MahjongGame) DrawNewTile() (Tile, error) {
+type GameEndError struct{}
+
+func (GameEndError) Error() string { return "Game ended" }
+
+func (game *MahjongGame) drawNewTile() (Tile, error) {
 	if len(game.LiveWall) == 0 {
-		return Invalid, errors.New("No more tiles to draw")
+		return Invalid, GameEndError{}
 	}
-	if !(game.CurrentTurnPlayed && game.PostTurnPlayed) {
+	if game.GameState != POST_TURN_PLAYED {
 		return Invalid, errors.New("Not in right state to draw")
 	}
 
-	tile := game.LiveWall[0]
-	game.LiveWall = game.LiveWall[1:]
+	tile := game.LiveWall[game.TileIdx]
+	game.TileIdx += 1
 	return tile, nil
 }
 
+func (game *MahjongGame) lastTile() (Tile, error) {
+	if game.TileIdx == 0 {
+		return Invalid, errors.New("No last tile")
+	}
+	return game.LiveWall[game.TileIdx-1], nil
+}
+
+func (game *MahjongGame) nextTurn() ([]ActionResult, error) {
+	if game.GameState != POST_TURN_PLAYED {
+		errors.New("Not in right state to progress to next turn")
+	}
+
+	game.GameState = CURRENT_TURN
+	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
+	tile, err := game.drawNewTile()
+	if errors.Is(err, GameEndError{}) {
+		return nil, GameEndError{}
+	}
+	return []ActionResult{
+		ActionResult{
+			ActionPerformed: PlayerAction{
+				Action:     DRAW,
+				FromPlayer: game.OrderToPlayer[game.CurrentTurnOrder],
+				Data:       DrawData{DrawnTile: tile},
+			},
+			IsPotential: false,
+			VisibleTo:   Visibility(game.OrderToPlayer[game.CurrentTurnOrder]),
+		},
+	}, nil
+}
+
 func (game *MahjongGame) currentPlayerIdx() uint8 {
-	return game.OrderToPlayer[game.CurrentTurn]
+	return game.OrderToPlayer[game.CurrentTurnOrder]
 }
 
 func (game *MahjongGame) nextPlayerIdx() uint8 {
-	return game.OrderToPlayer[game.CurrentTurn+1]
+	return game.OrderToPlayer[game.CurrentTurnOrder+1]
 }
 
 func (game MahjongGame) JoinArena(PlayerIdx int) error {
@@ -188,7 +234,7 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 
 	onTile := chiiData.TileToChii
 	chiiSequence := chiiData.TilesInHand
-	if !game.CurrentTurnPlayed {
+	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, true
 	}
 	if action.FromPlayer != game.nextPlayerIdx() {
@@ -217,7 +263,7 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 	tossData := action.Data.(TossData)
 
 	onTile := tossData.TileToToss
-	if game.CurrentTurnPlayed {
+	if game.GameState != CURRENT_TURN {
 		return nil, true
 	}
 	if action.FromPlayer != game.currentPlayerIdx() {
@@ -235,43 +281,40 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 
 // Checks the post-toss actions that can be made
 func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
-	if !game.CurrentTurnPlayed {
-		return nil, errors.New("Current turn has not been played")
-	}
-	if game.PostTurnPlayed {
-		return nil, errors.New("Post turn already played")
+	if game.GameState != CURRENT_TURN_PLAYED {
+		return nil, errors.New("Incorrect state")
 	}
 
-	tileTossed := game
+	tileTossed, err := game.lastTile()
+	if err != nil {
+		panic(err)
+	}
 
-	currentIdx := game.currentPlayerIdx()
-	currentOrder := game.PlayerToOrder[currentIdx]
-
-	for idx := range 4 {
-		order := game.PlayerToOrder[idx]
-		// Iterate through all possible combinations of Chii
-		tileNum := tossedTile.GetTileNumber()
-		moves := make([]PlayerAction, 0)
-		if tileNum < 7 { // 6, 7, 8
-			tiles := [3]Tile{tossedTile, tossedTile + 1, tossedTile + 2}
-			if player.TestChii(tiles) != nil {
-				moves = append(moves, PlayerAction(
-					ChiiAction{
-						Action:          CHII,
-						FromPlayer:      0,
-						PotentialAction: true,
-						Data: map[string]any{
-							"tiles": tiles,
+	nextPlayerIdx := game.nextPlayerIdx()
+	nextPlayer := game.Players[nextPlayerIdx]
+	// Iterate through all possible combinations of Chii
+	tileNum := tileTossed.GetTileNumber()
+	moves := make([]ActionResult, 0)
+	if tileNum < 7 { // 6, 7, 8
+		tiles := [3]Tile{tileTossed, tileTossed + 1, tileTossed + 2}
+		if nextPlayer.TestChii(tiles) != nil {
+			moves = append(moves,
+				ActionResult{
+					ActionPerformed: PlayerAction{
+						Action:     CHII,
+						FromPlayer: nextPlayerIdx,
+						Data: ChiiData{
+							TileToChii:  tileTossed,
+							TilesInHand: [2]Tile{tileTossed + 1, tileTossed + 2},
 						},
 					},
-				))
-			}
+					IsPotential: true,
+					VisibleTo:   Visibility(nextPlayerIdx),
+				})
 		}
-		if tileNum >= 0 {
+	}
+	if tileNum > 2 {
 
-		}
-
-		return nil
 	}
 
 	return nil, nil

@@ -20,6 +20,7 @@ const (
 
 	DoraTile Tile = 64
 	RedTile  Tile = 128
+	Hidden   Tile = 254
 	Invalid  Tile = 255
 )
 
@@ -35,6 +36,14 @@ const (
 
 func (s Tile) ClearRedOrDora() Tile {
 	return s & ^(DoraTile | RedTile)
+}
+
+func (s Tile) IsInvalid() bool {
+	return s == Invalid
+}
+
+func (s Tile) IsHidden() bool {
+	return s == Hidden
 }
 
 func (s Tile) IsHonour() bool {
