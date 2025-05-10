@@ -68,30 +68,8 @@ func (player *Player) Toss(discarded Tile) error {
 	return errors.New("Tile not found")
 }
 
-func (player Player) GetPostTurnMoves(tossedTile Tile) []PlayerAction {
-	// Iterate through all possible combinations of Chii
-	tileNum := tossedTile.GetTileNumber()
-	moves := make([]PlayerAction, 0)
-	if tileNum < 7 { // 6, 7, 8
-		tiles := [3]Tile{tossedTile, tossedTile + 1, tossedTile + 2}
-		if player.TestChii(tiles) != nil {
-			moves = append(moves, PlayerAction(
-				ChiiAction{
-					Action:          CHII,
-					FromPlayer:      0,
-					PotentialAction: true,
-					Data: map[string]any{
-						"tiles": tiles,
-					},
-				},
-			))
-		}
-	}
-	if tileNum >= 0 {
+func (player Player) GetPostTurnMoves(tossedTile Tile) []ActionResult {
 
-	}
-
-	return nil
 }
 
 func (player Player) TestChii(tiles [3]Tile) error {

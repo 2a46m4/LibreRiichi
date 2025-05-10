@@ -20,6 +20,7 @@ const (
 
 	DoraTile Tile = 64
 	RedTile  Tile = 128
+	Invalid  Tile = 255
 )
 
 const (

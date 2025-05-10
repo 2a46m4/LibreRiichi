@@ -8,6 +8,8 @@ const (
 )
 
 type ActionResult struct {
-	ActionPerformed PlayerAction
-	VisibleTo       Visibility
+	ActionPerformed PlayerAction `json:"action"`
+	// Whether this is an action that a player can take, not an action that a player took
+	IsPotential bool       `json:"is_potential"`
+	VisibleTo   Visibility `json:"visibility"`
 }

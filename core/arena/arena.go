@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"log"
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 	game "codeberg.org/ijnakashiar/LibreRiichi/core/game"
@@ -149,8 +150,9 @@ func (arena Arena) GameLoop() {
 		}
 
 		var action game.PlayerAction
-		err := json.Unmarshal(input.Data.([]byte), &action)
+		err := action.DecodeAction(input.Data.([]byte))
 		if err != nil {
+			log.Println(err)
 			continue
 		}
 		if action.FromPlayer != uint8(input.I) {

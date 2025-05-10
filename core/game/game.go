@@ -68,6 +68,19 @@ func (game *MahjongGame) setupGame() {
 	game.LiveWall = game.Tiles[tileItr:]
 }
 
+func (game *MahjongGame) DrawNewTile() (Tile, error) {
+	if len(game.LiveWall) == 0 {
+		return Invalid, errors.New("No more tiles to draw")
+	}
+	if !(game.CurrentTurnPlayed && game.PostTurnPlayed) {
+		return Invalid, errors.New("Not in right state to draw")
+	}
+
+	tile := game.LiveWall[0]
+	game.LiveWall = game.LiveWall[1:]
+	return tile, nil
+}
+
 func (game *MahjongGame) currentPlayerIdx() uint8 {
 	return game.OrderToPlayer[game.CurrentTurn]
 }
@@ -150,6 +163,7 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 // Returns the updated game state and things to notify when a player action is taken
 // Additionally returns whether the game should continue
 func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
+
 	switch action.Action {
 	case CHII:
 		return game.handleChii(action)
@@ -170,16 +184,10 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 }
 
 func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) {
-	chiiData := action.Data
+	chiiData := action.Data.(ChiiData)
 
-	onTile, ok := chiiData["OnTile"].(int)
-	if !ok {
-		return nil, true
-	}
-	chiiSequence, ok := chiiData["ChiiSequence"].([]int)
-	if !ok {
-		return nil, true
-	}
+	onTile := chiiData.TileToChii
+	chiiSequence := chiiData.TilesInHand
 	if !game.CurrentTurnPlayed {
 		return nil, true
 	}
@@ -197,7 +205,7 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 	}
 
 	return []ActionResult{
-		{action, GLOBAL},
+		{action, false, GLOBAL},
 	}, true
 }
 
@@ -206,13 +214,9 @@ func (game *MahjongGame) handleKan(action PlayerAction) ([]ActionResult, bool) {
 }
 
 func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) {
-	tossData := action.Data
+	tossData := action.Data.(TossData)
 
-	onTileInt, ok := tossData["OnTile"].(int)
-	if !ok {
-		return nil, true
-	}
-	onTile := Tile(onTileInt)
+	onTile := tossData.TileToToss
 	if game.CurrentTurnPlayed {
 		return nil, true
 	}
@@ -225,7 +229,7 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 	}
 
 	return []ActionResult{
-		{action, GLOBAL},
+		{action, false, GLOBAL},
 	}, true
 }
 
@@ -238,15 +242,36 @@ func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
 		return nil, errors.New("Post turn already played")
 	}
 
+	tileTossed := game
+
 	currentIdx := game.currentPlayerIdx()
 	currentOrder := game.PlayerToOrder[currentIdx]
 
 	for idx := range 4 {
 		order := game.PlayerToOrder[idx]
-
-		if game.nextPlayerIdx() == order {
-			game.Players[game.nextPlayerIdx()].TestChii()
+		// Iterate through all possible combinations of Chii
+		tileNum := tossedTile.GetTileNumber()
+		moves := make([]PlayerAction, 0)
+		if tileNum < 7 { // 6, 7, 8
+			tiles := [3]Tile{tossedTile, tossedTile + 1, tossedTile + 2}
+			if player.TestChii(tiles) != nil {
+				moves = append(moves, PlayerAction(
+					ChiiAction{
+						Action:          CHII,
+						FromPlayer:      0,
+						PotentialAction: true,
+						Data: map[string]any{
+							"tiles": tiles,
+						},
+					},
+				))
+			}
 		}
+		if tileNum >= 0 {
+
+		}
+
+		return nil
 	}
 
 	return nil, nil
