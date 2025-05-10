@@ -280,7 +280,7 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 }
 
 // Checks the post-toss actions that can be made
-func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
+func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, errors.New("Incorrect state")
 	}
@@ -295,29 +295,43 @@ func (game *MahjongGame) checkPostTossActions() ([]ActionResult, error) {
 	// Iterate through all possible combinations of Chii
 	tileNum := tileTossed.GetTileNumber()
 	moves := make([]ActionResult, 0)
-	if tileNum < 7 { // 6, 7, 8
-		tiles := [3]Tile{tileTossed, tileTossed + 1, tileTossed + 2}
-		if nextPlayer.TestChii(tiles) != nil {
-			moves = append(moves,
-				ActionResult{
-					ActionPerformed: PlayerAction{
-						Action:     CHII,
-						FromPlayer: nextPlayerIdx,
-						Data: ChiiData{
-							TileToChii:  tileTossed,
-							TilesInHand: [2]Tile{tileTossed + 1, tileTossed + 2},
-						},
+
+	appendChiiMove := func(chiiSequence [2]Tile) {
+		moves = append(moves,
+			ActionResult{
+				ActionPerformed: PlayerAction{
+					Action:     CHII,
+					FromPlayer: nextPlayerIdx,
+					Data: ChiiData{
+						TileToChii:  tileTossed,
+						TilesInHand: chiiSequence,
 					},
-					IsPotential: true,
-					VisibleTo:   Visibility(nextPlayerIdx),
-				})
+				},
+				IsPotential: true,
+				VisibleTo:   Visibility(nextPlayerIdx),
+			})
+	}
+
+	if tileNum <= 6 { // 6, 7, 8
+		chiiSequence := [2]Tile{tileTossed + 1, tileTossed + 2}
+		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			appendChiiMove(chiiSequence)
 		}
 	}
-	if tileNum > 2 {
-
+	if tileNum >= 2 { // 0, 1, 2
+		chiiSequence := [2]Tile{tileTossed - 1, tileTossed - 2}
+		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			appendChiiMove(chiiSequence)
+		}
+	}
+	if tileNum >= 1 && tileNum <= 7 { // Middle
+		chiiSequence := [2]Tile{tileTossed + 1, tileTossed - 1}
+		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			appendChiiMove(chiiSequence)
+		}
 	}
 
-	return nil, nil
+	return moves, nil
 }
 
 // Return the game results

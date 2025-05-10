@@ -38,3 +38,10 @@ func LastPtr[T any](array []T) *T {
 func Pop[T any](array []T) (T, []T) {
 	return Last(array), array[:len(array)-1]
 }
+
+func Swap[T any](array []T, first, second uint) []T {
+	temp := array[first]
+	array[first] = array[second]
+	array[second] = temp
+	return array
+}

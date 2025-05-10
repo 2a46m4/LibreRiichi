@@ -72,17 +72,19 @@ func (player Player) GetPostTurnMoves(tossedTile Tile) []ActionResult {
 
 }
 
-func (player Player) TestChii(tiles [3]Tile) error {
+func (player Player) TestChii(tossedTile Tile, tilesInHand [2]Tile) error {
 	if player.ExtraTileInHand() {
 		return errors.New("Player should not have extra tile in hand")
 	}
 
+	tiles := [3]Tile{tossedTile, tilesInHand[0], tilesInHand[1]}
+	slices.Sort(tiles[:])
 	if tiles[1]-tiles[0] != 1 || tiles[2]-tiles[1] != 1 {
 		return errors.New("Tiles are not in a sequence")
 	}
 
 	exist := 0
-	for _, seq := range tiles {
+	for _, seq := range tilesInHand {
 		for _, tile := range player.ClosedHand {
 			if tile == seq {
 				exist += 1
@@ -97,29 +99,28 @@ func (player Player) TestChii(tiles [3]Tile) error {
 }
 
 func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
-	tiles := [3]Tile{
-		onTile, chiiSequence[0], chiiSequence[1],
-	}
-	slices.Sort(tiles[:])
 
-	err := player.TestChii(tiles)
+	err := player.TestChii(onTile, chiiSequence)
 	if err != nil {
 		return err
 	}
 
-	indices := make([]int, 0, 3)
-	for _, seq := range tiles {
+	indices := make([]int, 0, 2)
+	for _, seq := range chiiSequence {
 		for i, tile := range player.ClosedHand {
 			if tile == seq {
 				indices = append(indices, i)
 			}
 		}
 	}
-	if len(indices) != 3 {
-		return errors.New("Does not have all the sequences")
+	if len(indices) != 2 {
+		return errors.New("Does not have all the tiles")
 	}
 
-	sort.Sort(sort.Reverse(sort.IntSlice(indices)))
+	// Pop the larger index first
+	if indices[1] > indices[0] {
+		core.Swap(indices, 0, 1)
+	}
 	for _, index := range indices {
 		var last Tile
 		last, player.ClosedHand = core.Pop(player.ClosedHand)
@@ -130,7 +131,7 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 		}
 	}
 
-	player.Chiis = append(player.Chiis, tiles[0])
+	player.Chiis = append(player.Chiis, min(onTile, chiiSequence[0], chiiSequence[1]))
 
 	return nil
 }
