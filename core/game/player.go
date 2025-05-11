@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"slices"
-	"sort"
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 )

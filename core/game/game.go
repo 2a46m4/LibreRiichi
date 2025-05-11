@@ -53,13 +53,12 @@ func (game *MahjongGame) setupGame() {
 	core.PermuteArray(game.Tiles[:])
 	game.CurrentTurnOrder = 0
 	game.GameState = CURRENT_TURN
-
 	game.RoundWind = East
 
 	tileItr := 0
 	for idx, order := range game.PlayerToOrder {
 		player := &game.Players[idx]
-		player = &Player{
+		*player = Player{
 			Points:   25000,
 			SeatWind: Wind(order) + East,
 		}
@@ -199,8 +198,7 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 				Type:     STARTING_POINTS,
 				ToPlayer: uint8(idx),
 				Data:     startingPoints,
-			},
-		)
+			})
 	}
 
 	return setup, nil
@@ -330,6 +328,8 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 			appendChiiMove(chiiSequence)
 		}
 	}
+
+	// TODO: Open kans, pons, and rons
 
 	return moves, nil
 }

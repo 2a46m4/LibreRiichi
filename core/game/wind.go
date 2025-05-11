@@ -8,3 +8,7 @@ const (
 	West       = Wind(WestTile)
 	North      = Wind(NorthTile)
 )
+
+func SameWind(wind Wind, tile Tile) bool {
+	return wind == Wind(tile)
+}

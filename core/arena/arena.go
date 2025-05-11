@@ -68,7 +68,7 @@ func (arena Arena) Loop() {
 					panic(err)
 				}
 
-				Message := msg.Message{}
+				Message := msg.ArenaMessage{}
 				err := json.Unmarshal(msgReceived.([]byte), &Message)
 				if err != nil {
 					panic(err)
@@ -95,7 +95,6 @@ func (arena Arena) Loop() {
 				continue
 			}
 		}
-
 	}
 }
 
