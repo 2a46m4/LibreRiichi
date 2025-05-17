@@ -1,7 +1,9 @@
 package main
 
 import (
-	core "codeberg.org/ijnakashiar/LibreRiichi/core/arena"
+	"fmt"
+
+	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 	"github.com/google/uuid"
 )
 
@@ -11,4 +13,5 @@ type ServerConfig struct {
 
 func main() {
 	rooms := map[uuid.UUID]core.Arena{}
+	fmt.Println(rooms)
 }

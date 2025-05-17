@@ -3,8 +3,6 @@ package core
 import (
 	"errors"
 	"fmt"
-
-	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 )
 
 type MahjongState uint8
@@ -45,12 +43,12 @@ type MahjongGame struct {
 
 // Sets up the game and the tiles
 func (game *MahjongGame) setupGame() {
-	core.PermuteArray(game.PlayerToOrder)
+	PermuteArray(game.PlayerToOrder)
 	for idx, order := range game.PlayerToOrder {
 		game.OrderToPlayer[order] = uint8(idx)
 	}
 	game.Tiles = [136]Tile(GetTileList())
-	core.PermuteArray(game.Tiles[:])
+	PermuteArray(game.Tiles[:])
 	game.CurrentTurnOrder = 0
 	game.GameState = CURRENT_TURN
 	game.RoundWind = East

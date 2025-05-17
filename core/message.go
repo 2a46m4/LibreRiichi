@@ -1,4 +1,4 @@
-package msg
+package core
 
 import (
 	"encoding/json"
@@ -44,10 +44,10 @@ type StartGameActionTypeData struct{}
 func (StartGameActionTypeData) arenaMessageDataImpl() {}
 
 type GameEventTypeData struct {
-	ActionPerformed core.PlayerAction `json:"action"`
+	ActionPerformed PlayerAction `json:"action"`
 	// Whether this is an action that a player can take, not an action that a player took
-	IsPotential bool            `json:"is_potential"`
-	VisibleTo   core.Visibility `json:"visibility"`
+	IsPotential bool       `json:"is_potential"`
+	VisibleTo   Visibility `json:"visibility"`
 }
 
 func (GameEventTypeData) arenaMessageDataImpl() {}
@@ -61,7 +61,7 @@ type QuitActionTypeData struct{}
 func (QuitActionTypeData) arenaMessageDataImpl() {}
 
 type PlayerJoinedEventData struct {
-	Agent core.Agent `json:"agent"`
+	Agent Agent `json:"agent"`
 }
 
 func (PlayerJoinedEventData) arenaMessageDataImpl() {}

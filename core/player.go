@@ -3,8 +3,6 @@ package core
 import (
 	"errors"
 	"slices"
-
-	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 )
 
 type Player struct {
@@ -59,8 +57,8 @@ func (player *Player) Toss(discarded Tile) error {
 
 	for i := range player.ClosedHand {
 		if player.ClosedHand[i] == discarded {
-			player.ClosedHand[i] = core.Last(player.ClosedHand)
-			_, player.ClosedHand = core.Pop(player.ClosedHand)
+			player.ClosedHand[i] = Last(player.ClosedHand)
+			_, player.ClosedHand = Pop(player.ClosedHand)
 			return nil
 		}
 	}
@@ -68,7 +66,7 @@ func (player *Player) Toss(discarded Tile) error {
 }
 
 func (player Player) GetPostTurnMoves(tossedTile Tile) []ActionResult {
-
+	return nil
 }
 
 func (player Player) TestChii(tossedTile Tile, tilesInHand [2]Tile) error {
@@ -118,11 +116,11 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 
 	// Pop the larger index first
 	if indices[1] > indices[0] {
-		core.Swap(indices, 0, 1)
+		Swap(indices, 0, 1)
 	}
 	for _, index := range indices {
 		var last Tile
-		last, player.ClosedHand = core.Pop(player.ClosedHand)
+		last, player.ClosedHand = Pop(player.ClosedHand)
 		if index >= len(player.ClosedHand) {
 			continue
 		} else {

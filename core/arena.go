@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 
-	msg "codeberg.org/ijnakashiar/LibreRiichi/core/msg"
 	"github.com/google/uuid"
 )
 
@@ -36,7 +35,7 @@ func (arena Arena) Broadcast(data any) error {
 	return nil
 }
 
-func (arena Arena) Send(data msg.ArenaMessage) error {
+func (arena Arena) Send(data ArenaMessage) error {
 	return nil
 }
 
@@ -53,9 +52,9 @@ func (arena Arena) Loop() {
 			}
 
 			err = arena.Broadcast(
-				msg.ArenaMessage{
-					MessageType: msg.PlayerJoinedEventType,
-					Data:        msg.PlayerJoinedEventData{},
+				ArenaMessage{
+					MessageType: PlayerJoinedEventType,
+					Data:        PlayerJoinedEventData{},
 					VisibleTo:   GLOBAL,
 				})
 			if err != nil {
@@ -75,14 +74,14 @@ func (arena Arena) Loop() {
 					panic(err)
 				}
 
-				Message := msg.ArenaMessage{}
+				Message := ArenaMessage{}
 				err := json.Unmarshal(msgReceived.([]byte), &Message)
 				if err != nil {
 					panic(err)
 				}
 
 				switch Message.MessageType {
-				case msg.StartGameActionType:
+				case StartGameActionType:
 					err := arena.StartArena()
 					if err != nil {
 						continue
@@ -91,7 +90,7 @@ func (arena Arena) Loop() {
 					arena.GameLoop()
 					arena.EndArena()
 
-				case msg.QuitActionType:
+				case QuitActionType:
 					err := arena.EndArena()
 					if err != nil {
 						continue
@@ -129,7 +128,7 @@ func (arena Arena) StartArena() error {
 
 	// Send over the data
 	for idx, setup := range setups {
-		data, err := json.Marshal(msg.ArenaMessage{
+		data, err := json.Marshal(ArenaMessage{
 			MessageType: 0,
 			Data:        nil,
 		})
