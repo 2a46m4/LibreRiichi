@@ -4,23 +4,21 @@ import (
 	"encoding/json"
 	"log"
 
-	core "codeberg.org/ijnakashiar/LibreRiichi/core"
-	game "codeberg.org/ijnakashiar/LibreRiichi/core/game"
 	msg "codeberg.org/ijnakashiar/LibreRiichi/core/msg"
 	"github.com/google/uuid"
 )
 
 // Agent represents a player that has joined the arena.
 type Agent struct {
-	Name       string        `json:"name"`
-	Id         uuid.UUID     `json:"id"`
-	Connection core.ConnChan `json:"-"`
+	Name       string    `json:"name"`
+	Id         uuid.UUID `json:"id"`
+	Connection ConnChan  `json:"-"`
 }
 
 // A location where players gather. Controls the flow of the game
 type Arena struct {
 	Agents []Agent
-	Game   game.MahjongGame
+	Game   MahjongGame
 
 	JoinChannel chan Agent
 }
@@ -38,6 +36,10 @@ func (arena Arena) Broadcast(data any) error {
 	return nil
 }
 
+func (arena Arena) Send(data msg.ArenaMessage) error {
+	return nil
+}
+
 func (arena Arena) Loop() {
 
 	for {
@@ -50,7 +52,12 @@ func (arena Arena) Loop() {
 				continue
 			}
 
-			err = arena.Broadcast(PlayerJoined(newRequest))
+			err = arena.Broadcast(
+				msg.ArenaMessage{
+					MessageType: msg.PlayerJoinedEventType,
+					Data:        msg.PlayerJoinedEventData{},
+					VisibleTo:   GLOBAL,
+				})
 			if err != nil {
 				panic(err)
 			}
@@ -122,7 +129,10 @@ func (arena Arena) StartArena() error {
 
 	// Send over the data
 	for idx, setup := range setups {
-		data, err := json.Marshal(GameStarted(setup))
+		data, err := json.Marshal(msg.ArenaMessage{
+			MessageType: 0,
+			Data:        nil,
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -137,7 +147,7 @@ func (arena Arena) GameLoop() {
 	for _, agent := range arena.Agents {
 		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
 	}
-	inputChannel := core.FanIn(dataChannels)
+	inputChannel := FanIn(dataChannels)
 	gameContinue := true
 
 	for gameContinue {
@@ -148,7 +158,7 @@ func (arena Arena) GameLoop() {
 			panic(err)
 		}
 
-		var action game.PlayerAction
+		var action PlayerAction
 		err := action.DecodeAction(input.Data.([]byte))
 		if err != nil {
 			log.Println(err)
@@ -158,12 +168,12 @@ func (arena Arena) GameLoop() {
 			continue
 		}
 
-		var actionResults []game.ActionResult
+		var actionResults []ActionResult
 		actionResults, gameContinue = arena.Game.RespondToAction(action)
 
 		// Send the results to the players
 		for _, actionResult := range actionResults {
-			if actionResult.VisibleTo == game.GLOBAL {
+			if actionResult.VisibleTo == GLOBAL {
 				for _, agent := range arena.Agents {
 					data, err := json.Marshal(actionResult)
 					if err != nil {
