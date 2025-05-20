@@ -46,6 +46,7 @@ type StartGameActionTypeData struct{}
 
 func (StartGameActionTypeData) arenaMessageDataImpl() {}
 
+// TODO: Change ActionResult to be this type
 type PlayerActionEventTypeData struct {
 	ActionResult
 }

@@ -9,6 +9,7 @@ import (
 
 // A channel wrapper for a connection
 type ConnChan struct {
+	// Data that will be received
 	DataChannel  chan any
 	CloseChannel chan any
 	WriteChannel chan []byte
@@ -56,8 +57,8 @@ func MakeChannel(conn net.Conn) ConnChan {
 }
 
 // Sends a message through the data channel
-func (conn ConnChan) Send(data any) {
-	conn.DataChannel <- data
+func (conn ConnChan) Send(data []byte) {
+	conn.WriteChannel <- data
 }
 
 func (conn ConnChan) Close() {
@@ -65,7 +66,7 @@ func (conn ConnChan) Close() {
 }
 
 func (conn ConnChan) Recv() any {
-	return <-conn.WriteChannel
+	return <-conn.DataChannel
 }
 
 // Send the data to all of the channels

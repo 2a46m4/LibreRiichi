@@ -100,36 +100,16 @@ func (game *MahjongGame) lastTile() (Tile, error) {
 	return game.LiveWall[game.TileIdx-1], nil
 }
 
-func (game *MahjongGame) nextTurn() ([]ActionResult, error) {
-	if game.GameState != POST_TURN_PLAYED {
-		errors.New("Not in right state to progress to next turn")
-	}
-
-	game.GameState = CURRENT_TURN
-	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
-	tile, err := game.drawNewTile()
-	if errors.Is(err, GameEndError{}) {
-		return nil, GameEndError{}
-	}
-	return []ActionResult{
-		ActionResult{
-			ActionPerformed: PlayerAction{
-				Action:     DRAW,
-				FromPlayer: game.OrderToPlayer[game.CurrentTurnOrder],
-				Data:       DrawData{DrawnTile: tile},
-			},
-			IsPotential: false,
-			VisibleTo:   Visibility(game.OrderToPlayer[game.CurrentTurnOrder]),
-		},
-	}, nil
-}
-
 func (game MahjongGame) currentPlayerIdx() uint8 {
 	return game.OrderToPlayer[game.CurrentTurnOrder]
 }
 
 func (game MahjongGame) nextPlayerIdx() uint8 {
 	return game.OrderToPlayer[game.CurrentTurnOrder+1]
+}
+
+func (game *MahjongGame) incrementTurn() {
+	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
 }
 
 func (game MahjongGame) JoinArena(PlayerIdx int) error {
@@ -202,31 +182,81 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 	return setup, nil
 }
 
-// Returns the updated game state and things to notify when a player action is taken
-// Additionally returns whether the game should continue
-func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
+// Returns the next events in the game, and if the game should end.
+func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool) {
+	switch game.GameState {
 
-	var concreteActions = []ActionResult{}
-	var potentialActions = []ActionResult{}
-	continueGame := true
+	case CURRENT_TURN: // The current player can make a toss move
+		actions = []ActionResult{
+			{
+				ActionPerformed: PlayerAction{
+					Action:     TOSS,
+					FromPlayer: game.currentPlayerIdx(),
+					Data:       TossData{Invalid},
+				},
+				IsPotential: true,
+				VisibleTo:   Visibility(game.currentPlayerIdx()),
+			},
+		}
+		shouldEnd = false
+
+	case CURRENT_TURN_PLAYED: // Get post-toss actions
+		var err error
+		actions, err = game.getPostTossActions()
+		if err != nil {
+			panic(err)
+		}
+		shouldEnd = false
+
+	case POST_TURN_PLAYED: // The post-toss has been played, we should progress to the next turn
+		game.GameState = CURRENT_TURN
+		game.incrementTurn()
+		tile, err := game.drawNewTile()
+		if errors.Is(err, GameEndError{}) {
+			return nil, true
+		}
+		actions = []ActionResult{
+			{
+				ActionPerformed: PlayerAction{
+					Action:     DRAW,
+					FromPlayer: game.OrderToPlayer[game.CurrentTurnOrder],
+					Data:       DrawData{DrawnTile: tile},
+				},
+				IsPotential: false,
+				VisibleTo:   Visibility(game.OrderToPlayer[game.CurrentTurnOrder]),
+			},
+		}
+		shouldEnd = false
+
+	case GAME_ENDED:
+		actions = nil
+		shouldEnd = true
+	default:
+	}
+	return actions, shouldEnd
+}
+
+// Updates the game state and returns the things to notify
+// Additionally returns whether the move was valid and game should continue
+// Performs no validation of the action
+func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
 
 	switch action.Action {
 	case CHII:
-		concreteActions, continueGame = game.handleChii(action)
+		return game.handleChii(action)
 	case KAN:
-		concreteActions, continueGame = game.handleKan(action)
+		return game.handleKan(action)
 	case PON:
 	case RIICHI:
 	case RON:
 	case SKIP:
 
 	case TOSS:
-		concreteActions, continueGame = game.handleToss(action)
+		return game.handleToss(action)
 	case TSUMO:
 	default:
 		panic(fmt.Sprintf("unexpected core.ActionType: %#v", action.Action))
 	}
-
 	return nil, false
 }
 
@@ -236,10 +266,10 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 	onTile := chiiData.TileToChii
 	chiiSequence := chiiData.TilesInHand
 	if game.GameState != CURRENT_TURN_PLAYED {
-		return nil, true
+		return nil, false
 	}
 	if action.FromPlayer != game.nextPlayerIdx() {
-		return nil, true
+		return nil, false
 	}
 	err := game.Players[action.FromPlayer].Chii(
 		Tile(onTile),
@@ -248,7 +278,7 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 			Tile(chiiSequence[1]),
 		})
 	if err != nil {
-		return nil, true
+		return nil, false
 	}
 
 	game.CurrentTurnOrder = action.FromPlayer
@@ -268,21 +298,22 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 
 	onTile := tossData.TileToToss
 	if game.GameState != CURRENT_TURN {
-		return nil, true
+		return nil, false
 	}
 	if action.FromPlayer != game.currentPlayerIdx() {
-		return nil, true
+		return nil, false
 	}
 	err := game.Players[action.FromPlayer].Toss(onTile)
 	if err != nil {
-		return nil, true
+		return nil, false
 	}
 
 	game.GameState = CURRENT_TURN_PLAYED
-
-	return []ActionResult{
+	actions := []ActionResult{
 		{action, false, GLOBAL},
-	}, true
+	}
+
+	return actions, true
 }
 
 // Checks the post-toss actions that can be made
@@ -304,6 +335,7 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	{
 		tileNum := tileTossed.GetTileNumber()
 
+		// Call when the chii move is valid
 		appendChiiMove := func(chiiSequence [2]Tile) {
 			moves = append(moves,
 				ActionResult{
@@ -342,6 +374,9 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	}
 
 	// Iterate through all combinations of kans
+	{
+		
+	}
 
 	// TODO: Open kans, pons, and rons
 

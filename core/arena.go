@@ -150,9 +150,25 @@ func (arena Arena) GameLoop() {
 		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
 	}
 	inputChannel := FanIn(dataChannels)
-	gameContinue := true
 
+	gameContinue := true
 	for gameContinue {
+
+		var events []ActionResult
+		events, gameContinue = arena.Game.GetNextEvent()
+
+		// Send the event to the players
+		for _, event := range events {
+			arena.Send(ArenaMessage{
+				MessageType: PlayerActionEventType,
+				Data:        PlayerActionEventTypeData{event},
+				VisibleTo:   event.VisibleTo,
+			})
+		}
+
+		// Wait on the players to make a response
+	Rewait:
+		// Set timeout here
 
 		input := <-inputChannel
 		if err, ok := input.Data.(error); ok {
@@ -164,14 +180,16 @@ func (arena Arena) GameLoop() {
 		err := action.DecodeAction(input.Data.([]byte))
 		if err != nil {
 			log.Println(err)
-			continue
+			goto Rewait
 		}
 		if action.FromPlayer != uint8(input.I) {
-			continue
+			goto Rewait
 		}
 
-		var actionResults []ActionResult
-		actionResults, gameContinue = arena.Game.RespondToAction(action)
+		actionResults, validMove := arena.Game.RespondToAction(action)
+		if !validMove {
+			goto Rewait
+		}
 
 		// Send the results to the players
 		for _, actionResult := range actionResults {
@@ -184,6 +202,7 @@ func (arena Arena) GameLoop() {
 	}
 
 	arena.Game.GetGameResults()
+	// Broadcast game end and results
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
