@@ -187,6 +187,7 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 	switch game.GameState {
 
 	case CURRENT_TURN: // The current player can make a toss move
+		// TODO: Check if the player can make a kan
 		actions = []ActionResult{
 			{
 				ActionPerformed: PlayerAction{
@@ -289,7 +290,7 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 }
 
 func (game *MahjongGame) handleKan(action PlayerAction) ([]ActionResult, bool) {
-
+	
 	return nil, false
 }
 
@@ -331,25 +332,30 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	nextPlayer := game.Players[nextPlayerIdx]
 	moves := make([]ActionResult, 0)
 
+	// Appends a potential move
+	appendMove := func(action ActionType, forPlayer uint8, data ActionData) {
+		moves = append(moves,
+			ActionResult{
+				ActionPerformed: PlayerAction{
+					Action:     action,
+					FromPlayer: forPlayer,
+					Data: data,
+				},
+				IsPotential: true,
+				VisibleTo:   Visibility(forPlayer),
+			})
+	}
+
 	// Iterate through all possible combinations of Chii
 	{
 		tileNum := tileTossed.GetTileNumber()
 
 		// Call when the chii move is valid
 		appendChiiMove := func(chiiSequence [2]Tile) {
-			moves = append(moves,
-				ActionResult{
-					ActionPerformed: PlayerAction{
-						Action:     CHII,
-						FromPlayer: nextPlayerIdx,
-						Data: ChiiData{
-							TileToChii:  tileTossed,
-							TilesInHand: chiiSequence,
-						},
-					},
-					IsPotential: true,
-					VisibleTo:   Visibility(nextPlayerIdx),
-				})
+			appendMove(CHII, nextPlayerIdx, ChiiData{
+				TileToChii:  tileTossed,
+				TilesInHand: chiiSequence,
+			})
 		}
 
 		if tileNum <= 6 { // 6, 7, 8
@@ -373,12 +379,28 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 
 	}
 
-	// Iterate through all combinations of kans
-	{
-		
-	}
+	for idx, player := range game.Players {
+		// Iterate through all kans
+		if player.TestDaiminkan(tileTossed) != nil {
+			appendMove(KAN, uint8(idx), KanData{
+				TileToKan: tileTossed,
+			})
+		}
 
-	// TODO: Open kans, pons, and rons
+		// Iterate through all pons
+		if player.TestPon(tileTossed) != nil {
+			appendMove(PON, uint8(idx), PonData{
+				TileToPon: tileTossed,
+			})				
+		}
+
+		// Iterate through all rons
+		if player.TestPon(tileTossed) != nil {
+			appendMove(RON, uint8(idx), RonData{
+				TileToRon: tileTossed,
+			})				
+		}
+	}
 
 	return moves, nil
 }

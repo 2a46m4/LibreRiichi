@@ -63,7 +63,7 @@ type PonData struct {
 func (PonData) actionDataImpl() {}
 
 type KanData struct {
-	TileToKan Tile `json:"tile_to_chii"`
+	TileToKan Tile `json:"tile_to_kan"`
 }
 
 func (KanData) actionDataImpl() {}

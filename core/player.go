@@ -18,6 +18,20 @@ type Player struct {
 	SeatWind Wind
 }
 
+// ==================== PRIVATE FUNCTIONS ====================
+
+func (player Player) countNumInClosedHand(tile Tile) int {
+	count := 0
+	for _, handTile := range player.ClosedHand {
+		if tile == handTile {
+			count++
+		}
+	}
+	return count
+}
+
+// ==================== PUBLIC FUNCTIONS ====================
+
 func (player *Player) FreshHand(tiles []Tile) {
 	if len(tiles) != 13 {
 		panic("Not equal to 13")
@@ -63,10 +77,6 @@ func (player *Player) Toss(discarded Tile) error {
 		}
 	}
 	return errors.New("Tile not found")
-}
-
-func (player Player) GetPostTurnMoves(tossedTile Tile) []ActionResult {
-	return nil
 }
 
 func (player Player) TestChii(tossedTile Tile, tilesInHand [2]Tile) error {
@@ -133,15 +143,41 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 	return nil
 }
 
-func (player *Player) Pon(onTile Tile) error {
-
+func (player *Player) Ankan(onTile Tile) error {
 	return nil
 }
 
-func (player Player) Ron(onTile Tile) {
-
+func (player Player) TestDaiminkan(onTile Tile) error {
+	if player.countNumInClosedHand(onTile) == 3 {
+		return nil
+	} 
+	return errors.New("Not enough tiles")
 }
 
-func (player Player) Riichi(onTile Tile) {
+func (player *Player) Daiminkan(onTile Tile) error {
+	return nil
+}
 
+func (player *Player) TestShouminkan(onTile Tile) error {
+	return nil
+}
+
+func (player *Player) Shouminkan(onTile Tile) error {
+	return nil
+}
+
+func (player *Player) TestPon(onTile Tile) error {
+	return nil
+}
+
+func (player *Player) Pon(onTile Tile) error {
+	return nil
+}
+
+func (player Player) Ron(onTile Tile) error {
+	return nil
+}
+
+func (player Player) Riichi(onTile Tile) error {
+	return nil
 }
