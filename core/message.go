@@ -7,16 +7,19 @@ import (
 type MessageType uint8
 
 const (
+	// Messages that are sent from game to player
 	PlayerJoinedEventType MessageType = iota
 	GameStartedEventType
 	SetupEventType
-	GameEventType
+	PlayerActionEventType
 
+	// Messages that are sent from player to game
 	StartGameActionType
 	PlayerActionType
 	QuitActionType
 )
 
+// ArenaMessage are messages that are sent between clients and server
 type ArenaMessage struct {
 	MessageType MessageType      `json:"message_type"`
 	Data        ArenaMessageData `json:"data"`
@@ -43,14 +46,11 @@ type StartGameActionTypeData struct{}
 
 func (StartGameActionTypeData) arenaMessageDataImpl() {}
 
-type GameEventTypeData struct {
-	ActionPerformed PlayerAction `json:"action"`
-	// Whether this is an action that a player can take, not an action that a player took
-	IsPotential bool       `json:"is_potential"`
-	VisibleTo   Visibility `json:"visibility"`
+type PlayerActionEventTypeData struct {
+	ActionResult
 }
 
-func (GameEventTypeData) arenaMessageDataImpl() {}
+func (PlayerActionEventTypeData) arenaMessageDataImpl() {}
 
 type PlayerActionTypeData struct{}
 

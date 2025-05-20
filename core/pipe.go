@@ -5,6 +5,7 @@ type FanInResult[T any] struct {
 	Data T
 }
 
+// Returns a channel that collects messages from channels with the same type.
 func FanIn[T any](channels []chan T) chan FanInResult[T] {
 	out := make(chan FanInResult[T])
 
@@ -24,6 +25,7 @@ func FanIn[T any](channels []chan T) chan FanInResult[T] {
 	return out
 }
 
+// Returns a channel that accepts a single message and sends them to all channels
 func FanOut[T any](output []chan T) chan T {
 	input := make(chan T)
 

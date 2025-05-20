@@ -124,11 +124,11 @@ func (game *MahjongGame) nextTurn() ([]ActionResult, error) {
 	}, nil
 }
 
-func (game *MahjongGame) currentPlayerIdx() uint8 {
+func (game MahjongGame) currentPlayerIdx() uint8 {
 	return game.OrderToPlayer[game.CurrentTurnOrder]
 }
 
-func (game *MahjongGame) nextPlayerIdx() uint8 {
+func (game MahjongGame) nextPlayerIdx() uint8 {
 	return game.OrderToPlayer[game.CurrentTurnOrder+1]
 }
 
@@ -206,22 +206,27 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 // Additionally returns whether the game should continue
 func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
 
+	var concreteActions = []ActionResult{}
+	var potentialActions = []ActionResult{}
+	continueGame := true
+
 	switch action.Action {
 	case CHII:
-		return game.handleChii(action)
+		concreteActions, continueGame = game.handleChii(action)
 	case KAN:
-		return game.handleKan(action)
+		concreteActions, continueGame = game.handleKan(action)
 	case PON:
 	case RIICHI:
 	case RON:
 	case SKIP:
 
 	case TOSS:
-		return game.handleToss(action)
+		concreteActions, continueGame = game.handleToss(action)
 	case TSUMO:
 	default:
 		panic(fmt.Sprintf("unexpected core.ActionType: %#v", action.Action))
 	}
+
 	return nil, false
 }
 
@@ -246,12 +251,15 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 		return nil, true
 	}
 
+	game.CurrentTurnOrder = action.FromPlayer
+
 	return []ActionResult{
 		{action, false, GLOBAL},
 	}, true
 }
 
 func (game *MahjongGame) handleKan(action PlayerAction) ([]ActionResult, bool) {
+
 	return nil, false
 }
 
@@ -269,6 +277,8 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 	if err != nil {
 		return nil, true
 	}
+
+	game.GameState = CURRENT_TURN_PLAYED
 
 	return []ActionResult{
 		{action, false, GLOBAL},
@@ -288,44 +298,50 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 
 	nextPlayerIdx := game.nextPlayerIdx()
 	nextPlayer := game.Players[nextPlayerIdx]
-	// Iterate through all possible combinations of Chii
-	tileNum := tileTossed.GetTileNumber()
 	moves := make([]ActionResult, 0)
 
-	appendChiiMove := func(chiiSequence [2]Tile) {
-		moves = append(moves,
-			ActionResult{
-				ActionPerformed: PlayerAction{
-					Action:     CHII,
-					FromPlayer: nextPlayerIdx,
-					Data: ChiiData{
-						TileToChii:  tileTossed,
-						TilesInHand: chiiSequence,
+	// Iterate through all possible combinations of Chii
+	{
+		tileNum := tileTossed.GetTileNumber()
+
+		appendChiiMove := func(chiiSequence [2]Tile) {
+			moves = append(moves,
+				ActionResult{
+					ActionPerformed: PlayerAction{
+						Action:     CHII,
+						FromPlayer: nextPlayerIdx,
+						Data: ChiiData{
+							TileToChii:  tileTossed,
+							TilesInHand: chiiSequence,
+						},
 					},
-				},
-				IsPotential: true,
-				VisibleTo:   Visibility(nextPlayerIdx),
-			})
+					IsPotential: true,
+					VisibleTo:   Visibility(nextPlayerIdx),
+				})
+		}
+
+		if tileNum <= 6 { // 6, 7, 8
+			chiiSequence := [2]Tile{tileTossed + 1, tileTossed + 2}
+			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+				appendChiiMove(chiiSequence)
+			}
+		}
+		if tileNum >= 2 { // 0, 1, 2
+			chiiSequence := [2]Tile{tileTossed - 1, tileTossed - 2}
+			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+				appendChiiMove(chiiSequence)
+			}
+		}
+		if tileNum >= 1 && tileNum <= 7 { // Middle
+			chiiSequence := [2]Tile{tileTossed + 1, tileTossed - 1}
+			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+				appendChiiMove(chiiSequence)
+			}
+		}
+
 	}
 
-	if tileNum <= 6 { // 6, 7, 8
-		chiiSequence := [2]Tile{tileTossed + 1, tileTossed + 2}
-		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
-			appendChiiMove(chiiSequence)
-		}
-	}
-	if tileNum >= 2 { // 0, 1, 2
-		chiiSequence := [2]Tile{tileTossed - 1, tileTossed - 2}
-		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
-			appendChiiMove(chiiSequence)
-		}
-	}
-	if tileNum >= 1 && tileNum <= 7 { // Middle
-		chiiSequence := [2]Tile{tileTossed + 1, tileTossed - 1}
-		if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
-			appendChiiMove(chiiSequence)
-		}
-	}
+	// Iterate through all combinations of kans
 
 	// TODO: Open kans, pons, and rons
 

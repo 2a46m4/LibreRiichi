@@ -16,26 +16,27 @@ type Agent struct {
 
 // A location where players gather. Controls the flow of the game
 type Arena struct {
-	Agents []Agent
-	Game   MahjongGame
+	Agents     []Agent
+	Spectators []Agent
+	Game       MahjongGame
 
 	JoinChannel chan Agent
 }
 
-func (arena Arena) Broadcast(data any) error {
+func (arena Arena) Send(data ArenaMessage) error {
 	marshalledData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	for _, player := range arena.Agents {
-		player.Connection.WriteChannel <- marshalledData
+	if data.VisibleTo == GLOBAL {
+		for _, player := range arena.Agents {
+			player.Connection.WriteChannel <- marshalledData
+		}
+	} else {
+		arena.Agents[data.VisibleTo].Connection.WriteChannel <- marshalledData
 	}
 
-	return nil
-}
-
-func (arena Arena) Send(data ArenaMessage) error {
 	return nil
 }
 
@@ -51,10 +52,10 @@ func (arena Arena) Loop() {
 				continue
 			}
 
-			err = arena.Broadcast(
+			err = arena.Send(
 				ArenaMessage{
 					MessageType: PlayerJoinedEventType,
-					Data:        PlayerJoinedEventData{},
+					Data:        PlayerJoinedEventData{newRequest},
 					VisibleTo:   GLOBAL,
 				})
 			if err != nil {
@@ -126,22 +127,24 @@ func (arena Arena) StartArena() error {
 		return err
 	}
 
-	// Send over the data
+	// Send over the setups for each player
 	for idx, setup := range setups {
-		data, err := json.Marshal(ArenaMessage{
-			MessageType: 0,
-			Data:        nil,
+		err := arena.Send(ArenaMessage{
+			MessageType: SetupEventType,
+			Data:        SetupEventTypeData{setup[idx]},
+			VisibleTo:   Visibility(idx),
 		})
 		if err != nil {
 			panic(err)
 		}
-		arena.Agents[idx].Connection.WriteChannel <- data
 	}
 
 	return nil
 }
 
 func (arena Arena) GameLoop() {
+
+	// Collect data channels
 	dataChannels := make([]chan any, len(arena.Agents))
 	for _, agent := range arena.Agents {
 		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
@@ -172,16 +175,11 @@ func (arena Arena) GameLoop() {
 
 		// Send the results to the players
 		for _, actionResult := range actionResults {
-			if actionResult.VisibleTo == GLOBAL {
-				for _, agent := range arena.Agents {
-					data, err := json.Marshal(actionResult)
-					if err != nil {
-						panic(err)
-					}
-
-					agent.Connection.WriteChannel <- data
-				}
-			}
+			arena.Send(ArenaMessage{
+				MessageType: PlayerActionEventType,
+				Data:        PlayerActionEventTypeData{actionResult},
+				VisibleTo:   actionResult.VisibleTo,
+			})
 		}
 	}
 

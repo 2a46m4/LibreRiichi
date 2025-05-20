@@ -55,6 +55,19 @@ func MakeChannel(conn net.Conn) ConnChan {
 	return ret
 }
 
+// Sends a message through the data channel
+func (conn ConnChan) Send(data any) {
+	conn.DataChannel <- data
+}
+
+func (conn ConnChan) Close() {
+	conn.CloseChannel <- Unit
+}
+
+func (conn ConnChan) Recv() any {
+	return <-conn.WriteChannel
+}
+
 // Send the data to all of the channels
 func Broadcast(data []byte, conns []ConnChan) {
 	for _, conn := range conns {
