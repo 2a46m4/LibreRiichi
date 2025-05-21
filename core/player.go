@@ -143,6 +143,13 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 	return nil
 }
 
+func (player Player) TestAnkan(onTile Tile) error {
+	if player.countNumInClosedHand(onTile) == 4 {
+		return nil
+	} 
+	return errors.New("Not enough tiles")
+}
+
 func (player *Player) Ankan(onTile Tile) error {
 	return nil
 }
@@ -166,11 +173,15 @@ func (player *Player) Shouminkan(onTile Tile) error {
 	return nil
 }
 
-func (player *Player) TestPon(onTile Tile) error {
+func (player Player) TestPon(onTile Tile) error {
 	return nil
 }
 
 func (player *Player) Pon(onTile Tile) error {
+	return nil
+}
+
+func (player Player) TestRon(onTile Tile) error {
 	return nil
 }
 

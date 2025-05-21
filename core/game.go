@@ -36,10 +36,13 @@ type MahjongGame struct {
 	GameState        MahjongState
 	RoundWind        Wind
 
+	// Represents the next, undrawn tile
 	TileIdx      uint8
 	DoraRevealed uint8
 	KansDrawn    uint8
 }
+
+// ==================== PRIVATE FUNCTIONS ====================
 
 // Sets up the game and the tiles
 func (game *MahjongGame) setupGame() {
@@ -49,8 +52,8 @@ func (game *MahjongGame) setupGame() {
 	}
 	game.Tiles = [136]Tile(GetTileList())
 	PermuteArray(game.Tiles[:])
-	game.CurrentTurnOrder = 0
-	game.GameState = CURRENT_TURN
+	game.CurrentTurnOrder = 3 // To initiate the first draw
+	game.GameState = POST_TURN_PLAYED // To initiate the first draw
 	game.RoundWind = East
 
 	tileItr := 0
@@ -93,11 +96,30 @@ func (game *MahjongGame) drawNewTile() (Tile, error) {
 	return tile, nil
 }
 
-func (game *MahjongGame) lastTile() (Tile, error) {
+func (game MahjongGame) lastTile() (Tile, error) {
 	if game.TileIdx == 0 {
 		return Invalid, errors.New("No last tile")
 	}
-	return game.LiveWall[game.TileIdx-1], nil
+
+	switch game.GameState {
+	case CURRENT_TURN:
+		// The tile before the drawn tile
+		return game.LiveWall[game.TileIdx-2], nil
+	case CURRENT_TURN_PLAYED:
+		// The tile just discarded
+		return game.LiveWall[game.TileIdx-1], nil
+	case POST_TURN_PLAYED:
+		return game.LiveWall[game.TileIdx-1], nil
+	case GAME_ENDED:
+		return game.LiveWall[game.TileIdx-1], nil
+	default:
+		return Invalid, nil
+	}
+
+}
+
+func (game *MahjongGame) currentPlayer() *Player {
+	return &game.Players[game.currentPlayerIdx()]
 }
 
 func (game MahjongGame) currentPlayerIdx() uint8 {
@@ -202,11 +224,16 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 		shouldEnd = false
 
 	case CURRENT_TURN_PLAYED: // Get post-toss actions
+		// We should wait for all post toss actions to finish before moving to the next turn
 		var err error
 		actions, err = game.getPostTossActions()
 		if err != nil {
 			panic(err)
 		}
+		if len(actions) == 0 {
+			game.GameState = POST_TURN_PLAYED
+		}
+
 		shouldEnd = false
 
 	case POST_TURN_PLAYED: // The post-toss has been played, we should progress to the next turn
@@ -220,11 +247,11 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 			{
 				ActionPerformed: PlayerAction{
 					Action:     DRAW,
-					FromPlayer: game.OrderToPlayer[game.CurrentTurnOrder],
+					FromPlayer: game.currentPlayerIdx(),
 					Data:       DrawData{DrawnTile: tile},
 				},
 				IsPotential: false,
-				VisibleTo:   Visibility(game.OrderToPlayer[game.CurrentTurnOrder]),
+				VisibleTo:   Visibility(game.currentPlayerIdx()),
 			},
 		}
 		shouldEnd = false
@@ -289,9 +316,42 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 	}, true
 }
 
-func (game *MahjongGame) handleKan(action PlayerAction) ([]ActionResult, bool) {
-	
-	return nil, false
+func (game *MahjongGame) handleKan(action PlayerAction) (actions []ActionResult, validMove bool) {
+	kanData := action.Data.(KanData)
+	switch game.GameState {
+	case CURRENT_TURN: // Ankan
+
+		if action.FromPlayer != game.currentPlayerIdx() {
+			return nil, false
+		}
+		
+		err := game.Players[action.FromPlayer].Ankan(kanData.TileToKan)
+		if err != nil {
+			return nil, false
+		}
+
+		actions = []ActionResult{
+			{
+				ActionPerformed: action,
+				IsPotential:     false,
+				VisibleTo:       GLOBAL,
+			},
+		}
+		validMove = true
+
+	case CURRENT_TURN_PLAYED: // Daiminkan
+	if action.FromPlayer == game.currentPlayerIdx() {
+		return nil, false
+	}
+	// if game.lastTile() != 
+
+
+	err := game.Players[action.FromPlayer].Daiminkan(kanData.TileToKan)
+
+	case POST_TURN_PLAYED: // Invalid
+	case GAME_ENDED: // Invalid
+	}
+	return actions, validMove
 }
 
 func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) {
@@ -332,7 +392,7 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	nextPlayer := game.Players[nextPlayerIdx]
 	moves := make([]ActionResult, 0)
 
-	// Appends a potential move
+	// Helper that appends a potential move
 	appendMove := func(action ActionType, forPlayer uint8, data ActionData) {
 		moves = append(moves,
 			ActionResult{
@@ -360,42 +420,39 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 
 		if tileNum <= 6 { // 6, 7, 8
 			chiiSequence := [2]Tile{tileTossed + 1, tileTossed + 2}
-			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			if nextPlayer.TestChii(tileTossed, chiiSequence) == nil {
 				appendChiiMove(chiiSequence)
 			}
 		}
 		if tileNum >= 2 { // 0, 1, 2
 			chiiSequence := [2]Tile{tileTossed - 1, tileTossed - 2}
-			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			if nextPlayer.TestChii(tileTossed, chiiSequence) == nil {
 				appendChiiMove(chiiSequence)
 			}
 		}
 		if tileNum >= 1 && tileNum <= 7 { // Middle
 			chiiSequence := [2]Tile{tileTossed + 1, tileTossed - 1}
-			if nextPlayer.TestChii(tileTossed, chiiSequence) != nil {
+			if nextPlayer.TestChii(tileTossed, chiiSequence) == nil {
 				appendChiiMove(chiiSequence)
 			}
 		}
-
 	}
 
+	// Iterate through all kans, pons, and rons
 	for idx, player := range game.Players {
-		// Iterate through all kans
-		if player.TestDaiminkan(tileTossed) != nil {
+		if player.TestDaiminkan(tileTossed) == nil {
 			appendMove(KAN, uint8(idx), KanData{
 				TileToKan: tileTossed,
 			})
 		}
 
-		// Iterate through all pons
-		if player.TestPon(tileTossed) != nil {
+		if player.TestPon(tileTossed) == nil {
 			appendMove(PON, uint8(idx), PonData{
 				TileToPon: tileTossed,
 			})				
 		}
 
-		// Iterate through all rons
-		if player.TestPon(tileTossed) != nil {
+		if player.TestRon(tileTossed) == nil {
 			appendMove(RON, uint8(idx), RonData{
 				TileToRon: tileTossed,
 			})				
