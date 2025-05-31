@@ -228,10 +228,28 @@ func (player *Player) Shouminkan(onTile Tile) error {
 }
 
 func (player Player) TestPon(onTile Tile) error {
+	if player.countNumInClosedHand(onTile) < 2 {
+		return errors.New("Cannot pon: Not enough tiles")
+	}
 	return nil
 }
 
 func (player *Player) Pon(onTile Tile) error {
+	if err := player.TestPon(onTile); err != nil {
+		return err
+	}
+	for range 2 {
+		tileIdx, err := player.idxOfTile(onTile)
+		if err != nil {
+			panic(err)
+		}
+
+		Swap(player.ClosedHand, uint(tileIdx), uint(len(player.ClosedHand)-1))
+		Pop(&player.ClosedHand)
+	}
+
+	player.Pons = append(player.Pons, onTile)
+	player.HandOpen = true
 	return nil
 }
 
