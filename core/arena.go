@@ -168,7 +168,7 @@ func (arena Arena) GameLoop() {
 
 		// Wait on the players to make a response
 	Rewait:
-		// Set timeout here
+		// TODO: Set timeout here
 
 		input := <-inputChannel
 		if err, ok := input.Data.(error); ok {

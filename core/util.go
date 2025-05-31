@@ -35,8 +35,9 @@ func LastPtr[T any](array []T) *T {
 	return &array[len(array)-1]
 }
 
-func Pop[T any](array []T) (T, []T) {
-	return Last(array), array[:len(array)-1]
+func Pop[T any](array *[]T) T {
+	*array = (*array)[:len(*array)-1]
+	return Last(*array)
 }
 
 func Swap[T any](array []T, first, second uint) []T {
@@ -44,4 +45,13 @@ func Swap[T any](array []T, first, second uint) []T {
 	array[first] = array[second]
 	array[second] = temp
 	return array
+}
+
+func Count[T comparable](array []T, find T) (count int) {
+	for _, i := range array {
+		if i == find {
+			count += 1
+		}
+	}
+	return count
 }

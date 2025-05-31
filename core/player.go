@@ -30,6 +30,15 @@ func (player Player) countNumInClosedHand(tile Tile) int {
 	return count
 }
 
+func (player Player) idxOfTile(tile Tile) (int, error) {
+	for idx, handTile := range player.ClosedHand {
+		if tile == handTile {
+			return idx, nil
+		}
+	}
+	return 0, errors.New("Not found")
+}
+
 // ==================== PUBLIC FUNCTIONS ====================
 
 func (player *Player) FreshHand(tiles []Tile) {
@@ -72,7 +81,7 @@ func (player *Player) Toss(discarded Tile) error {
 	for i := range player.ClosedHand {
 		if player.ClosedHand[i] == discarded {
 			player.ClosedHand[i] = Last(player.ClosedHand)
-			_, player.ClosedHand = Pop(player.ClosedHand)
+			Pop(&player.ClosedHand)
 			return nil
 		}
 	}
@@ -129,8 +138,7 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 		Swap(indices, 0, 1)
 	}
 	for _, index := range indices {
-		var last Tile
-		last, player.ClosedHand = Pop(player.ClosedHand)
+		last := Pop(&player.ClosedHand)
 		if index >= len(player.ClosedHand) {
 			continue
 		} else {
@@ -139,6 +147,7 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 	}
 
 	player.Chiis = append(player.Chiis, min(onTile, chiiSequence[0], chiiSequence[1]))
+	player.HandOpen = true
 
 	return nil
 }
@@ -146,30 +155,75 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 func (player Player) TestAnkan(onTile Tile) error {
 	if player.countNumInClosedHand(onTile) == 4 {
 		return nil
-	} 
+	}
 	return errors.New("Not enough tiles")
 }
 
 func (player *Player) Ankan(onTile Tile) error {
+	if err := player.TestAnkan(onTile); err != nil {
+		return err
+	}
+	for range 4 {
+		tileIdx, err := player.idxOfTile(onTile)
+		if err != nil {
+			panic(err)
+		}
+
+		Swap(player.ClosedHand, uint(tileIdx), uint(len(player.ClosedHand)-1))
+		Pop(&player.ClosedHand)
+	}
+
+	player.Kans = append(player.Kans, onTile)
 	return nil
 }
 
 func (player Player) TestDaiminkan(onTile Tile) error {
 	if player.countNumInClosedHand(onTile) == 3 {
 		return nil
-	} 
+	}
 	return errors.New("Not enough tiles")
 }
 
 func (player *Player) Daiminkan(onTile Tile) error {
+	if err := player.TestDaiminkan(onTile); err != nil {
+		return err
+	}
+	for range 3 {
+		tileIdx, err := player.idxOfTile(onTile)
+		if err != nil {
+			panic(err)
+		}
+
+		Swap(player.ClosedHand, uint(tileIdx), uint(len(player.ClosedHand)-1))
+		Pop(player.ClosedHand)
+	}
+
+	player.Kans = append(player.Kans, onTile)
+	player.HandOpen = true
 	return nil
 }
 
 func (player *Player) TestShouminkan(onTile Tile) error {
-	return nil
+	for _, i := range player.Pons {
+		if i == onTile {
+			return nil
+		}
+	}
+	return errors.New("Does not have a pon")
 }
 
 func (player *Player) Shouminkan(onTile Tile) error {
+	if err := player.TestShouminkan(onTile); err != nil {
+		return err
+	}
+	for idx, tile := range player.Pons {
+		if tile == onTile {
+			Swap(player.Pons, uint(idx), uint(len(player.Pons)-1))
+			Pop(&player.Pons)
+		}
+	}
+	player.Kans = append(player.Kans, onTile)
+	player.HandOpen = true
 	return nil
 }
 

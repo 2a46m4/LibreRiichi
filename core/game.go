@@ -52,7 +52,7 @@ func (game *MahjongGame) setupGame() {
 	}
 	game.Tiles = [136]Tile(GetTileList())
 	PermuteArray(game.Tiles[:])
-	game.CurrentTurnOrder = 3 // To initiate the first draw
+	game.CurrentTurnOrder = 3         // To initiate the first draw
 	game.GameState = POST_TURN_PLAYED // To initiate the first draw
 	game.RoundWind = East
 
@@ -269,6 +269,7 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 // Performs no validation of the action
 func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
 
+	// TODO: Finish all the cases
 	switch action.Action {
 	case CHII:
 		return game.handleChii(action)
@@ -293,13 +294,19 @@ func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) 
 
 	onTile := chiiData.TileToChii
 	chiiSequence := chiiData.TilesInHand
+
+	last, err := game.lastTile()
+	if err != nil || onTile != last {
+		return nil, false
+	}
+
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, false
 	}
 	if action.FromPlayer != game.nextPlayerIdx() {
 		return nil, false
 	}
-	err := game.Players[action.FromPlayer].Chii(
+	err = game.Players[action.FromPlayer].Chii(
 		Tile(onTile),
 		[2]Tile{
 			Tile(chiiSequence[0]),
@@ -322,12 +329,12 @@ func (game *MahjongGame) handleKan(action PlayerAction) (actions []ActionResult,
 	case CURRENT_TURN: // Ankan
 
 		if action.FromPlayer != game.currentPlayerIdx() {
-			return nil, false
+			break
 		}
-		
+
 		err := game.Players[action.FromPlayer].Ankan(kanData.TileToKan)
 		if err != nil {
-			return nil, false
+			break
 		}
 
 		actions = []ActionResult{
@@ -340,13 +347,25 @@ func (game *MahjongGame) handleKan(action PlayerAction) (actions []ActionResult,
 		validMove = true
 
 	case CURRENT_TURN_PLAYED: // Daiminkan
-	if action.FromPlayer == game.currentPlayerIdx() {
-		return nil, false
-	}
-	// if game.lastTile() != 
+		if action.FromPlayer == game.currentPlayerIdx() {
+			break
+		}
 
+		lastTile, err := game.lastTile()
+		if err != nil || lastTile != kanData.TileToKan {
+			break
+		}
 
-	err := game.Players[action.FromPlayer].Daiminkan(kanData.TileToKan)
+		err = game.Players[action.FromPlayer].Daiminkan(kanData.TileToKan)
+		if err != nil {
+			break
+		}
+
+		game.CurrentTurnOrder = action.FromPlayer
+		actions = []ActionResult{
+			{action, false, GLOBAL},
+		}
+		validMove = true
 
 	case POST_TURN_PLAYED: // Invalid
 	case GAME_ENDED: // Invalid
@@ -399,7 +418,7 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 				ActionPerformed: PlayerAction{
 					Action:     action,
 					FromPlayer: forPlayer,
-					Data: data,
+					Data:       data,
 				},
 				IsPotential: true,
 				VisibleTo:   Visibility(forPlayer),
@@ -449,13 +468,13 @@ func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 		if player.TestPon(tileTossed) == nil {
 			appendMove(PON, uint8(idx), PonData{
 				TileToPon: tileTossed,
-			})				
+			})
 		}
 
 		if player.TestRon(tileTossed) == nil {
 			appendMove(RON, uint8(idx), RonData{
 				TileToRon: tileTossed,
-			})				
+			})
 		}
 	}
 
