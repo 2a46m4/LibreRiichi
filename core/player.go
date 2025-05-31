@@ -195,7 +195,7 @@ func (player *Player) Daiminkan(onTile Tile) error {
 		}
 
 		Swap(player.ClosedHand, uint(tileIdx), uint(len(player.ClosedHand)-1))
-		Pop(player.ClosedHand)
+		Pop(&player.ClosedHand)
 	}
 
 	player.Kans = append(player.Kans, onTile)
