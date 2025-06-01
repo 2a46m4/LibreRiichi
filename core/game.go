@@ -29,6 +29,7 @@ type MahjongGame struct {
 	UraDora  []Tile
 	KanDraw  []Tile
 	Tiles    [136]Tile
+	Discards [4][]Tile
 
 	// Current turn lasts until everyone has finished their possible actions
 	// CurrentTurnOrder is in range (0, 4)
@@ -55,6 +56,9 @@ func (game *MahjongGame) setupGame() {
 	game.CurrentTurnOrder = 3         // To initiate the first draw
 	game.GameState = POST_TURN_PLAYED // To initiate the first draw
 	game.RoundWind = East
+	for i := range 4 {
+		game.Discards[i] = make([]Tile, 0, 24) // Arbitrary
+	}
 
 	tileItr := 0
 	for idx, order := range game.PlayerToOrder {

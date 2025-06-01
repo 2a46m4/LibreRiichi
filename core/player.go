@@ -11,7 +11,7 @@ type Player struct {
 	Pons       []Tile
 	Chiis      []Tile // Chiis are the start of the sequence
 
-	InRiichi bool
+	Yakus    YakuType
 	HandOpen bool
 
 	Points   uint32
@@ -39,6 +39,12 @@ func (player Player) idxOfTile(tile Tile) (int, error) {
 	return 0, errors.New("Not found")
 }
 
+// Finds the tiles that results in a winning hand. Returns an empty list if the hand is not in Tenpai.
+func (player Player) checkWaitingTiles() []Tile {
+	// TODO: Memoize it later?
+	return nil
+}
+
 // ==================== PUBLIC FUNCTIONS ====================
 
 func (player *Player) FreshHand(tiles []Tile) {
@@ -52,7 +58,6 @@ func (player *Player) FreshHand(tiles []Tile) {
 	player.Pons = nil
 	player.Chiis = nil
 
-	player.InRiichi = false
 	player.HandOpen = false
 }
 
