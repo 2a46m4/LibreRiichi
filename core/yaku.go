@@ -149,5 +149,87 @@ func (yaku YakuType) OpenHand() bool {
 		NO_YAKU:           true,
 		MENZEN_TSUMO_YAKU: false,
 		RIICHI_YAKU:       false,
+		IPPATSU_YAKU:      false,
+		PINFU_YAKU:        false,
+		IIPEIKOU_YAKU:     false,
+
+		HAITEI_YAOYUE_YAKU:  true,
+		HOUTEI_RAOYUI_YAKU:  true,
+		RINSHAN_KAIHOU_YAKU: true,
+		CHANKAN_YAKU:        true,
+		TANYAO_YAKU:         true,
+		YAKUHAI_YAKU:        true,
+
+		DOUBLE_RIICHI_YAKU:   false,
+		CHANTAIYAO_YAKU:      true,
+		SANSHOKU_DOUJUN_YAKU: true,
+		ITTSU_YAKU:           true,
+		TOITOI_YAKU:          true,
+		SANANKOU_YAKU:        true,
+		SANSHOKU_DOUKOU_YAKU: true,
+		SANKANTSU_YAKU:       true,
+		CHIITOITSU_YAKU:      false,
+		HONROUTOU_YAKU:       true,
+		SHOUSANGEN_YAKU:      true,
+
+		HONITSU_YAKU:    true,
+		JUNCHAN_YAKU:    true,
+		RYANPEIKOU_YAKU: false,
+
+		CHINITSU_YAKU: true,
+
+		KAZOE_YAKUMAN_YAKU:  true,
+		KOKUSHI_MUSOU_YAKU:  false,
+		SUUANKOU_YAKU:       false,
+		DAISANGEN_YAKU:      true,
+		SHOUSUUSHII_YAKU:    true,
+		DAISUUSHII_YAKU:     true,
+		TSUUIISOU_YAKU:      true,
+		CHINROUTOU_YAKU:     true,
+		RYUUIISOU_YAKU:      true,
+		CHUUREN_POUTOU_YAKU: false,
+		SUUKANTSU_YAKU:      true,
+
+		TENHOU_YAKU:  false,
+		CHIIHOU_YAKU: false,
+
+		NAGASHI_MANGAN_YAKU: false,
+	}[yaku]
+}
+
+func (yaku YakuType) HanLossOnOpen() int {
+	return map[YakuType]int{
+		NO_YAKU: 0,
+
+		HAITEI_YAOYUE_YAKU:  0,
+		HOUTEI_RAOYUI_YAKU:  0,
+		RINSHAN_KAIHOU_YAKU: 0,
+		CHANKAN_YAKU:        0,
+		TANYAO_YAKU:         0,
+		YAKUHAI_YAKU:        0,
+
+		CHANTAIYAO_YAKU:      1,
+		SANSHOKU_DOUJUN_YAKU: 1,
+		ITTSU_YAKU:           1,
+		TOITOI_YAKU:          0,
+		SANANKOU_YAKU:        0,
+		SANSHOKU_DOUKOU_YAKU: 0,
+		SANKANTSU_YAKU:       0,
+		HONROUTOU_YAKU:       0,
+		SHOUSANGEN_YAKU:      0,
+
+		HONITSU_YAKU: 1,
+		JUNCHAN_YAKU: 1,
+
+		CHINITSU_YAKU: 1,
+
+		KAZOE_YAKUMAN_YAKU: 0,
+		DAISANGEN_YAKU:     0,
+		SHOUSUUSHII_YAKU:   0,
+		DAISUUSHII_YAKU:    0,
+		TSUUIISOU_YAKU:     0,
+		CHINROUTOU_YAKU:    0,
+		RYUUIISOU_YAKU:     0,
+		SUUKANTSU_YAKU:     0,
 	}[yaku]
 }
