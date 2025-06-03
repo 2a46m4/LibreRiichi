@@ -242,6 +242,6 @@ func (yaku *YakuType) Set() {
 }
 
 // TODO: Do Yaku calculations
-func GetYaku(tiles []Tile) YakuType {
+func GetYaku(hand Hand, winTile Tile) YakuType {
 	return NO_YAKU
 }

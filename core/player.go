@@ -5,14 +5,18 @@ import (
 	"slices"
 )
 
-type Player struct {
-	ClosedHand []Tile
-	Kans       []Tile
-	Pons       []Tile
-	Chiis      []Tile // Chiis are the start of the sequence
-	Discards   []Tile // For furiten
+type Hand struct {
+	ClosedHand   []Tile
+	Kans         []Tile
+	Pons         []Tile
+	Chiis        []Tile // Chiis are the start of the sequence
+	HandOpen     bool
+	HandInRiichi bool
+}
 
-	HandOpen bool
+type Player struct {
+	Hand
+	Discards []Tile // For furiten
 
 	Points   uint32
 	SeatWind Wind
@@ -20,7 +24,9 @@ type Player struct {
 
 type WinResult struct {
 	Yakus       YakuType
-	WinningHand []Tile
+	WinningHand Hand
+	WinningTile Tile
+	WonByRon    bool
 }
 
 // ==================== PRIVATE FUNCTIONS ====================
@@ -266,14 +272,25 @@ func (player *Player) Pon(onTile Tile) error {
 }
 
 func (player Player) TestRon(onTile Tile) error {
-	// The player needs to have a hand with the correct tile
+	// The player needs to have a hand with the correct tile, and waits cannot be in the discard pile
 	if player.ExtraTileInHand() {
 		return errors.New("Too many tiles in hand")
 	}
 
-	waiting := player.checkWaitingTiles()
-	if idx := slices.Index(waiting, onTile); idx == -1 {
+	waitingTiles := player.checkWaitingTiles()
+	if idx := slices.Index(waitingTiles, onTile); idx == -1 {
 		return errors.New("Tile is not part of waiting tiles")
+	}
+
+	for _, waitingTile := range waitingTiles {
+		if slices.Index(player.Discards, waitingTile) != -1 {
+			return errors.New("Hand in furiten, cannot discard")
+		}
+	}
+
+	yakus := GetYaku(player.Hand, onTile)
+	if yakus == NO_YAKU {
+		return errors.New("No yaku")
 	}
 
 	return nil
@@ -286,12 +303,16 @@ func (player *Player) Ron(onTile Tile) (WinResult, error) {
 		return WinResult{}, err
 	}
 
-	entireHand := append(player.ClosedHand, onTile)
-	yakus := GetYaku(entireHand)
+	yakus := GetYaku(player.Hand, onTile)
+	if yakus == NO_YAKU {
+		panic("Logic error")
+	}
 
 	return WinResult{
 		Yakus:       yakus,
-		WinningHand: entireHand,
+		WinningHand: player.Hand,
+		WinningTile: onTile,
+		WonByRon:    true,
 	}, nil
 }
 
