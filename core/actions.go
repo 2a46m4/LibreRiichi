@@ -28,6 +28,7 @@ type ActionData interface{ actionDataImpl() }
 
 type RonData struct {
 	TileToRon Tile `json:"tile_to_ron"`
+	WinResult WinResult `json:"win_result"`
 }
 
 func (RonData) actionDataImpl() {}

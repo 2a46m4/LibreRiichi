@@ -267,7 +267,7 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 }
 
 // Updates the game state and returns the things to notify
-// Additionally returns whether the move was valid and game should continue
+// Additionally returns whether the move was valid
 // Performs no validation of the action
 func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
 
@@ -280,8 +280,8 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	case PON:
 	case RIICHI:
 	case RON:
+		return game.handleRon(action)
 	case SKIP:
-
 	case TOSS:
 		return game.handleToss(action)
 	case TSUMO:
@@ -373,6 +373,23 @@ func (game *MahjongGame) handleKan(action PlayerAction) (actions []ActionResult,
 	case GAME_ENDED: // Invalid
 	}
 	return actions, validMove
+}
+
+func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
+	ronData := action.Data.(RonData)
+
+	if action.FromPlayer == game.currentPlayerIdx() {
+		return nil, false
+	}
+
+	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
+	
+	
+	game.GameState = GAME_ENDED
+	return []ActionResult{
+		{action, false, GLOBAL},
+		
+	}, true
 }
 
 func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) {

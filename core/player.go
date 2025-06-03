@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+// TODO: Separate Kans into the different types
+
 // ==================== TYPES ====================
 
 type Hand struct {
