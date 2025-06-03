@@ -10,6 +10,7 @@ type Player struct {
 	Kans       []Tile
 	Pons       []Tile
 	Chiis      []Tile // Chiis are the start of the sequence
+	Discards   []Tile // For furiten
 
 	Yakus    YakuType
 	HandOpen bool
@@ -43,6 +44,10 @@ func (player Player) idxOfTile(tile Tile) (int, error) {
 func (player Player) checkWaitingTiles() []Tile {
 	// TODO: Memoize it later?
 	return nil
+}
+
+func (player Player) getYaku() {
+
 }
 
 // ==================== PUBLIC FUNCTIONS ====================
@@ -259,11 +264,18 @@ func (player *Player) Pon(onTile Tile) error {
 }
 
 func (player Player) TestRon(onTile Tile) error {
+	// The player needs to have a hand with the correct tile
+	waiting := player.checkWaitingTiles()
+	if idx := slices.Index(waiting, onTile); idx == -1 {
+		return errors.New("Tile is not part of waiting tiles")
+	}
+
 	return nil
 }
 
-func (player Player) Ron(onTile Tile) error {
-	return nil
+// Returns the winning hand or an error
+func (player Player) Ron(onTile Tile) ([]Tile, error) {
+	return nil, nil
 }
 
 func (player Player) Riichi(onTile Tile) error {

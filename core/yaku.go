@@ -37,6 +37,7 @@ const (
 
 	KAZOE_YAKUMAN_YAKU
 	KOKUSHI_MUSOU_YAKU
+	KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU
 	SUUANKOU_YAKU
 	DAISANGEN_YAKU
 	SHOUSUUSHII_YAKU
@@ -54,8 +55,9 @@ const (
 )
 
 func (yaku YakuType) Han() int {
-	return map[YakuType]int{
-		NO_YAKU:           0,
+
+	return []int{
+		NO_YAKU:      0,
 		MENZEN_TSUMO_YAKU: 1,
 		RIICHI_YAKU:       1,
 		IPPATSU_YAKU:      1,
@@ -87,17 +89,18 @@ func (yaku YakuType) Han() int {
 
 		CHINITSU_YAKU: 6,
 
-		KAZOE_YAKUMAN_YAKU:  13,
-		KOKUSHI_MUSOU_YAKU:  13,
-		SUUANKOU_YAKU:       13,
-		DAISANGEN_YAKU:      13,
-		SHOUSUUSHII_YAKU:    13,
-		DAISUUSHII_YAKU:     26,
-		TSUUIISOU_YAKU:      13,
-		CHINROUTOU_YAKU:     13,
-		RYUUIISOU_YAKU:      13,
-		CHUUREN_POUTOU_YAKU: 13,
-		SUUKANTSU_YAKU:      13,
+		KAZOE_YAKUMAN_YAKU:                13,
+		KOKUSHI_MUSOU_YAKU:                13,
+		KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU: 26,
+		SUUANKOU_YAKU:                     13,
+		DAISANGEN_YAKU:                    13,
+		SHOUSUUSHII_YAKU:                  13,
+		DAISUUSHII_YAKU:                   26,
+		TSUUIISOU_YAKU:                    13,
+		CHINROUTOU_YAKU:                   13,
+		RYUUIISOU_YAKU:                    13,
+		CHUUREN_POUTOU_YAKU:               13,
+		SUUKANTSU_YAKU:                    13,
 
 		TENHOU_YAKU:  13,
 		CHIIHOU_YAKU: 13,
@@ -232,4 +235,8 @@ func (yaku YakuType) HanLossOnOpen() int {
 		RYUUIISOU_YAKU:     0,
 		SUUKANTSU_YAKU:     0,
 	}[yaku]
+}
+
+func (yaku *YakuType) Set() {
+
 }
