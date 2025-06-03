@@ -295,6 +295,13 @@ func (player *Player) Ron(onTile Tile) (WinResult, error) {
 	}, nil
 }
 
+func (player Player) TestTsumo() {
+
+}
+
+func (player Player) Tsumo() {
+
+}
 func (player Player) Riichi(onTile Tile) error {
 	return nil
 }
