@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+// ==================== TYPES ====================
+
 type Hand struct {
 	ClosedHand   []Tile
 	Kans         []Tile

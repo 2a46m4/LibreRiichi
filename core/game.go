@@ -134,6 +134,8 @@ func (game *MahjongGame) incrementTurn() {
 	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
 }
 
+// ==================== PUBLIC FUNCTIONS ====================
+
 func (game MahjongGame) JoinArena(PlayerIdx int) error {
 	if PlayerIdx >= game.GetMaxPlayers() {
 		return errors.New("No more space")

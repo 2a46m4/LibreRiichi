@@ -1,5 +1,8 @@
 package core
 
+// TODO: Consider generating this by parsing from a file instead
+// Indexing from a map seems like a bad idea performance-wise, we
+// should really be generating this code at compile-time instead
 type YakuType uint64
 
 const (
@@ -54,9 +57,17 @@ const (
 	NAGASHI_MANGAN_YAKU
 )
 
+func iterateYaku(yakus YakuType, operate func(singleYaku YakuType)) {
+	for itr := 0; itr != 64; itr += 1 {
+		if (yakus >> itr) & 1 == 1 {
+			operate(yakus & (1 << itr))
+		}
+	}
+}
+
 func (yaku YakuType) Han() int {
 
-	return []int{
+	yakuHan := map[YakuType]int{
 		NO_YAKU:      0,
 		MENZEN_TSUMO_YAKU: 1,
 		RIICHI_YAKU:       1,
@@ -106,7 +117,14 @@ func (yaku YakuType) Han() int {
 		CHIIHOU_YAKU: 13,
 
 		NAGASHI_MANGAN_YAKU: 3,
-	}[yaku]
+	}
+
+	totalHan := 0
+	iterateYaku(yaku, func(singleYaku YakuType) {
+		totalHan += yakuHan[singleYaku]
+	})
+
+	return totalHan
 }
 
 func (yaku YakuType) IsYakuman() bool {
@@ -136,9 +154,9 @@ func (yaku YakuType) IsYakuman() bool {
 	}
 
 	hanCount := 0
-	for i := 0; i < 64; i++ {
-		hanCount += YakuType(1 << i).Han()
-	}
+	iterateYaku(yaku, func(singleYaku YakuType) {
+		hanCount += singleYaku.Han()
+	})
 
 	if hanCount == 13 {
 		return true
@@ -147,8 +165,9 @@ func (yaku YakuType) IsYakuman() bool {
 	return false
 }
 
+// Whether or not the hand can be open.
 func (yaku YakuType) OpenHand() bool {
-	return map[YakuType]bool{
+	canBeOpen := map[YakuType]bool{
 		NO_YAKU:           true,
 		MENZEN_TSUMO_YAKU: false,
 		RIICHI_YAKU:       false,
@@ -197,11 +216,18 @@ func (yaku YakuType) OpenHand() bool {
 		CHIIHOU_YAKU: false,
 
 		NAGASHI_MANGAN_YAKU: false,
-	}[yaku]
+	}
+
+	isOpen := false
+	iterateYaku(yaku, func(singleYaku YakuType) {
+		isOpen = isOpen || canBeOpen[singleYaku]	
+	})
+
+	return isOpen
 }
 
 func (yaku YakuType) HanLossOnOpen() int {
-	return map[YakuType]int{
+	hanLoss := map[YakuType]int{
 		NO_YAKU: 0,
 
 		HAITEI_YAOYUE_YAKU:  0,
@@ -234,7 +260,14 @@ func (yaku YakuType) HanLossOnOpen() int {
 		CHINROUTOU_YAKU:    0,
 		RYUUIISOU_YAKU:     0,
 		SUUKANTSU_YAKU:     0,
-	}[yaku]
+	}
+
+	totalHanLoss := 0
+	iterateYaku(yaku, func(singleYaku YakuType) {
+		totalHanLoss += hanLoss[singleYaku]
+	})
+
+	return totalHanLoss
 }
 
 func (yaku *YakuType) Set() {

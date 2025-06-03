@@ -67,6 +67,7 @@ type PlayerJoinedEventData struct {
 
 func (PlayerJoinedEventData) arenaMessageDataImpl() {}
 
+// Selects the correct type to write into
 func arenaToDataMap(msgType MessageType) ArenaMessageData {
 	var ArenaToDataMap = []ArenaMessageData{
 		PlayerJoinedEventData{},

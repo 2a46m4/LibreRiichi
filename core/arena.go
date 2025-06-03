@@ -14,7 +14,8 @@ type Agent struct {
 	Connection ConnChan  `json:"-"`
 }
 
-// A location where players gather. Controls the flow of the game
+// A location where players gather. Controls the flow of the game,
+// directing messages to players, requesting input/ouput
 type Arena struct {
 	Agents     []Agent
 	Spectators []Agent
