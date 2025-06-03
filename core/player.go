@@ -29,6 +29,20 @@ type WinResult struct {
 	WonByRon    bool
 }
 
+// ==================== ERRORS ====================
+
+type TooManyTilesErr struct{}
+
+func (TooManyTilesErr) Error() string {
+	return "Too many tiles in hand"
+}
+
+type TooLittleTilesErr struct{}
+
+func (TooLittleTilesErr) Error() string {
+	return "Too little tiles in hand"
+}
+
 // ==================== PRIVATE FUNCTIONS ====================
 
 func (player Player) countNumInClosedHand(tile Tile) int {
@@ -73,7 +87,9 @@ func (player *Player) FreshHand(tiles []Tile) {
 	player.HandOpen = false
 }
 
-func (player *Player) ExtraTileInHand() bool {
+// This function essentially keeps track of the player turn. If it's
+// the player's turn, there should be an extra tile in the hand.
+func (player Player) ExtraTileInHand() bool {
 	numOpenTriplets := 0
 	numOpenTriplets += len(player.Kans)
 	numOpenTriplets += len(player.Chiis)
@@ -81,9 +97,14 @@ func (player *Player) ExtraTileInHand() bool {
 	return (len(player.ClosedHand) + numOpenTriplets*3) == 14
 }
 
+// Alias
+func (player Player) IsPlayerTurn() bool {
+	return player.ExtraTileInHand()
+}
+
 func (player *Player) Draw(drawn Tile) error {
 	if player.ExtraTileInHand() {
-		return errors.New("Too many tiles in hand")
+		return TooManyTilesErr{}
 	}
 
 	player.ClosedHand = append(player.ClosedHand, drawn)
@@ -92,7 +113,7 @@ func (player *Player) Draw(drawn Tile) error {
 
 func (player *Player) Toss(discarded Tile) error {
 	if !player.ExtraTileInHand() {
-		return errors.New("Too little tiles in hand")
+		return TooLittleTilesErr{}
 	}
 
 	for i := range player.ClosedHand {
@@ -108,7 +129,7 @@ func (player *Player) Toss(discarded Tile) error {
 
 func (player Player) TestChii(tossedTile Tile, tilesInHand [2]Tile) error {
 	if player.ExtraTileInHand() {
-		return errors.New("Player should not have extra tile in hand")
+		return TooManyTilesErr{}
 	}
 
 	tiles := [3]Tile{tossedTile, tilesInHand[0], tilesInHand[1]}
@@ -171,10 +192,14 @@ func (player *Player) Chii(onTile Tile, chiiSequence [2]Tile) error {
 }
 
 func (player Player) TestAnkan(onTile Tile) error {
+	if !player.ExtraTileInHand() {
+		return TooLittleTilesErr{}
+	}
+
 	if player.countNumInClosedHand(onTile) == 4 {
 		return nil
 	}
-	return errors.New("Not enough tiles")
+	return errors.New("Not enough tiles to kan")
 }
 
 func (player *Player) Ankan(onTile Tile) error {
@@ -196,6 +221,10 @@ func (player *Player) Ankan(onTile Tile) error {
 }
 
 func (player Player) TestDaiminkan(onTile Tile) error {
+	if player.ExtraTileInHand() {
+		return TooManyTilesErr{}
+	}
+
 	if player.countNumInClosedHand(onTile) == 3 {
 		return nil
 	}
@@ -222,6 +251,10 @@ func (player *Player) Daiminkan(onTile Tile) error {
 }
 
 func (player *Player) TestShouminkan(onTile Tile) error {
+	if player.ExtraTileInHand() {
+		return TooManyTilesErr{}
+	}
+
 	for _, i := range player.Pons {
 		if i == onTile {
 			return nil
@@ -246,6 +279,10 @@ func (player *Player) Shouminkan(onTile Tile) error {
 }
 
 func (player Player) TestPon(onTile Tile) error {
+	if player.ExtraTileInHand() {
+		return TooManyTilesErr{}
+	}
+
 	if player.countNumInClosedHand(onTile) < 2 {
 		return errors.New("Cannot pon: Not enough tiles")
 	}
@@ -274,7 +311,7 @@ func (player *Player) Pon(onTile Tile) error {
 func (player Player) TestRon(onTile Tile) error {
 	// The player needs to have a hand with the correct tile, and waits cannot be in the discard pile
 	if player.ExtraTileInHand() {
-		return errors.New("Too many tiles in hand")
+		return TooManyTilesErr{}
 	}
 
 	waitingTiles := player.checkWaitingTiles()
@@ -323,6 +360,11 @@ func (player Player) TestTsumo() {
 func (player Player) Tsumo() {
 
 }
+
+func (player Player) TestRiichi(discard Tile) error {
+	return nil
+}
+
 func (player Player) Riichi(onTile Tile) error {
 	return nil
 }
