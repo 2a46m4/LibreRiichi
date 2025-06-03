@@ -240,3 +240,8 @@ func (yaku YakuType) HanLossOnOpen() int {
 func (yaku *YakuType) Set() {
 
 }
+
+// TODO: Do Yaku calculations
+func GetYaku(tiles []Tile) YakuType {
+	return NO_YAKU
+}

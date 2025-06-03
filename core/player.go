@@ -12,11 +12,15 @@ type Player struct {
 	Chiis      []Tile // Chiis are the start of the sequence
 	Discards   []Tile // For furiten
 
-	Yakus    YakuType
 	HandOpen bool
 
 	Points   uint32
 	SeatWind Wind
+}
+
+type WinResult struct {
+	Yakus       YakuType
+	WinningHand []Tile
 }
 
 // ==================== PRIVATE FUNCTIONS ====================
@@ -46,10 +50,6 @@ func (player Player) checkWaitingTiles() []Tile {
 	return nil
 }
 
-func (player Player) getYaku() {
-
-}
-
 // ==================== PUBLIC FUNCTIONS ====================
 
 func (player *Player) FreshHand(tiles []Tile) {
@@ -62,6 +62,7 @@ func (player *Player) FreshHand(tiles []Tile) {
 	player.Kans = nil
 	player.Pons = nil
 	player.Chiis = nil
+	player.Discards = nil
 
 	player.HandOpen = false
 }
@@ -92,6 +93,7 @@ func (player *Player) Toss(discarded Tile) error {
 		if player.ClosedHand[i] == discarded {
 			player.ClosedHand[i] = Last(player.ClosedHand)
 			Pop(&player.ClosedHand)
+			player.Discards = append(player.Discards, discarded)
 			return nil
 		}
 	}
@@ -265,6 +267,10 @@ func (player *Player) Pon(onTile Tile) error {
 
 func (player Player) TestRon(onTile Tile) error {
 	// The player needs to have a hand with the correct tile
+	if player.ExtraTileInHand() {
+		return errors.New("Too many tiles in hand")
+	}
+
 	waiting := player.checkWaitingTiles()
 	if idx := slices.Index(waiting, onTile); idx == -1 {
 		return errors.New("Tile is not part of waiting tiles")
@@ -273,9 +279,20 @@ func (player Player) TestRon(onTile Tile) error {
 	return nil
 }
 
-// Returns the winning hand or an error
-func (player Player) Ron(onTile Tile) ([]Tile, error) {
-	return nil, nil
+// Returns the game result or an error
+func (player *Player) Ron(onTile Tile) (WinResult, error) {
+
+	if err := player.TestRon(onTile); err != nil {
+		return WinResult{}, err
+	}
+
+	entireHand := append(player.ClosedHand, onTile)
+	yakus := GetYaku(entireHand)
+
+	return WinResult{
+		Yakus:       yakus,
+		WinningHand: entireHand,
+	}, nil
 }
 
 func (player Player) Riichi(onTile Tile) error {

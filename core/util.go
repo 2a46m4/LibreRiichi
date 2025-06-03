@@ -35,6 +35,7 @@ func LastPtr[T any](array []T) *T {
 	return &array[len(array)-1]
 }
 
+// Always modifies the array
 func Pop[T any](array *[]T) T {
 	*array = (*array)[:len(*array)-1]
 	return Last(*array)
