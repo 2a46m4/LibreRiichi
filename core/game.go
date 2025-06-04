@@ -383,12 +383,11 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 	}
 
 	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
-	
-	
+	fmt.Println(result, err)
+
 	game.GameState = GAME_ENDED
 	return []ActionResult{
 		{action, false, GLOBAL},
-		
 	}, true
 }
 
