@@ -153,7 +153,7 @@ func (arena Arena) GameLoop() {
 	inputChannel := FanIn(dataChannels)
 
 	gameContinue := true
-	for gameContinue {
+	for {
 
 		var events []ActionResult
 		events, gameContinue = arena.Game.GetNextEvent()
@@ -165,6 +165,10 @@ func (arena Arena) GameLoop() {
 				Data:        PlayerActionEventTypeData{event},
 				VisibleTo:   event.VisibleTo,
 			})
+		}
+
+		if !gameContinue {
+			break
 		}
 
 		// Wait on the players to make a response
