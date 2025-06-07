@@ -31,6 +31,12 @@ func serveGame(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL.Path)
 	log.Println(r.Method)
 
-	conn, err := upgrader.Upgrade(w, r)
-	http.ServeFile(w, r, "static/home.html")
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	conn.WriteMessage(websocket.TextMessage, []byte("Hello world"))
+
+	// http.ServeFile(w, r, "static/home.html")
 }

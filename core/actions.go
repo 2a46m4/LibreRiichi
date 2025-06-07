@@ -27,7 +27,7 @@ type PlayerAction struct {
 type ActionData interface{ actionDataImpl() }
 
 type RonData struct {
-	TileToRon Tile `json:"tile_to_ron"`
+	TileToRon Tile      `json:"tile_to_ron"`
 	WinResult WinResult `json:"win_result"`
 }
 
@@ -52,7 +52,7 @@ type TossData struct {
 func (TossData) actionDataImpl() {}
 
 type SkipData struct {
-	TileToSkip Tile `json:"tile_to_skip"`
+	ActionToSkip ActionType `json:"action_to_skip"`
 }
 
 func (SkipData) actionDataImpl() {}

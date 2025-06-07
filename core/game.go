@@ -40,6 +40,10 @@ type MahjongGame struct {
 	TileIdx      uint8
 	DoraRevealed uint8
 	KansDrawn    uint8
+
+	// Game result storage
+	Results            *GameResult
+	PendingPostActions []ActionResult
 }
 
 // ==================== PRIVATE FUNCTIONS ====================
@@ -232,6 +236,8 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 		if err != nil {
 			panic(err)
 		}
+		game.PostTurnActions = actions
+
 		if len(actions) == 0 {
 			game.GameState = POST_TURN_PLAYED
 		}
@@ -243,6 +249,7 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 		game.incrementTurn()
 		tile, err := game.drawNewTile()
 		if errors.Is(err, GameEndError{}) {
+			game.GameState = GAME_ENDED
 			return nil, true
 		}
 		actions = []ActionResult{
@@ -268,7 +275,7 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 
 // Updates the game state and returns the things to notify
 // Additionally returns whether the move was valid
-// Performs no validation of the action
+// Performs no validation of the action data structure
 func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
 
 	// TODO: Finish all the cases
@@ -282,6 +289,7 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	case RON:
 		return game.handleRon(action)
 	case SKIP:
+		return game.handleSkip(action)
 	case TOSS:
 		return game.handleToss(action)
 	case TSUMO:
@@ -383,12 +391,35 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 	}
 
 	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
-	fmt.Println(result, err)
+	if err != nil {
+		return nil, false
+	}
 
+	gameResult := GenerateGameResult(result, action.FromPlayer)
+	err = gameResult.Apply(game)
+	if err != nil {
+		return nil, false
+	}
+
+	game.Results = &gameResult
 	game.GameState = GAME_ENDED
 	return []ActionResult{
 		{action, false, GLOBAL},
 	}, true
+}
+
+func (game *MahjongGame) handleSkip(action PlayerAction) ([]ActionResult, bool) {
+	skipData := action.Data.(SkipData)
+	for i := range game.PendingPostActions {
+		if game.PendingPostActions[i].ActionPerformed.Action == skipData.ActionToSkip &&
+			game.PendingPostActions[i].ActionPerformed.FromPlayer == action.FromPlayer {
+			Remove(&game.PendingPostActions, i)
+			return []ActionResult{
+				{action, false, Visibility(action.FromPlayer)},
+			}, true
+		}
+	}
+	return nil, false
 }
 
 func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) {
@@ -418,6 +449,10 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, errors.New("Incorrect state")
+	}
+
+	if len(game.PendingPostActions) != 0 {
+		return game.PendingPostActions, nil
 	}
 
 	tileTossed, err := game.lastTile()
