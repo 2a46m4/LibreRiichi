@@ -41,9 +41,8 @@ type MahjongGame struct {
 	DoraRevealed uint8
 	KansDrawn    uint8
 
-	// Game result storage
-	Results            *GameResult
-	PendingPostActions []ActionResult
+	Results            *GameResult    // If game has finished, store the results here
+	PendingPostActions []ActionResult // The list of potential actions that need to be either taken or skipped
 }
 
 // ==================== PRIVATE FUNCTIONS ====================
@@ -136,6 +135,17 @@ func (game MahjongGame) nextPlayerIdx() uint8 {
 
 func (game *MahjongGame) incrementTurn() {
 	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
+}
+
+// Returns the index of the pending post action
+func (game MahjongGame) findAction(actionType ActionType, fromPlayer uint8) (int, error) {
+	for i, action := range game.PendingPostActions {
+		if action.ActionPerformed.Action == actionType && action.ActionPerformed.FromPlayer == fromPlayer {
+			return i, nil
+		}
+	}
+
+	return 0, errors.New("Can't find action")
 }
 
 // ==================== PUBLIC FUNCTIONS ====================
@@ -410,16 +420,14 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 
 func (game *MahjongGame) handleSkip(action PlayerAction) ([]ActionResult, bool) {
 	skipData := action.Data.(SkipData)
-	for i := range game.PendingPostActions {
-		if game.PendingPostActions[i].ActionPerformed.Action == skipData.ActionToSkip &&
-			game.PendingPostActions[i].ActionPerformed.FromPlayer == action.FromPlayer {
-			Remove(&game.PendingPostActions, i)
-			return []ActionResult{
-				{action, false, Visibility(action.FromPlayer)},
-			}, true
-		}
+	idx, err := game.findAction(skipData.ActionToSkip, action.FromPlayer)
+	if err != nil {
+		return nil, false
 	}
-	return nil, false
+	Remove(&game.PendingPostActions, idx)
+	return []ActionResult{
+		{action, false, Visibility(action.FromPlayer)},
+	}, true
 }
 
 func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) {
