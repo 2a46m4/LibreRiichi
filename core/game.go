@@ -14,6 +14,9 @@ const (
 	GAME_ENDED
 )
 
+// TODO: With the pending game actions stored in the game, we don't
+// have to re-check a lot of the actions
+
 type MahjongGame struct {
 	Players []Player
 	// Maps Player Index → Order
@@ -295,6 +298,7 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	case KAN:
 		return game.handleKan(action)
 	case PON:
+		return game.handlePon(action)
 	case RIICHI:
 	case RON:
 		return game.handleRon(action)
@@ -393,13 +397,42 @@ func (game *MahjongGame) handleKan(action PlayerAction) (actions []ActionResult,
 	return actions, validMove
 }
 
+func (game *MahjongGame) handlePon(action PlayerAction) (actions []ActionResult, validMove bool) {
+	ponData := action.Data.(PonData)
+	last, err := game.lastTile()
+	onTile := ponData.TileToPon
+	if err != nil || onTile != last {
+		return nil, false
+	}
+	if game.GameState != CURRENT_TURN_PLAYED {
+		return nil, false
+	}
+	if action.FromPlayer != game.nextPlayerIdx() {
+		return nil, false
+	}
+			
+	err = game.Players[action.FromPlayer].Pon(onTile) 
+	if err != nil {
+		return nil, false
+	}
+	game.CurrentTurnOrder = action.FromPlayer
+
+	return []ActionResult{
+		{action, false, GLOBAL},
+	}, true
+
+}
+
 func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 	ronData := action.Data.(RonData)
 
 	if action.FromPlayer == game.currentPlayerIdx() {
 		return nil, false
 	}
-	// game.findAction(action, action.FromPlayer)
+	_, err := game.findAction(action)
+	if err != nil {
+		return nil, false
+	}
 
 	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
 	if err != nil {
