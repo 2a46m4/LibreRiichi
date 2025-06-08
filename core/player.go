@@ -259,10 +259,8 @@ func (player *Player) TestShouminkan(onTile Tile) error {
 		return TooManyTilesErr{}
 	}
 
-	for _, i := range player.Pons {
-		if i == onTile {
-			return nil
-		}
+	if slices.Contains(player.Pons, onTile) {
+		return nil
 	}
 	return errors.New("Does not have a pon")
 }
@@ -361,8 +359,8 @@ func (player Player) TestTsumo() {
 
 }
 
-func (player Player) Tsumo() {
-
+func (player Player) Tsumo(tsumoTile Tile) (WinResult, error) {
+	return WinResult{}, nil
 }
 
 func (player Player) GetRiichiDiscards() []Tile {
