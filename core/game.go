@@ -334,6 +334,7 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	case TOSS:
 		return game.handleToss(action)
 	case TSUMO:
+		return game.handleTsumo(action)
 	default:
 		panic(fmt.Sprintf("unexpected core.ActionType: %#v", action.Action))
 	}
@@ -544,6 +545,35 @@ func (game *MahjongGame) handleToss(action PlayerAction) ([]ActionResult, bool) 
 	}
 
 	return actions, true
+}
+
+func (game *MahjongGame) handleTsumo(action PlayerAction) ([]ActionResult, bool) {
+	tsumoData := action.Data.(TsumoData)
+
+	if action.FromPlayer != game.currentPlayerIdx() {
+		return nil, false
+	}
+	last, err := game.lastTile()
+	if err != nil || tsumoData.TileToTsumo != last {
+		return nil, false
+	}
+
+	result, err := game.Players[action.FromPlayer].Tsumo(tsumoData.TileToTsumo)
+	if err != nil {
+		return nil, false
+	}
+
+	gameResult := GenerateGameResult(result, action.FromPlayer)
+	err = gameResult.Apply(game)
+	if err != nil {
+		return nil, false
+	}
+
+	game.Results = &gameResult
+	game.GameState = GAME_ENDED
+	return []ActionResult{
+		{action, false, GLOBAL},
+	}, true
 }
 
 // Checks the post-toss actions that can be made
