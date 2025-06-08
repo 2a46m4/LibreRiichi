@@ -109,8 +109,8 @@ func (game MahjongGame) lastTile() (Tile, error) {
 
 	switch game.GameState {
 	case CURRENT_TURN:
-		// The tile before the drawn tile
-		return game.LiveWall[game.TileIdx-2], nil
+		// The drawn tile
+		return game.LiveWall[game.TileIdx-1], nil
 	case CURRENT_TURN_PLAYED:
 		// The tile just discarded
 		return game.LiveWall[game.TileIdx-1], nil
@@ -228,6 +228,9 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 	switch game.GameState {
 
 	case CURRENT_TURN: // The current player can make a toss move
+		// We should only reach this state when someone makes a post-turn action like pon.
+		// Then the player only has the choice to discard something
+
 		// TODO: Check if the player can make a kan
 		actions = []ActionResult{
 			{
@@ -275,7 +278,30 @@ func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool)
 				IsPotential: false,
 				VisibleTo:   Visibility(game.currentPlayerIdx()),
 			},
+			{
+				ActionPerformed: PlayerAction{
+					Action:     TOSS,
+					FromPlayer: game.currentPlayerIdx(),
+					Data:       TossData{Invalid},
+				},
+				IsPotential: true,
+				VisibleTo:   Visibility(game.currentPlayerIdx()),
+			},
 		}
+		for _, discard := range game.currentPlayer().GetRiichiDiscards() {
+			actions = append(actions, ActionResult{
+				ActionPerformed: PlayerAction{
+					Action:     RIICHI,
+					FromPlayer: game.currentPlayerIdx(),
+					Data: RiichiData{
+						TileToRiichi: discard,
+					},
+				},
+				IsPotential: true,
+				VisibleTo:   Visibility(game.currentPlayerIdx()),
+			})
+		}
+
 		shouldEnd = false
 
 	case GAME_ENDED:
@@ -300,6 +326,7 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	case PON:
 		return game.handlePon(action)
 	case RIICHI:
+		return game.handleRiichi(action)
 	case RON:
 		return game.handleRon(action)
 	case SKIP:
@@ -410,8 +437,8 @@ func (game *MahjongGame) handlePon(action PlayerAction) (actions []ActionResult,
 	if action.FromPlayer != game.nextPlayerIdx() {
 		return nil, false
 	}
-			
-	err = game.Players[action.FromPlayer].Pon(onTile) 
+
+	err = game.Players[action.FromPlayer].Pon(onTile)
 	if err != nil {
 		return nil, false
 	}
@@ -447,6 +474,32 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 
 	game.Results = &gameResult
 	game.GameState = GAME_ENDED
+	return []ActionResult{
+		{action, false, GLOBAL},
+	}, true
+}
+
+func (game *MahjongGame) handleRiichi(action PlayerAction) ([]ActionResult, bool) {
+	riichiData := action.Data.(RiichiData)
+
+	tileDrawn, err := game.lastTile()
+	if err != nil || riichiData.TileToRiichi != tileDrawn {
+		return nil, false
+	}
+	if game.GameState != CURRENT_TURN {
+		return nil, false
+	}
+	if action.FromPlayer != game.currentPlayerIdx() {
+		return nil, false
+	}
+
+	err = game.Players[action.FromPlayer].Riichi(riichiData.TileToRiichi)
+	if err != nil {
+		return nil, false
+	}
+
+	game.GameState = CURRENT_TURN_PLAYED
+
 	return []ActionResult{
 		{action, false, GLOBAL},
 	}, true

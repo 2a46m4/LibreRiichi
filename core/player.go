@@ -365,7 +365,11 @@ func (player Player) Tsumo() {
 
 }
 
-func (player Player) TestRiichi(discard Tile) error {
+func (player Player) GetRiichiDiscards() []Tile {
+	return nil
+}
+
+func (player Player) TestRiichi(onTile Tile) error {
 	return nil
 }
 
