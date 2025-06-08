@@ -138,9 +138,9 @@ func (game *MahjongGame) incrementTurn() {
 }
 
 // Returns the index of the pending post action
-func (game MahjongGame) findAction(actionType ActionType, fromPlayer uint8) (int, error) {
-	for i, action := range game.PendingPostActions {
-		if action.ActionPerformed.Action == actionType && action.ActionPerformed.FromPlayer == fromPlayer {
+func (game MahjongGame) findAction(action PlayerAction) (int, error) {
+	for i, pendingAction := range game.PendingPostActions {
+		if pendingAction.ActionPerformed.Action == action.Action && pendingAction.ActionPerformed.FromPlayer == action.FromPlayer {
 			return i, nil
 		}
 	}
@@ -399,6 +399,7 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 	if action.FromPlayer == game.currentPlayerIdx() {
 		return nil, false
 	}
+	// game.findAction(action, action.FromPlayer)
 
 	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
 	if err != nil {
@@ -420,7 +421,13 @@ func (game *MahjongGame) handleRon(action PlayerAction) ([]ActionResult, bool) {
 
 func (game *MahjongGame) handleSkip(action PlayerAction) ([]ActionResult, bool) {
 	skipData := action.Data.(SkipData)
-	idx, err := game.findAction(skipData.ActionToSkip, action.FromPlayer)
+
+	// We aren't finding the skip action itself but the action that is being skipped
+	idx, err := game.findAction(PlayerAction{
+		Action:     skipData.ActionToSkip.Action,
+		FromPlayer: action.FromPlayer,
+		Data:       skipData.ActionToSkip.Data,
+	})
 	if err != nil {
 		return nil, false
 	}

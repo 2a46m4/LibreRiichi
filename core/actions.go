@@ -52,7 +52,7 @@ type TossData struct {
 func (TossData) actionDataImpl() {}
 
 type SkipData struct {
-	ActionToSkip ActionType `json:"action_to_skip"`
+	ActionToSkip PlayerAction `json:"action_to_skip"`
 }
 
 func (SkipData) actionDataImpl() {}
