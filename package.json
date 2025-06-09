@@ -1,0 +1,20 @@
+{
+	"name": "LibreRiichi",
+	"version": "1.0.0",
+	"description": "Open Source Mahjong Server",
+	"repository": "git@codeberg.org:ijnakashiar/LibreRiichi.git",
+	"author": "IJN Akashi AR <dabanya@protonmail.com>",
+	"license": "MIT",
+	"devDependencies": {
+		"@parcel/transformer-vue": "2.15.2",
+		"parcel": "^2.15.2",
+		"typescript": "^5.8.3"
+	},
+	"scripts": {
+		"dev": "parcel app/index.html",
+		"build": "parcel build app/index.html"
+	},
+	"dependencies": {
+		"vue": "^3.5.16"
+	}
+}
