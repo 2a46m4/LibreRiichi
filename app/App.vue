@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 
+
+
 const message = ref('Hello World!')
 
-const input = ref('input')
+const room_name = ref('')
 
 function reverseMessage() {
   // Access/mutate the value of a ref via
@@ -14,13 +16,20 @@ function reverseMessage() {
 function notify() {
   alert('navigation was prevented.')
 }
+
+function find_room() {
+  console.log(room_name.value)
+}
 </script>
 
 <template>
   <h1>LibreRiichi</h1>
 
   <p>Join Room</p>
-  <p>Room Name <input v-bind:id="input"> <button>Find</button></p>
+  <p>Room Name
+    <input v-model="room_name">
+    <button @click="find_room">Find</button>
+  </p>
 
   <!--
     Note we don't need .value inside templates because
@@ -47,8 +56,7 @@ function notify() {
 </template>
 
 <style>
-button, a {
-  display: block;
-  margin-bottom: 1em;
+button {
+  margin: 10px;
 }
 </style>
