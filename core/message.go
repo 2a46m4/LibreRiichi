@@ -62,7 +62,7 @@ type QuitActionTypeData struct{}
 func (QuitActionTypeData) arenaMessageDataImpl() {}
 
 type PlayerJoinedEventData struct {
-	Agent Agent `json:"agent"`
+	Client Client `json:"client"`
 }
 
 func (PlayerJoinedEventData) arenaMessageDataImpl() {}

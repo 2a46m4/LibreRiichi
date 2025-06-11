@@ -3,6 +3,7 @@ package web
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -12,31 +13,28 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func SetupHTTP() error {
-	http.HandleFunc("/", serveHome)
-	http.HandleFunc("/game", serveGame)
+func SetupHTTP(accept func(conn *websocket.Conn)) error {
+	upgrader.CheckOrigin =
+		func(r *http.Request) bool {
+			return strings.HasPrefix(
+				r.Header.Get("Origin"),
+				"http://localhost",
+			)
+		}
+
+	http.HandleFunc("/game", func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.URL.Path)
+		log.Println(r.Method)
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		accept(conn)
+	})
 	http.ListenAndServe(":3000", nil)
 
 	return nil
-}
-
-func serveHome(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL.Path)
-	log.Println(r.Method)
-
-	http.ServeFile(w, r, "static/home.html")
-}
-
-func serveGame(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL.Path)
-	log.Println(r.Method)
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Panicln(err)
-	}
-
-	conn.WriteMessage(websocket.TextMessage, []byte("Hello world"))
-
-	// http.ServeFile(w, r, "static/home.html")
 }

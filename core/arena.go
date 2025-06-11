@@ -3,25 +3,16 @@ package core
 import (
 	"encoding/json"
 	"log"
-
-	"github.com/google/uuid"
 )
-
-// Agent represents a player that has joined the arena.
-type Agent struct {
-	Name       string    `json:"name"`
-	Id         uuid.UUID `json:"id"`
-	Connection ConnChan  `json:"-"`
-}
 
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents     []Agent
-	Spectators []Agent
+	Agents     []Client
+	Spectators []Client
 	Game       MahjongGame
 
-	JoinChannel chan Agent
+	JoinChannel chan Client
 }
 
 func (arena Arena) Send(data ArenaMessage) error {
@@ -107,7 +98,7 @@ func (arena Arena) Loop() {
 }
 
 // Adds an agnet to the arena.
-func (arena *Arena) JoinArena(agent Agent, joinAsPlayer bool) error {
+func (arena *Arena) JoinArena(agent Client, joinAsPlayer bool) error {
 	if !joinAsPlayer {
 		panic("NYI")
 	}

@@ -1,7 +1,16 @@
 <script setup>
 import { ref } from 'vue'
+import {MessageType} from "./Message";
 
+// Try to connect to websockets
+let socket = new WebSocket("ws://localhost:3000/game");
+socket.onopen = function(e) {
+  console.log("Socket opened:", e)
+}
 
+socket.onmessage = function (e) {
+  console.log("Message recv:", JSON.parse(e.data))
+}
 
 const message = ref('Hello World!')
 
@@ -19,6 +28,16 @@ function notify() {
 
 function find_room() {
   console.log(room_name.value)
+  let message = JSON.stringify({
+    message_type: MessageType.InitialMessageReturn,
+    data: {
+      name: "dabanya",
+      room: "bigjoeroom"
+    }
+  })
+  console.log("Sending message:", message)
+  socket.send(message)
+
 }
 </script>
 
