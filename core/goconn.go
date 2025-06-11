@@ -133,6 +133,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 }
 
 // Sends a message through the data channel
+// TODO: Error handling
 func (conn ConnChan) Send(data []byte) {
 	conn.WriteChannel <- data
 }
@@ -150,6 +151,7 @@ func (conn ConnChan) Close() {
 	conn.CloseChannel <- Unit
 }
 
+// TODO: Error handling
 func (conn ConnChan) Recv() any {
 	return <-conn.DataChannel
 }
