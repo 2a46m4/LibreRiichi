@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -20,19 +21,31 @@ func MakeClient(name string, room *Arena, connection *websocket.Conn) (Client, e
 	if err != nil {
 		return Client{}, err
 	}
-	return Client{
+	client := Client{
 		Name:       name,
 		ID:         uuid,
 		Connection: MakeChannelFromWebsocket(connection),
 		room:       room,
-	}, nil
+	}
+	fmt.Println("Making new client", client)
+	return client, nil
 }
 
 func (client Client) Loop() {
 	fmt.Println(client.Name, client.ID, client.Connection, client.room)
 	for {
-		fmt.Println("Sending hello")
-		client.Connection.Send([]byte("Hello"))
-		fmt.Println("Sent")
+		msg, err := json.Marshal("Hello")
+		if err != nil {
+			panic(err)
+		}
+		sent := client.Connection.SendNonBlock(msg)
+		if sent {
+			fmt.Println("Sent")
+		}
+
+		data, recv := client.Connection.RecvNonBlock()
+		if recv {
+			fmt.Println("Data received by client:", string(data.([]byte)))
+		}
 	}
 }

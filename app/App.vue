@@ -37,7 +37,7 @@ function find_room() {
   })
   console.log("Sending message:", message)
   socket.send(message)
-
+  console.log("Message sent:", message)
 }
 </script>
 

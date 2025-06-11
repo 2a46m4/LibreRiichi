@@ -87,7 +87,9 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				}
 				return
 			default:
+				fmt.Println("Waiting for message")
 				msgType, buffer, err := conn.ReadMessage()
+				fmt.Println("Recved message")
 				if err != nil {
 					ret.DataChannel <- err
 					continue
@@ -108,17 +110,22 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 	}()
 
 	go func() {
-		select {
-		case <-ret.CloseChannel:
-			return
-		case toWrite, ok := <-ret.WriteChannel:
-			if !ok {
-				conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(0, "Closed conection"))
+		for {
+			select {
+			case <-ret.CloseChannel:
 				return
-			}
+			case toWrite, ok := <-ret.WriteChannel:
+				if !ok {
+					conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(0, "Closed conection"))
+					return
+				}
 
-			conn.WriteMessage(websocket.TextMessage, toWrite)
-		default:
+				err := conn.WriteMessage(websocket.TextMessage, toWrite)
+				if err != nil {
+					panic(err)
+				}
+			default:
+			}
 		}
 	}()
 
@@ -130,12 +137,30 @@ func (conn ConnChan) Send(data []byte) {
 	conn.WriteChannel <- data
 }
 
+func (conn ConnChan) SendNonBlock(data []byte) bool {
+	select {
+	case conn.WriteChannel <- data:
+		return true
+	default:
+		return false
+	}
+}
+
 func (conn ConnChan) Close() {
 	conn.CloseChannel <- Unit
 }
 
 func (conn ConnChan) Recv() any {
 	return <-conn.DataChannel
+}
+
+func (conn ConnChan) RecvNonBlock() (any, bool) {
+	select {
+	case data := <-conn.DataChannel:
+		return data, true
+	default:
+		return nil, false
+	}
 }
 
 // Send the data to all of the channels
