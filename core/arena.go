@@ -8,34 +8,31 @@ import (
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents     []ClientConnection
-	Spectators []ClientConnection
+	Agents     []*Client
+	Spectators []*Client
 	Game       MahjongGame
 
-	JoinChannel chan Client
-}
-
-type ClientConnection struct {
-	client  *Client
-	channel chan ArenaMessage
-}
-
-func (arena *Arena) RegisterClient() {
-
+	JoinChannel chan *Client
 }
 
 func (arena Arena) Send(data ArenaMessage, sendTo Visibility) error {
-	marshalledData, err := json.Marshal(data)
+	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
 	if sendTo == GLOBAL {
 		for _, player := range arena.Agents {
-			player.Connection.WriteChannel <- marshalledData
+			player.Recv <- Message{
+				MessageType: ServerArenaEventType,
+				Data:        bytes,
+			}
 		}
 	} else {
-		arena.Agents[sendTo].Connection.WriteChannel <- marshalledData
+		arena.Agents[sendTo].Recv <- Message{
+			MessageType: ServerArenaEventType,
+			Data:        bytes,
+		}
 	}
 
 	return nil
@@ -49,20 +46,28 @@ func (arena Arena) Loop() {
 		case newRequest := <-arena.JoinChannel:
 			err := arena.JoinArena(newRequest, true)
 			if err != nil {
-				// Send a error back to the request
+				// TODO: Send a error back to the request
+				continue
+			}
+
+			data := PlayerJoinedEventData{
+				Client: *newRequest,
+			}
+			bytes, err := json.Marshal(data)
+			if err != nil {
 				continue
 			}
 
 			err = arena.Send(
 				ArenaMessage{
 					MessageType: PlayerJoinedEventType,
-					Data:        PlayerJoinedEventData{newRequest},
-					VisibleTo:   GLOBAL,
-				})
+					Data:        bytes,
+				}, GLOBAL)
 			if err != nil {
 				panic(err)
 			}
 
+			newRequest.Arena = &arena
 		default:
 			break
 		}
@@ -107,7 +112,7 @@ func (arena Arena) Loop() {
 }
 
 // Adds an agnet to the arena.
-func (arena *Arena) JoinArena(agent Client, joinAsPlayer bool) error {
+func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	if !joinAsPlayer {
 		panic("NYI")
 	}

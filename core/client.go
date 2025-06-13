@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -9,10 +10,11 @@ import (
 )
 
 type Client struct {
-	Name       string    `json:"name"`
-	ID         uuid.UUID `json:"id"`
-	Connection ConnChan  `json:"-"`
-	Recv       chan Message
+	Name       string       `json:"name"`
+	ID         uuid.UUID    `json:"id"`
+	Connection ConnChan     `json:"-"`
+	Recv       chan Message `json:"-"`
+	Arena      *Arena       `json:"-"`
 }
 
 func MakeClient(connection *websocket.Conn) (Client, error) {
@@ -26,6 +28,7 @@ func MakeClient(connection *websocket.Conn) (Client, error) {
 		ID:         uuid,
 		Connection: MakeChannelFromWebsocket(connection),
 		Recv:       make(chan Message, 32),
+		Arena:      nil,
 	}
 	fmt.Println("Making new client", client)
 	return client, nil
@@ -51,6 +54,20 @@ func (client Client) Loop() {
 				continue
 			}
 		}
+	}
+}
+
+// HandleJoinArenaAction implements ServerHandler.
+func (client *Client) HandleJoinArenaAction(data JoinArenaActionData) error {
+	if client.Arena != nil {
+		return errors.New("Already in an arena")
+	} else {
+		arena := GetArena(data.ArenaName)
+		arena.JoinChannel <- client
+		if client.Arena == nil {
+			return errors.New("Could not join arena")
+		}
+		return nil
 	}
 }
 
