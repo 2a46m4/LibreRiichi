@@ -15,7 +15,7 @@ type Arena struct {
 	JoinChannel chan Client
 }
 
-func (arena Arena) Send(data ArenaMessage) error {
+func (arena Arena) Send(data ArenaMessage, sendTo ) error {
 	marshalledData, err := json.Marshal(data)
 	if err != nil {
 		return err

@@ -2,6 +2,14 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
+)
+
+type Visibility uint8
+
+const (
+	PLAYER Visibility = 0
+	GLOBAL            = 255
 )
 
 type ActionType uint8
@@ -18,93 +26,138 @@ const (
 	DRAW
 )
 
+type ActionData struct {
+	ActionType ActionType      `json:"action_type"`
+	Data       json.RawMessage `json:"data"`
+}
+
+type ActionHandler interface {
+	HandleRon(RonData) error
+	HandleTsumo(TsumoData) error
+	HandleRiichi(RiichiData) error
+	HandleToss(TossData) error
+	HandleSkip(SkipData) error
+	HandlePon(PonData) error
+	HandleKan(KanData) error
+	HandleChii(ChiiData) error
+	HandleDraw(DrawData) error
+}
+
 type RonData struct {
 	TileToRon Tile      `json:"tile_to_ron"`
 	WinResult WinResult `json:"win_result"`
 }
 
-func (RonData) actionDataImpl() {}
-
 type TsumoData struct {
 	TileToTsumo Tile `json:"tile_to_tsumo"`
 }
-
-func (TsumoData) actionDataImpl() {}
 
 type RiichiData struct {
 	TileToRiichi Tile `json:"tile_to_riichi"`
 }
 
-func (RiichiData) actionDataImpl() {}
-
 type TossData struct {
 	TileToToss Tile `json:"tile_to_toss"`
 }
 
-func (TossData) actionDataImpl() {}
-
 type SkipData struct {
-	ActionToSkip PlayerAction `json:"action_to_skip"`
+	ActionToSkip PlayerActionData `json:"action_to_skip"`
 }
-
-func (SkipData) actionDataImpl() {}
 
 type PonData struct {
 	TileToPon Tile `json:"tile_to_pon"`
 }
 
-func (PonData) actionDataImpl() {}
-
 type KanData struct {
 	TileToKan Tile `json:"tile_to_kan"`
 }
-
-func (KanData) actionDataImpl() {}
 
 type ChiiData struct {
 	TileToChii  Tile    `json:"tile_to_chii"`
 	TilesInHand [2]Tile `json:"tiles_in_hand"`
 }
 
-func (ChiiData) actionDataImpl() {}
-
 type DrawData struct {
 	DrawnTile Tile `json:"drawn_tile"`
 }
 
-func (DrawData) actionDataImpl() {}
-
-func (action *PlayerAction) DecodeAction(rawData []byte) error {
+func ActionDecodeAndDispatch(handler ActionHandler, rawData []byte) error {
 	var raw struct {
-		Action          ActionType      `json:"action_type"`
-		FromPlayer      uint8           `json:"from_player"`
-		PotentialAction bool            `json:"potential_action"`
-		Data            json.RawMessage `json:"data"`
+		ActionType ActionType      `json:"action_type"`
+		Data       json.RawMessage `json:"data"`
 	}
 
 	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
 
-	var ActionToDataMap = []ActionData{
-		RonData{},
-		TsumoData{},
-		RiichiData{},
-		TossData{},
-		SkipData{},
-		PonData{},
-		KanData{},
-		ChiiData{},
-		DrawData{},
+	switch raw.ActionType {
+	case CHII:
+		message := ChiiData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleChii(message)
+	case DRAW:
+		message := DrawData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleDraw(message)
+	case KAN:
+		message := KanData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleKan(message)
+	case PON:
+		message := PonData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandlePon(message)
+	case RIICHI:
+		message := RiichiData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleRiichi(message)
+	case RON:
+		message := RonData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleRon(message)
+	case SKIP:
+		message := SkipData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleSkip(message)
+	case TOSS:
+		message := TossData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleToss(message)
+	case TSUMO:
+		message := TsumoData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleTsumo(message)
+	default:
+		return fmt.Errorf("unexpected core.ActionType: %#v", raw.ActionType)
 	}
-
-	action.Action = raw.Action
-	data := ActionToDataMap[raw.Action]
-	if err := json.Unmarshal(raw.Data, &data); err != nil {
-		return err
-	}
-	action.Data = data
-	return nil
 }
 
 type SetupType uint8
@@ -120,7 +173,6 @@ const (
 )
 
 type Setup struct {
-	Type     SetupType `json:"setup_type"`
-	ToPlayer uint8     `json:"to_player"`
-	Data     any       `json:"data"`
+	Type SetupType `json:"setup_type"`
+	Data any       `json:"data"`
 }
