@@ -20,8 +20,8 @@ type Server struct {
 func (server Server) AcceptConnection(conn *websocket.Conn) {
 	fmt.Println("Got connection")
 	go func() {
-		err := conn.WriteJSON(ServerMessage{
-			MessageType: InitialMessage,
+		err := conn.WriteJSON(core.Message{
+			MessageType: core.InitialMessageType,
 			Data:        nil,
 		})
 		if err != nil {
@@ -30,7 +30,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		ret := ServerMessage{}
+		ret := core.Message{}
 		messageType, buffer, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println("Failed at read")
@@ -49,7 +49,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		if ret.MessageType != InitialMessageReturn {
+		if ret.MessageType != core.InitialMessageReturnType {
 			conn.Close()
 			return
 		}

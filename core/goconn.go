@@ -156,6 +156,10 @@ func (conn ConnChan) Recv() any {
 	return <-conn.DataChannel
 }
 
+func (conn ConnChan) RecvChan() <-chan any {
+	return conn.DataChannel
+}
+
 func (conn ConnChan) RecvNonBlock() (any, bool) {
 	select {
 	case data := <-conn.DataChannel:

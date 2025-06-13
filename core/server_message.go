@@ -1,21 +1,24 @@
-package web
+package core
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"codeberg.org/ijnakashiar/LibreRiichi/core"
+	"github.com/google/uuid"
 )
 
 type MessageType uint8
 
 const (
 	// Messages that are sent from server to client
-	InitialMessage MessageType = iota
-	ArenaMessage
+	InitialMessageEventType MessageType = iota
+	JoinArenaEventType
+	ServerArenaEventType
 
 	// Messages that are sent from client to server
-	InitialMessageReturn
+	InitialMessageActionType
+	JoinArenaActionType
+	ServerArenaActionType
 )
 
 type Message struct {
@@ -23,25 +26,35 @@ type Message struct {
 	Data        json.RawMessage `json:"data"`
 }
 
-// This interface handles different message types
+// The server will accept these message types
 type ServerHandler interface {
-	HandlerInitialMessageReturn(InitialMessageReturnData) error
+	HandleInitialMessageAction(InitialMessageActionData) error
+	HandleJoinArenaAction(JoinArenaActionData) error
+	HandleServerArenaAction(ServerArenaActionData) error
 }
 
 type ClientHandler interface {
-	HandleInitialMessage(InitialMessageData) error
-	HandleArenaMessage(ArenaMessageData) error
+	HandleInitialMessageEvent(InitialMessageEventData) error
+	HandleJoinArenaEvent() error
+	HandleServerArenaMessageEvent(ServerArenaMessageEventData) error
 }
 
-type InitialMessageData struct{}
+type InitialMessageEventData struct{}
 
-type ArenaMessageData struct {
-	ArenaMessage core.ArenaMessage
+type ServerArenaMessageEventData struct {
+	ArenaMessage ArenaMessage
 }
 
-type InitialMessageReturnData struct {
+type InitialMessageActionData struct {
 	Name string `json:"name"`
-	Room string `json:"room"`
+}
+
+type ServerArenaActionData struct {
+	ArenaMessage ArenaMessage
+}
+
+type JoinArenaActionData struct {
+	ArenaName uuid.UUID
 }
 
 // This function decodes the message type and then dispatches the
@@ -57,13 +70,20 @@ func ServerDecodeAndDispatch(handler ServerHandler, rawData []byte) error {
 	}
 
 	switch raw.MessageType {
-	case InitialMessageReturn:
-		initialMessageReturn := InitialMessageReturnData{}
+	case InitialMessageActionType:
+		initialMessageReturn := InitialMessageActionData{}
 		err := json.Unmarshal(raw.Data, &initialMessageReturn)
 		if err != nil {
 			return err
 		}
-		return handler.HandlerInitialMessageReturn(initialMessageReturn)
+		return handler.HandleInitialMessageAction(initialMessageReturn)
+	case ServerArenaActionType:
+		serverArenaAction := ServerArenaActionData{}
+		err := json.Unmarshal(raw.Data, &serverArenaAction)
+		if err != nil {
+			return err
+		}
+		return handler.HandleServerArenaAction(serverArenaAction)
 	default:
 		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
 	}
@@ -80,20 +100,20 @@ func ClientDecodeAndDispatch(handler ClientHandler, rawData []byte) error {
 	}
 
 	switch raw.MessageType {
-	case ArenaMessage:
-		arenaMessage := ArenaMessageData{}
+	case ServerArenaEventType:
+		arenaMessage := ServerArenaMessageEventData{}
 		err := json.Unmarshal(raw.Data, &arenaMessage)
 		if err != nil {
 			return err
 		}
-		return handler.HandleArenaMessage(arenaMessage)
-	case InitialMessage:
-		initialMessage := InitialMessageData{}
+		return handler.HandleServerArenaMessageEvent(arenaMessage)
+	case InitialMessageEventType:
+		initialMessage := InitialMessageEventData{}
 		err := json.Unmarshal(raw.Data, &initialMessage)
 		if err != nil {
 			return err
 		}
-		return handler.HandleInitialMessage(initialMessage)
+		return handler.HandleInitialMessageEvent(initialMessage)
 	default:
 		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
 	}

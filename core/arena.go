@@ -8,25 +8,34 @@ import (
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents     []Client
-	Spectators []Client
+	Agents     []ClientConnection
+	Spectators []ClientConnection
 	Game       MahjongGame
 
 	JoinChannel chan Client
 }
 
-func (arena Arena) Send(data ArenaMessage, sendTo ) error {
+type ClientConnection struct {
+	client  *Client
+	channel chan ArenaMessage
+}
+
+func (arena *Arena) RegisterClient() {
+
+}
+
+func (arena Arena) Send(data ArenaMessage, sendTo Visibility) error {
 	marshalledData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	if data.VisibleTo == GLOBAL {
+	if sendTo == GLOBAL {
 		for _, player := range arena.Agents {
 			player.Connection.WriteChannel <- marshalledData
 		}
 	} else {
-		arena.Agents[data.VisibleTo].Connection.WriteChannel <- marshalledData
+		arena.Agents[sendTo].Connection.WriteChannel <- marshalledData
 	}
 
 	return nil
