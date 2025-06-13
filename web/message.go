@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"codeberg.org/ijnakashiar/LibreRiichi/core"
 )
@@ -17,31 +18,35 @@ const (
 	InitialMessageReturn
 )
 
-type ServerMessage struct {
-	MessageType MessageType       `json:"message_type"`
-	Data        ServerMessageData `json:"data"`
+type Message struct {
+	MessageType MessageType     `json:"message_type"`
+	Data        json.RawMessage `json:"data"`
 }
 
-type ServerMessageData interface{ serverMessageDataImpl() }
+// This interface handles different message types
+type ServerHandler interface {
+	HandlerInitialMessageReturn(InitialMessageReturnData) error
+}
+
+type ClientHandler interface {
+	HandleInitialMessage(InitialMessageData) error
+	HandleArenaMessage(ArenaMessageData) error
+}
 
 type InitialMessageData struct{}
-
-func (InitialMessageData) serverMessageDataImpl() {}
 
 type ArenaMessageData struct {
 	ArenaMessage core.ArenaMessage
 }
-
-func (ArenaMessageData) serverMessageDataImpl() {}
 
 type InitialMessageReturnData struct {
 	Name string `json:"name"`
 	Room string `json:"room"`
 }
 
-func (InitialMessageReturnData) serverMessageDataImpl() {}
-
-func (msg *ServerMessage) DecodeMessage(rawData []byte) error {
+// This function decodes the message type and then dispatches the
+// correct handler based on the message type
+func ServerDecodeAndDispatch(handler ServerHandler, rawData []byte) error {
 	var raw struct {
 		MessageType MessageType     `json:"message_type"`
 		Data        json.RawMessage `json:"data"`
@@ -51,17 +56,45 @@ func (msg *ServerMessage) DecodeMessage(rawData []byte) error {
 		return err
 	}
 
-	var MessageToDataMap = []ServerMessageData{
-		&InitialMessageData{},
-		&ArenaMessageData{},
-		&InitialMessageReturnData{},
+	switch raw.MessageType {
+	case InitialMessageReturn:
+		initialMessageReturn := InitialMessageReturnData{}
+		err := json.Unmarshal(raw.Data, &initialMessageReturn)
+		if err != nil {
+			return err
+		}
+		return handler.HandlerInitialMessageReturn(initialMessageReturn)
+	default:
+		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+	}
+}
+
+func ClientDecodeAndDispatch(handler ClientHandler, rawData []byte) error {
+	var raw struct {
+		MessageType MessageType     `json:"message_type"`
+		Data        json.RawMessage `json:"data"`
 	}
 
-	msg.MessageType = raw.MessageType
-	data := MessageToDataMap[raw.MessageType]
-	if err := json.Unmarshal(raw.Data, data); err != nil {
+	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
-	msg.Data = data
-	return nil
+
+	switch raw.MessageType {
+	case ArenaMessage:
+		arenaMessage := ArenaMessageData{}
+		err := json.Unmarshal(raw.Data, &arenaMessage)
+		if err != nil {
+			return err
+		}
+		return handler.HandleArenaMessage(arenaMessage)
+	case InitialMessage:
+		initialMessage := InitialMessageData{}
+		err := json.Unmarshal(raw.Data, &initialMessage)
+		if err != nil {
+			return err
+		}
+		return handler.HandleInitialMessage(initialMessage)
+	default:
+		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+	}
 }

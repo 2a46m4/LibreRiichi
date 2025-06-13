@@ -17,6 +17,6 @@ type ArenaMessage = {
     message_type: ArenaMessage
     data: {
         message_type: ArenaMessageType
-        arena_data: any
+        data: any
     }
 }

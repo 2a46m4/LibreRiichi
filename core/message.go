@@ -2,18 +2,20 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
-type MessageType uint8
+type ArenaMessageType uint8
 
 const (
-	// Messages that are sent from game to player
-	PlayerJoinedEventType MessageType = iota
+	// Messages that are sent from game (server) to player (client)
+	PlayerJoinedEventType ArenaMessageType = iota
 	GameStartedEventType
 	SetupEventType
 	PlayerActionEventType
+	PotentialActionEventType
 
-	// Messages that are sent from player to game
+	// Messages that are sent from player (client) to game (server)
 	StartGameActionType
 	PlayerActionType
 	QuitActionType
@@ -21,81 +23,141 @@ const (
 
 // ArenaMessage are messages that are sent between clients and server
 type ArenaMessage struct {
-	MessageType MessageType      `json:"message_type"`
-	Data        ArenaMessageData `json:"data"`
-	VisibleTo   Visibility       `json:"visibility"`
+	MessageType ArenaMessageType `json:"message_type"`
+	Data        json.RawMessage  `json:"data"`
 }
 
-type ArenaMessageData interface{ arenaMessageDataImpl() }
+type ServerArenaHandler interface {
+	HandleStartGameAction(StartGameActionTypeData) error
+	HandlePlayerAction(PlayerActionTypeData) error
+	HandleQuitAction(QuitActionTypeData) error
+}
+
+type ClientArenaHandler interface {
+	HandlePlayerJoinedEvent(PlayerJoinedEventTypeData) error
+	HandleGameStartedEvent(GameStartedEventTypeData) error
+	HandleSetupEvent(SetupEventTypeData) error
+	HandlePlayerActionEvent(PlayerActionEventTypeData) error
+	HandlePotentialActionEvent(PotentialActionEventTypeData) error
+}
 
 type PlayerJoinedEventTypeData struct{}
 
-func (PlayerJoinedEventTypeData) arenaMessageDataImpl() {}
-
 type GameStartedEventTypeData struct{}
-
-func (GameStartedEventTypeData) arenaMessageDataImpl() {}
 
 type SetupEventTypeData struct {
 	Setup Setup `json:"setup"`
 }
 
-func (SetupEventTypeData) arenaMessageDataImpl() {}
-
 type StartGameActionTypeData struct{}
-
-func (StartGameActionTypeData) arenaMessageDataImpl() {}
 
 // TODO: Change ActionResult to be this type
 type PlayerActionEventTypeData struct {
+	ActionPerformed PlayerAction `json:"action"`
+	// Whether this is an action that a player can take, not an action that a player took
+	IsPotential bool       `json:"is_potential"`
+	VisibleTo   Visibility `json:"visibility"`
+}
+
+type PotentialActionEventTypeData struct {
 	ActionResult
 }
 
-func (PlayerActionEventTypeData) arenaMessageDataImpl() {}
-
-type PlayerActionTypeData struct{}
-
-func (PlayerActionTypeData) arenaMessageDataImpl() {}
+type PlayerActionTypeData struct {
+	ActionPerformed PlayerAction
+	ActionResult
+}
 
 type QuitActionTypeData struct{}
-
-func (QuitActionTypeData) arenaMessageDataImpl() {}
 
 type PlayerJoinedEventData struct {
 	Client Client `json:"client"`
 }
 
-func (PlayerJoinedEventData) arenaMessageDataImpl() {}
-
-// Selects the correct type to write into
-func arenaToDataMap(msgType MessageType) ArenaMessageData {
-	var ArenaToDataMap = []ArenaMessageData{
-		PlayerJoinedEventData{},
-		GameStartedEventTypeData{},
-		SetupEventTypeData{},
-		StartGameActionTypeData{},
-		PlayerActionTypeData{},
-		QuitActionTypeData{},
-	}
-
-	return ArenaToDataMap[msgType]
-}
-
-func (arena *ArenaMessage) DecodeArenaMessage(rawData []byte) error {
+func ServerArenaDecodeAndDispatch(handler ServerArenaHandler, rawData []byte) error {
 	var raw struct {
-		MessageType MessageType     `json:"message_type"`
-		Data        json.RawMessage `json:"data"`
+		MessageType ArenaMessageType `json:"message_type"`
+		Data        json.RawMessage  `json:"data"`
 	}
 
 	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
 
-	arena.MessageType = raw.MessageType
-	data := arenaToDataMap(raw.MessageType)
-	if err := json.Unmarshal(raw.Data, &data); err != nil {
+	switch raw.MessageType {
+	case PlayerActionType:
+		message := PlayerActionTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandlePlayerAction(message)
+	case QuitActionType:
+		message := QuitActionTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleQuitAction(message)
+	case StartGameActionType:
+		message := StartGameActionTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleStartGameAction(message)
+	default:
+		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
+	}
+}
+
+func ClientArenaDecodeAndDispatch(handler ClientArenaHandler, rawData []byte) error {
+	var raw struct {
+		MessageType ArenaMessageType `json:"message_type"`
+		Data        json.RawMessage  `json:"data"`
+	}
+
+	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
-	arena.Data = data
-	return nil
+
+	switch raw.MessageType {
+	case PlayerJoinedEventType:
+		message := PlayerJoinedEventTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandlePlayerJoinedEvent(message)
+	case GameStartedEventType:
+		message := GameStartedEventTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleGameStartedEvent(message)
+	case SetupEventType:
+		message := SetupEventTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandleSetupEvent(message)
+	case PlayerActionEventType:
+		message := PlayerActionEventTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandlePlayerActionEvent(message)
+	case PotentialActionEventType:
+		message := PotentialActionEventTypeData{}
+		err := json.Unmarshal(raw.Data, &message)
+		if err != nil {
+			return err
+		}
+		return handler.HandlePotentialActionEvent(message)
+	default:
+		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
+	}
 }
