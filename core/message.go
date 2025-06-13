@@ -51,21 +51,20 @@ type SetupEventTypeData struct {
 
 type StartGameActionTypeData struct{}
 
-// TODO: Change ActionResult to be this type
 type PlayerActionEventTypeData struct {
-	ActionPerformed PlayerAction `json:"action"`
-	// Whether this is an action that a player can take, not an action that a player took
-	IsPotential bool       `json:"is_potential"`
-	VisibleTo   Visibility `json:"visibility"`
+	Action     ActionType      `json:"action_type"`
+	FromPlayer uint8           `json:"from_player"`
+	Data       json.RawMessage `json:"data"`
 }
 
 type PotentialActionEventTypeData struct {
-	ActionResult
+	Action ActionType      `json:"action_type"`
+	Data   json.RawMessage `json:"data"`
 }
 
 type PlayerActionTypeData struct {
-	ActionPerformed PlayerAction
-	ActionResult
+	Action ActionType      `json:"action_type"`
+	Data   json.RawMessage `json:"data"`
 }
 
 type QuitActionTypeData struct{}

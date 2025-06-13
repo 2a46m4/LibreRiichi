@@ -9,8 +9,6 @@ const (
 
 // Represents a change in the board state. It can be either a change that can happen or a change that has occured. Usually it is an action that a player has taken.
 type ActionResult struct {
-	ActionPerformed PlayerAction `json:"action"`
 	// Whether this is an action that a player can take, not an action that a player took
-	IsPotential bool       `json:"is_potential"`
-	VisibleTo   Visibility `json:"visibility"`
+	VisibleTo Visibility `json:"visibility"`
 }

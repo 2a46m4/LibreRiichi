@@ -18,14 +18,6 @@ const (
 	DRAW
 )
 
-type PlayerAction struct {
-	Action     ActionType `json:"action_type"`
-	FromPlayer uint8      `json:"from_player"`
-	Data       ActionData `json:"data"`
-}
-
-type ActionData interface{ actionDataImpl() }
-
 type RonData struct {
 	TileToRon Tile      `json:"tile_to_ron"`
 	WinResult WinResult `json:"win_result"`
