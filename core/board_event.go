@@ -8,9 +8,13 @@ import (
 type BoardEventType uint8
 
 const (
+	// An action that a player performed, affecting the board state
 	PlayerActionEventType BoardEventType = iota
+	// A potential action available to the player
 	PotentialActionEventType
+	// A setup event
 	GameSetupEventType
+	// A game end event
 	GameEndEventType
 )
 

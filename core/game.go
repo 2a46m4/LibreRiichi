@@ -224,7 +224,7 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 }
 
 // Returns the next events in the game, and if the game should end.
-func (game *MahjongGame) GetNextEvent() (actions []ActionResult, shouldEnd bool) {
+func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bool) {
 	switch game.GameState {
 
 	case CURRENT_TURN: // The current player can make a toss move
