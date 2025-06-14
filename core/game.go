@@ -153,7 +153,7 @@ func (game MahjongGame) findAction(action PlayerAction) (int, error) {
 
 // ==================== PUBLIC FUNCTIONS ====================
 
-func (game MahjongGame) JoinArena(PlayerIdx int) error {
+func (game *MahjongGame) JoinArena(PlayerIdx int) error {
 	if PlayerIdx >= game.GetMaxPlayers() {
 		return errors.New("No more space")
 	}

@@ -25,7 +25,7 @@ const (
 // Should only indicate things that change the arena, not the game
 type ArenaMessage struct {
 	MessageType ArenaMessageType `json:"message_type"`
-	Data        json.RawMessage  `json:"data"`
+	Data        any              `json:"data"`
 }
 
 type ServerArenaHandler interface {

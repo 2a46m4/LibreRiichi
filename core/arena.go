@@ -2,20 +2,23 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
+	"sync"
 )
 
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents     []*Client
-	Spectators []*Client
-	Game       MahjongGame
+	Agents      []*Client
+	Spectators  []*Client
+	GameStarted bool
+	Game        MahjongGame
 
-	JoinChannel chan *Client
+	sync.Mutex
 }
 
-func (arena Arena) Send(data ArenaMessage, sendTo Visibility) error {
+func (arena *Arena) Send(data ArenaMessage, sendTo Visibility) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -38,39 +41,94 @@ func (arena Arena) Send(data ArenaMessage, sendTo Visibility) error {
 	return nil
 }
 
-func (arena Arena) Loop() {
+func CreateArena() Arena {
+	return Arena{
+		Agents:      []*Client{},
+		Spectators:  []*Client{},
+		Game:        MahjongGame{},
+		GameStarted: false,
+		Mutex:       sync.Mutex{},
+	}
+}
+
+func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
+	if !joinAsPlayer {
+		panic("NYI")
+	}
+
+	arena.Lock()
+	defer arena.Unlock()
+
+	err := arena.Game.JoinArena(len(arena.Agents))
+	if err != nil {
+		return err
+	}
+
+	arena.Agents = append(arena.Agents, agent)
+
+	data := PlayerJoinedEventData{
+		Client: *agent,
+	}
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	err = arena.Send(
+		ArenaMessage{
+			MessageType: PlayerJoinedEventType,
+			Data:        bytes,
+		}, GLOBAL)
+
+	if err != nil {
+		panic(err)
+	}
+
+	agent.Arena = arena
+
+	return nil
+}
+
+// StartArena is called when a game should be started. It broadcasts a start round message to the connected players
+func (arena *Arena) StartArena() error {
+	arena.Lock()
+	defer arena.Unlock()
+
+	if len(arena.Agents) != 4 {
+		return errors.New("Not enough agents")
+	}
+
+	setups, err := arena.Game.StartNewGame()
+	if err != nil {
+		return err
+	}
+
+	// Send over the setups for each player
+	for idx, setup := range setups {
+
+		err = arena.Send(ArenaMessage{
+			MessageType: ArenaBoardEventType,
+			Data: ArenaBoardEventData{
+				BoardEvent{
+					EventType: GameSetupEventType,
+					Data: GameSetupEventData{
+						Setup: setup,
+					},
+				},
+			},
+		}, Visibility(idx))
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return nil
+}
+
+func (arena *Arena) Loop() {
 
 	for {
-		// Check for new join requests
-		select {
-		case newRequest := <-arena.JoinChannel:
-			err := arena.JoinArena(newRequest, true)
-			if err != nil {
-				// TODO: Send a error back to the request
-				continue
-			}
-
-			data := PlayerJoinedEventData{
-				Client: *newRequest,
-			}
-			bytes, err := json.Marshal(data)
-			if err != nil {
-				continue
-			}
-
-			err = arena.Send(
-				ArenaMessage{
-					MessageType: PlayerJoinedEventType,
-					Data:        bytes,
-				}, GLOBAL)
-			if err != nil {
-				panic(err)
-			}
-
-			newRequest.Arena = &arena
-		default:
-			break
-		}
 
 		// Check for new messages from players
 		for _, player := range arena.Agents {
@@ -111,44 +169,7 @@ func (arena Arena) Loop() {
 	}
 }
 
-// Adds an agnet to the arena.
-func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
-	if !joinAsPlayer {
-		panic("NYI")
-	}
-
-	err := arena.Game.JoinArena(len(arena.Agents))
-	if err != nil {
-		return err
-	}
-
-	arena.Agents = append(arena.Agents, agent)
-	return nil
-}
-
-// StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena Arena) StartArena() error {
-	setups, err := arena.Game.StartNewGame()
-	if err != nil {
-		return err
-	}
-
-	// Send over the setups for each player
-	for idx, setup := range setups {
-		err := arena.Send(ArenaMessage{
-			MessageType: SetupEventType,
-			Data:        SetupEventTypeData{setup[idx]},
-			VisibleTo:   Visibility(idx),
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return nil
-}
-
-func (arena Arena) GameLoop() {
+func (arena *Arena) GameLoop() {
 
 	// Collect data channels
 	dataChannels := make([]chan any, len(arena.Agents))
