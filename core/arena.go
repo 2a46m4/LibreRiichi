@@ -19,7 +19,7 @@ type Arena struct {
 }
 
 type MessageSendInfo struct {
-	events []ArenaBoardEventData
+	Events []ArenaBoardEventData
 	SendTo Visibility
 }
 

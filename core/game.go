@@ -153,15 +153,32 @@ func (game *MahjongGame) incrementTurn() {
 	game.CurrentTurnOrder = (game.CurrentTurnOrder + 1) % 4
 }
 
-// Returns the index of the pending post action
-func (game MahjongGame) findAction(action ActionData) (int, error) {
+// Returns the index of the pending action
+func (game MahjongGame) findAction(action ActionData, fromPlayer uint8) (int, error) {
 	for i, pendingAction := range game.PendingActions {
-		if pendingAction.ActionType == action.ActionType && pendingAction.FromPlayer == action.FromPlayer {
+		if pendingAction.ActionData == action &&
+			pendingAction.uint8 == fromPlayer {
 			return i, nil
 		}
 	}
 
 	return 0, errors.New("Can't find action")
+}
+
+func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent{
+			EventType: eventType,
+			Data:      data,
+		},
+	}
+}
+
+func makeMessage(sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
+	return MessageSendInfo{
+		Events: data,
+		SendTo: Visibility(sendTo),
+	}
 }
 
 // ==================== PUBLIC FUNCTIONS ====================
@@ -220,19 +237,16 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 
 	case CURRENT_TURN: // The current player can make a toss move
 		// We should only reach this state when someone makes a post-turn action like pon.
-		// Then the player only has the choice to discard something
+		// Then the player only has the choice to discard or kan
 
 		// TODO: Check if the player can make a kan
-		actions = []ActionResult{
-			{
-				ActionPerformed: PlayerAction{
-					Action:     TOSS,
-					FromPlayer: game.currentPlayerIdx(),
-					Data:       TossData{Invalid},
-				},
-				IsPotential: true,
-				VisibleTo:   Visibility(game.currentPlayerIdx()),
-			},
+		actions = []MessageSendInfo{
+			makeMessage(
+				game.currentPlayerIdx(),
+				encodeBoardEvent(
+					PotentialActionEventType,
+					TossData{Invalid},
+				)),
 		}
 		shouldEnd = false
 
@@ -243,7 +257,7 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 		if err != nil {
 			panic(err)
 		}
-		game.PostTurnActions = actions
+		game.PendingActions = actions
 
 		if len(actions) == 0 {
 			game.GameState = POST_TURN_PLAYED
