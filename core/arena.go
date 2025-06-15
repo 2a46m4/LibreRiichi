@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"sync"
 )
 
@@ -95,8 +94,36 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	return nil
 }
 
+func (arena *Arena) DriveGame() error {
+	arena.Lock()
+	defer arena.Unlock()
+	return arena.driveGame()
+}
+
+// Drives the game forward
+func (arena *Arena) driveGame() error {
+
+	events, gameContinue := arena.Game.GetNextEvent()
+
+	if !gameContinue {
+		arena.FinishRoundArena()
+		return nil
+	}
+
+	// Send the event to the players
+	for _, event := range events {
+		arena.Send(ArenaMessage{
+			MessageType: ArenaBoardEventType,
+			Data:        event.events,
+		}, event.SendTo)
+	}
+
+	return nil
+}
+
+// TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena *Arena) StartArena() error {
+func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -137,134 +164,33 @@ func (arena *Arena) StartArena() error {
 	return arena.driveGame()
 }
 
-func (arena *Arena) DriveGame() error {
+func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 	arena.Lock()
 	defer arena.Unlock()
-	return arena.driveGame()
-}
 
-// Drives the game forward
-func (arena *Arena) driveGame() error {
-
-	events, gameContinue := arena.Game.GetNextEvent()
-
-	if !gameContinue {
-		arena.FinishRoundArena()
-		return nil
+	actions, valid := arena.Game.RespondToAction(data)
+	if !valid {
+		return errors.New("Invalid move")
 	}
 
-	// Send the event to the players
-	for _, event := range events {
+	for _, action := range actions {
 		arena.Send(ArenaMessage{
 			MessageType: ArenaBoardEventType,
-			Data:        event.events,
-		}, event.SendTo)
+			Data:        action.events,
+		}, action.SendTo)
 	}
 
-	// TODO: Set timeout here
-
-	input := <-inputChannel
-	if err, ok := input.Data.(error); ok {
-		// Handle problematic connection here
-		panic(err)
-	}
-
-	var action PlayerAction
-	err := action.DecodeAction(input.Data.([]byte))
+	err := arena.driveGame()
 	if err != nil {
-		log.Println(err)
-		goto Rewait
-	}
-	if action.FromPlayer != uint8(input.I) {
-		goto Rewait
+		panic("TODO: Error handling")
 	}
 
-	actionResults, validMove := arena.Game.RespondToAction(action)
-	if !validMove {
-		goto Rewait
-	}
-
-	// Send the results to the players
-	for _, actionResult := range actionResults {
-		arena.Send(ArenaMessage{
-			MessageType: PlayerActionEventType,
-			Data:        PlayerActionEventTypeData{actionResult},
-			VisibleTo:   actionResult.VisibleTo,
-		})
-	}
 	return nil
-}
-
-func (arena Arena) GameLoop() {
-
-	// Collect data channels
-	dataChannels := make([]chan any, len(arena.Agents))
-	for _, agent := range arena.Agents {
-		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
-	}
-	inputChannel := FanIn(dataChannels)
-
-	gameContinue := true
-	for {
-
-		var events []ActionResult
-		events, gameContinue = arena.Game.GetNextEvent()
-
-		// Send the event to the players
-		for _, event := range events {
-			arena.Send(ArenaMessage{
-				MessageType: PlayerActionEventType,
-				Data:        PlayerActionEventTypeData{event},
-				VisibleTo:   event.VisibleTo,
-			})
-		}
-
-		if !gameContinue {
-			break
-		}
-
-		// Wait on the players to make a response
-	Rewait:
-		// TODO: Set timeout here
-
-		input := <-inputChannel
-		if err, ok := input.Data.(error); ok {
-			// Handle problematic connection here
-			panic(err)
-		}
-
-		var action PlayerAction
-		err := action.DecodeAction(input.Data.([]byte))
-		if err != nil {
-			log.Println(err)
-			goto Rewait
-		}
-		if action.FromPlayer != uint8(input.I) {
-			goto Rewait
-		}
-
-		actionResults, validMove := arena.Game.RespondToAction(action)
-		if !validMove {
-			goto Rewait
-		}
-
-		// Send the results to the players
-		for _, actionResult := range actionResults {
-			arena.Send(ArenaMessage{
-				MessageType: PlayerActionEventType,
-				Data:        PlayerActionEventTypeData{actionResult},
-				VisibleTo:   actionResult.VisibleTo,
-			})
-		}
-	}
-
-	arena.Game.GetGameResults()
-	// Broadcast game end and results
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
 func (arena *Arena) FinishRoundArena() {
-
+	arena.Game.GetGameResults()
 }
 
 // EndArena is called when the arena is finished and all players should be disconnected

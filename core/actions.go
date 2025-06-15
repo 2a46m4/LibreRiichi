@@ -27,8 +27,8 @@ const (
 )
 
 type ActionData struct {
-	ActionType ActionType      `json:"action_type"`
-	Data       json.RawMessage `json:"data"`
+	ActionType ActionType `json:"action_type"`
+	Data       any        `json:"data"`
 }
 
 type ActionHandler interface {

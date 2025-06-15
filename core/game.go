@@ -184,39 +184,32 @@ func (game MahjongGame) StartNewGame() ([][]Setup, error) {
 		setup[idx] = make([]Setup, 0, 7)
 		setup[idx] = append(setup[idx],
 			Setup{
-				Type:     INITIAL_TILES,
-				ToPlayer: uint8(idx),
-				Data:     player.ClosedHand,
+				Type: INITIAL_TILES,
+				Data: player.ClosedHand,
 			},
 			Setup{
-				Type:     DORA,
-				ToPlayer: uint8(idx),
-				Data:     game.Dora[0],
+				Type: DORA,
+				Data: game.Dora[0],
 			},
 			Setup{
-				Type:     PLAYER_NUMBER,
-				ToPlayer: uint8(idx),
-				Data:     uint8(idx),
+				Type: PLAYER_NUMBER,
+				Data: uint8(idx),
 			},
 			Setup{
-				Type:     PLAYER_ORDER,
-				ToPlayer: uint8(idx),
-				Data:     game.PlayerToOrder,
+				Type: PLAYER_ORDER,
+				Data: game.PlayerToOrder,
 			},
 			Setup{
-				Type:     ROUND_NUMBER,
-				ToPlayer: uint8(idx),
-				Data:     0,
+				Type: ROUND_NUMBER,
+				Data: 0,
 			},
 			Setup{
-				Type:     ROUND_WIND,
-				ToPlayer: uint8(idx),
-				Data:     game.RoundWind,
+				Type: ROUND_WIND,
+				Data: game.RoundWind,
 			},
 			Setup{
-				Type:     STARTING_POINTS,
-				ToPlayer: uint8(idx),
-				Data:     startingPoints,
+				Type: STARTING_POINTS,
+				Data: startingPoints,
 			})
 	}
 
@@ -315,10 +308,10 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 // Updates the game state and returns the things to notify
 // Additionally returns whether the move was valid
 // Performs no validation of the action data structure
-func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, bool) {
+func (game *MahjongGame) RespondToAction(action PlayerActionData) ([]MessageSendInfo, bool) {
 
 	// TODO: Finish all the cases
-	switch action.Action {
+	switch action.ActionType {
 	case CHII:
 		return game.handleChii(action)
 	case KAN:
@@ -338,7 +331,6 @@ func (game *MahjongGame) RespondToAction(action PlayerAction) ([]ActionResult, b
 	default:
 		panic(fmt.Sprintf("unexpected core.ActionType: %#v", action.Action))
 	}
-	return nil, false
 }
 
 func (game *MahjongGame) handleChii(action PlayerAction) ([]ActionResult, bool) {
