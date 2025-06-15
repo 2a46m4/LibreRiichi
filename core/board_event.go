@@ -47,16 +47,42 @@ type BoardEventHandler interface {
 	HandleGameEndEventType(GameEndEventData) error
 }
 
-// TODO
-func BoardEventDecodeAndDispatch(handler ClientArenaHandler, rawData []byte) error {
+func BoardEventDecodeAndDispatch(handler BoardEventHandler, rawData []byte) error {
 	var raw struct {
-		MessageType ArenaMessageType `json:"message_type"`
-		Data        json.RawMessage  `json:"data"`
+		MessageType BoardEventType  `json:"message_type"`
+		Data        json.RawMessage `json:"data"`
 	}
 
 	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
 
-	return nil
+	switch raw.MessageType {
+	case GameEndEventType:
+		data := GameEndEventData{}
+		if err := json.Unmarshal(raw.Data, &data); err != nil {
+			return err
+		}
+		return handler.HandleGameEndEventType(data)
+	case GameSetupEventType:
+		data := GameSetupEventData{}
+		if err := json.Unmarshal(raw.Data, &data); err != nil {
+			return err
+		}
+		return handler.HandleGameSetupEventType(data)
+	case PlayerActionEventType:
+		data := PlayerActionEventData{}
+		if err := json.Unmarshal(raw.Data, &data); err != nil {
+			return err
+		}
+		return handler.HandlePlayerActionEventType(data)
+	case PotentialActionEventType:
+		data := PotentialActionEventData{}
+		if err := json.Unmarshal(raw.Data, &data); err != nil {
+			return err
+		}
+		return handler.HandlePotentialActionEventType(data)
+	default:
+		panic(fmt.Sprintf("unexpected core.BoardEventType: %#v", raw.MessageType))
+	}
 }

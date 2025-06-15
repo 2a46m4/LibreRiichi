@@ -98,7 +98,7 @@ func (arena *Arena) DriveGame() error {
 // Drives the game forward
 func (arena *Arena) driveGame() error {
 
-	events, gameContinue := arena.Game.GetNextEvent()
+	sendInfos, gameContinue := arena.Game.GetNextEvent()
 
 	if !gameContinue {
 		arena.FinishRoundArena()
@@ -106,11 +106,13 @@ func (arena *Arena) driveGame() error {
 	}
 
 	// Send the event to the players
-	for _, event := range events {
-		arena.Send(ArenaMessage{
-			MessageType: ArenaBoardEventType,
-			Data:        event.events,
-		}, event.SendTo)
+	for _, sendInfo := range sendInfos {
+		for event := range sendInfo.Events {
+			arena.Send(ArenaMessage{
+				MessageType: ArenaBoardEventType,
+				Data:        event,
+			}, sendInfo.SendTo)
+		}
 	}
 
 	return nil
@@ -163,16 +165,18 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 	arena.Lock()
 	defer arena.Unlock()
 
-	actions, valid := arena.Game.RespondToAction(data)
+	sendInfos, valid := arena.Game.RespondToAction(data)
 	if !valid {
 		return errors.New("Invalid move")
 	}
 
-	for _, action := range actions {
-		arena.Send(ArenaMessage{
-			MessageType: ArenaBoardEventType,
-			Data:        action.events,
-		}, action.SendTo)
+	for _, sendInfo := range sendInfos {
+		for _, event := range sendInfo.Events {
+			arena.Send(ArenaMessage{
+				MessageType: ArenaBoardEventType,
+				Data:        event,
+			}, sendInfo.SendTo)
+		}
 	}
 
 	err := arena.driveGame()

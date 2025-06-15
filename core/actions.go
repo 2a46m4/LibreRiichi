@@ -9,7 +9,8 @@ type Visibility uint8
 
 const (
 	PLAYER Visibility = 0
-	GLOBAL            = 255
+
+	GLOBAL = 255
 )
 
 type ActionType uint8

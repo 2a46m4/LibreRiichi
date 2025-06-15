@@ -45,10 +45,7 @@ type MahjongGame struct {
 
 	// The list of potential actions that need to be either taken or skipped
 	// Need to attach a timer to them
-	PendingActions []struct {
-		ActionData
-		uint8
-	}
+	PendingActions []MessageSendInfo
 }
 
 // ==================== ERRORS ====================
@@ -261,6 +258,7 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 
 		if len(actions) == 0 {
 			game.GameState = POST_TURN_PLAYED
+			// TODO: Get next event again here?
 		}
 
 		shouldEnd = false
@@ -273,26 +271,38 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 			game.GameState = GAME_ENDED
 			return nil, true
 		}
-		actions = []ActionResult{
-			{
-				ActionPerformed: PlayerAction{
-					Action:     DRAW,
-					FromPlayer: game.currentPlayerIdx(),
-					Data:       DrawData{DrawnTile: tile},
-				},
-				IsPotential: false,
-				VisibleTo:   Visibility(game.currentPlayerIdx()),
-			},
-			{
-				ActionPerformed: PlayerAction{
-					Action:     TOSS,
-					FromPlayer: game.currentPlayerIdx(),
-					Data:       TossData{Invalid},
-				},
-				IsPotential: true,
-				VisibleTo:   Visibility(game.currentPlayerIdx()),
-			},
+
+		actions = []MessageSendInfo{
+			makeMessage(
+				game.currentPlayerIdx(),
+				encodeBoardEvent(PlayerActionEventType, PlayerActionEventData{
+					ActionData{
+						ActionType: DRAW,
+						Data:       DrawData{tile},
+					},
+					game.currentPlayerIdx(),
+				})),
+
+			// {
+			// 	ActionPerformed: PlayerAction{
+			// 		Action:     DRAW,
+			// 		FromPlayer: game.currentPlayerIdx(),
+			// 		Data:       DrawData{DrawnTile: tile},
+			// 	},
+			// 	IsPotential: false,
+			// 	VisibleTo:   Visibility(game.currentPlayerIdx()),
+			// },
+			// {
+			// 	ActionPerformed: PlayerAction{
+			// 		Action:     TOSS,
+			// 		FromPlayer: game.currentPlayerIdx(),
+			// 		Data:       TossData{Invalid},
+			// 	},
+			// 	IsPotential: true,
+			// 	VisibleTo:   Visibility(game.currentPlayerIdx()),
+			// },
 		}
+
 		for _, discard := range game.currentPlayer().GetRiichiDiscards() {
 			actions = append(actions, ActionResult{
 				ActionPerformed: PlayerAction{
@@ -581,7 +591,7 @@ func (game *MahjongGame) handleTsumo(action PlayerAction) ([]ActionResult, bool)
 }
 
 // Checks the post-toss actions that can be made
-func (game *MahjongGame) getPostTossActions() ([]ActionResult, error) {
+func (game *MahjongGame) getPostTossActions() ([]MessageSendInfo, error) {
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, errors.New("Incorrect state")
 	}
