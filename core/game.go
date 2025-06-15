@@ -24,9 +24,6 @@ type MahjongGame struct {
 	// Maps Order → Player Index
 	OrderToPlayer []uint8
 
-	CurrentTurnActions []ActionResult
-	PostTurnActions    []ActionResult
-
 	LiveWall []Tile
 	Dora     []Tile
 	UraDora  []Tile
@@ -44,14 +41,32 @@ type MahjongGame struct {
 	DoraRevealed uint8
 	KansDrawn    uint8
 
-	Results            *GameResult    // If game has finished, store the results here
-	PendingPostActions []ActionResult // The list of potential actions that need to be either taken or skipped
+	Results *GameResult // If game has finished, store the results here
+
+	// The list of potential actions that need to be either taken or skipped
+	// Need to attach a timer to them
+	PendingActions []struct {
+		ActionData
+		uint8
+	}
 }
+
+// ==================== ERRORS ====================
+type GameEndError struct{}
+
+func (GameEndError) Error() string { return "Game ended" }
 
 // ==================== PRIVATE FUNCTIONS ====================
 
-// Sets up the game and the tiles
+// Sets up the game and the tiles for the very start of the game
 func (game *MahjongGame) setupGame() {
+	game.Players = make([]Player, 4)
+	game.PlayerToOrder = make([]uint8, 4)
+	for i := range game.PlayerToOrder {
+		game.PlayerToOrder[i] = uint8(i)
+	}
+	game.OrderToPlayer = make([]uint8, 0)
+
 	PermuteArray(game.PlayerToOrder)
 	for idx, order := range game.PlayerToOrder {
 		game.OrderToPlayer[order] = uint8(idx)
@@ -83,11 +98,10 @@ func (game *MahjongGame) setupGame() {
 	tileItr += 4
 	game.LiveWall = game.Tiles[tileItr:]
 	game.TileIdx = 0
+
+	game.Results = nil
+	game.PendingActions = nil
 }
-
-type GameEndError struct{}
-
-func (GameEndError) Error() string { return "Game ended" }
 
 func (game *MahjongGame) drawNewTile() (Tile, error) {
 	if len(game.LiveWall) == 0 {
@@ -121,7 +135,6 @@ func (game MahjongGame) lastTile() (Tile, error) {
 	default:
 		return Invalid, nil
 	}
-
 }
 
 func (game *MahjongGame) currentPlayer() *Player {
@@ -141,9 +154,9 @@ func (game *MahjongGame) incrementTurn() {
 }
 
 // Returns the index of the pending post action
-func (game MahjongGame) findAction(action PlayerAction) (int, error) {
-	for i, pendingAction := range game.PendingPostActions {
-		if pendingAction.ActionPerformed.Action == action.Action && pendingAction.ActionPerformed.FromPlayer == action.FromPlayer {
+func (game MahjongGame) findAction(action ActionData) (int, error) {
+	for i, pendingAction := range game.PendingActions {
+		if pendingAction.ActionType == action.ActionType && pendingAction.FromPlayer == action.FromPlayer {
 			return i, nil
 		}
 	}
@@ -153,23 +166,8 @@ func (game MahjongGame) findAction(action PlayerAction) (int, error) {
 
 // ==================== PUBLIC FUNCTIONS ====================
 
-func (game *MahjongGame) JoinArena(PlayerIdx int) error {
-	if PlayerIdx >= game.GetMaxPlayers() {
-		return errors.New("No more space")
-	}
-
-	game.Players = append(game.Players, Player{})
-	game.PlayerToOrder = append(game.PlayerToOrder, uint8(PlayerIdx))
-	game.OrderToPlayer = append(game.OrderToPlayer, 0)
-
-	return nil
-}
-
 // Returns data to send to clients when a new game can be started, otherwise an error
-func (game MahjongGame) StartNewGame() ([][]Setup, error) {
-	if len(game.Players) != 4 {
-		return nil, errors.New("Not enough players")
-	}
+func (game *MahjongGame) StartNewGame() ([][]Setup, error) {
 
 	game.setupGame()
 	setup := make([][]Setup, 4)

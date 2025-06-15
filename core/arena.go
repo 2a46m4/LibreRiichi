@@ -64,11 +64,6 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	arena.Lock()
 	defer arena.Unlock()
 
-	err := arena.Game.JoinArena(len(arena.Agents))
-	if err != nil {
-		return err
-	}
-
 	arena.Agents = append(arena.Agents, agent)
 
 	data := PlayerJoinedEventData{
