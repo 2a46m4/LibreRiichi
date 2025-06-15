@@ -8,9 +8,9 @@ import (
 type Visibility uint8
 
 const (
-	PLAYER Visibility = 0
-
-	GLOBAL = 255
+	PLAYER Visibility = iota
+	PARTIAL
+	GLOBAL
 )
 
 type ActionType uint8

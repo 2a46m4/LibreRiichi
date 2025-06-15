@@ -45,7 +45,12 @@ type MahjongGame struct {
 
 	// The list of potential actions that need to be either taken or skipped
 	// Need to attach a timer to them
-	PendingActions []MessageSendInfo
+	PendingActions []PendingAction
+}
+
+type PendingAction struct {
+	ActionData
+	fromPlayer uint8
 }
 
 // ==================== ERRORS ====================
@@ -152,10 +157,10 @@ func (game *MahjongGame) incrementTurn() {
 
 // Returns the index of the pending action
 func (game MahjongGame) findAction(action ActionData, fromPlayer uint8) (int, error) {
-	for i, pendingAction := range game.PendingActions {
+	for idx, pendingAction := range game.PendingActions {
 		if pendingAction.ActionData == action &&
-			pendingAction.uint8 == fromPlayer {
-			return i, nil
+			pendingAction.fromPlayer == fromPlayer {
+			return idx, nil
 		}
 	}
 
@@ -591,13 +596,13 @@ func (game *MahjongGame) handleTsumo(action PlayerAction) ([]ActionResult, bool)
 }
 
 // Checks the post-toss actions that can be made
-func (game *MahjongGame) getPostTossActions() ([]MessageSendInfo, error) {
+func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, errors.New("Incorrect state")
 	}
 
-	if len(game.PendingPostActions) != 0 {
-		return game.PendingPostActions, nil
+	if len(game.PendingActions) != 0 {
+		return game.PendingActions, nil
 	}
 
 	tileTossed, err := game.lastTile()
@@ -607,19 +612,18 @@ func (game *MahjongGame) getPostTossActions() ([]MessageSendInfo, error) {
 
 	nextPlayerIdx := game.nextPlayerIdx()
 	nextPlayer := game.Players[nextPlayerIdx]
-	moves := make([]ActionResult, 0)
+	moves := make([]ActionData, 0)
 
 	// Helper that appends a potential move
 	appendMove := func(action ActionType, forPlayer uint8, data ActionData) {
 		moves = append(moves,
-			ActionResult{
+			ActionData{
 				ActionPerformed: PlayerAction{
 					Action:     action,
 					FromPlayer: forPlayer,
 					Data:       data,
 				},
-				IsPotential: true,
-				VisibleTo:   Visibility(forPlayer),
+				VisibleTo: Visibility(forPlayer),
 			})
 	}
 

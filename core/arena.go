@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -23,24 +24,39 @@ type MessageSendInfo struct {
 	SendTo Visibility
 }
 
-func (arena *Arena) Send(data ArenaMessage, sendTo Visibility) error {
+func (arena *Arena) Send(data ArenaMessage, others *ArenaMessage,
+	visibility Visibility, sendTo uint8) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	if sendTo == GLOBAL {
+	switch visibility {
+	case GLOBAL:
 		for _, player := range arena.Agents {
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
 				Data:        bytes,
 			}
 		}
-	} else {
+	case PARTIAL:
 		arena.Agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
 			Data:        bytes,
 		}
+		for _, player := range arena.Agents {
+			player.Recv <- Message{
+				MessageType: ServerArenaEventType,
+				Data:        bytes,
+			}
+		}
+	case PLAYER:
+		arena.Agents[sendTo].Recv <- Message{
+			MessageType: ServerArenaEventType,
+			Data:        bytes,
+		}
+	default:
+		panic(fmt.Sprintf("unexpected core.Visibility: %#v", sendTo))
 	}
 
 	return nil
@@ -150,7 +166,7 @@ func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
 					},
 				},
 			},
-		}, Visibility(idx))
+		}, nil, Visibility(idx))
 
 		if err != nil {
 			panic(err)
