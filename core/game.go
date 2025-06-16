@@ -176,10 +176,19 @@ func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
 	}
 }
 
-func makeMessage(sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
+func makeMessage(visibility Visibility, sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
 	return MessageSendInfo{
-		Events: data,
-		SendTo: Visibility(sendTo),
+		Events:     data,
+		Visibility: visibility,
+		SendTo:     sendTo,
+	}
+}
+
+func makeGlobalMessage(data ...ArenaBoardEventData) MessageSendInfo {
+	return MessageSendInfo{
+		Events:     data,
+		Visibility: GLOBAL,
+		SendTo:     0,
 	}
 }
 
@@ -244,6 +253,7 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 		// TODO: Check if the player can make a kan
 		actions = []MessageSendInfo{
 			makeMessage(
+				PARTIAL,
 				game.currentPlayerIdx(),
 				encodeBoardEvent(
 					PotentialActionEventType,
@@ -254,16 +264,19 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 
 	case CURRENT_TURN_PLAYED: // Get post-toss actions
 		// We should wait for all post toss actions to finish before moving to the next turn
-		var err error
-		actions, err = game.getPostTossActions()
+		pendingActions, err := game.getPostTossActions()
 		if err != nil {
 			panic(err)
 		}
-		game.PendingActions = actions
+		game.PendingActions = pendingActions
 
-		if len(actions) == 0 {
+		if len(pendingActions) == 0 {
 			game.GameState = POST_TURN_PLAYED
 			// TODO: Get next event again here?
+		}
+
+		for _, pendingAction := range pendingActions {
+			actions = append(actions, makeMessage())
 		}
 
 		shouldEnd = false
@@ -691,4 +704,14 @@ func (MahjongGame) GetGameResults() (GameResult, error) {
 // Returns the maximum amount of players
 func (MahjongGame) GetMaxPlayers() int {
 	return 4
+}
+
+func GetAltMessage(msg ArenaMessage) (altMsg ArenaMessage, err error) {
+	if msg.MessageType != ArenaBoardEventType {
+		return altMsg, errors.New("Not correct type")
+	}
+	eventData := msg.Data.(ArenaBoardEventData)
+	BoardEventDecodeAndDispatch(AltMessageHandler{}, eventData.Data.([]byte))
+
+	return ArenaMessage{}, nil
 }

@@ -21,9 +21,15 @@ const (
 	ServerArenaActionType
 )
 
+type BadTypeError struct{}
+
+func (BadTypeError) Error() string {
+	return "Bad type"
+}
+
 type Message struct {
-	MessageType MessageType     `json:"message_type"`
-	Data        json.RawMessage `json:"data"`
+	MessageType MessageType `json:"message_type"`
+	Data        any         `json:"data"`
 }
 
 // The server will accept these message types
@@ -57,9 +63,7 @@ type JoinArenaActionData struct {
 	ArenaName uuid.UUID
 }
 
-// This function decodes the message type and then dispatches the
-// correct handler based on the message type
-func ServerDecodeAndDispatch(handler ServerHandler, rawData []byte) error {
+func (msg *Message) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		MessageType MessageType     `json:"message_type"`
 		Data        json.RawMessage `json:"data"`
@@ -68,6 +72,8 @@ func ServerDecodeAndDispatch(handler ServerHandler, rawData []byte) error {
 	if err := json.Unmarshal(rawData, &raw); err != nil {
 		return err
 	}
+
+	msg.MessageType = raw.MessageType
 
 	switch raw.MessageType {
 	case InitialMessageActionType:
@@ -76,45 +82,71 @@ func ServerDecodeAndDispatch(handler ServerHandler, rawData []byte) error {
 		if err != nil {
 			return err
 		}
-		return handler.HandleInitialMessageAction(initialMessageReturn)
+		msg.Data = initialMessageReturn
 	case ServerArenaActionType:
 		serverArenaAction := ServerArenaActionData{}
 		err := json.Unmarshal(raw.Data, &serverArenaAction)
 		if err != nil {
 			return err
 		}
-		return handler.HandleServerArenaAction(serverArenaAction)
+		msg.Data = serverArenaAction
+	case ServerArenaEventType:
+		arenaEventMessage := ServerArenaMessageEventData{}
+		err := json.Unmarshal(raw.Data, &arenaEventMessage)
+		if err != nil {
+			return err
+		}
+		msg.Data = arenaEventMessage
+	case InitialMessageEventType:
+		initialMessageEvent := InitialMessageEventData{}
+		err := json.Unmarshal(raw.Data, &initialMessageEvent)
+		if err != nil {
+			return err
+		}
+		msg.Data = initialMessageEvent
 	default:
 		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+	}
+
+	return nil
+}
+
+// This function decodes the message type and then dispatches the
+// correct handler based on the message type
+func ServerDispatch(handler ServerHandler, message Message) error {
+	switch message.MessageType {
+	case InitialMessageActionType:
+		initialMessageReturn, ok := message.Data.(InitialMessageActionData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandleInitialMessageAction(initialMessageReturn)
+	case ServerArenaActionType:
+		serverArenaAction, ok := message.Data.(ServerArenaActionData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandleServerArenaAction(serverArenaAction)
+	default:
+		return fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)
 	}
 }
 
-func ClientDecodeAndDispatch(handler ClientHandler, rawData []byte) error {
-	var raw struct {
-		MessageType MessageType     `json:"message_type"`
-		Data        json.RawMessage `json:"data"`
-	}
-
-	if err := json.Unmarshal(rawData, &raw); err != nil {
-		return err
-	}
-
-	switch raw.MessageType {
+func ClientDispatch(handler ClientHandler, message Message) error {
+	switch message.MessageType {
 	case ServerArenaEventType:
-		arenaMessage := ServerArenaMessageEventData{}
-		err := json.Unmarshal(raw.Data, &arenaMessage)
-		if err != nil {
-			return err
+		arenaMessage, ok := message.Data.(ServerArenaMessageEventData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandleServerArenaMessageEvent(arenaMessage)
 	case InitialMessageEventType:
-		initialMessage := InitialMessageEventData{}
-		err := json.Unmarshal(raw.Data, &initialMessage)
-		if err != nil {
-			return err
+		initialMessage, ok := message.Data.(InitialMessageEventData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandleInitialMessageEvent(initialMessage)
 	default:
-		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+		return fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)
 	}
 }

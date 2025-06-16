@@ -20,12 +20,12 @@ type Arena struct {
 }
 
 type MessageSendInfo struct {
-	Events []ArenaBoardEventData
-	SendTo Visibility
+	Events     []ArenaBoardEventData
+	Visibility Visibility
+	SendTo     uint8
 }
 
-func (arena *Arena) Send(data ArenaMessage, others *ArenaMessage,
-	visibility Visibility, sendTo uint8) error {
+func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -44,10 +44,24 @@ func (arena *Arena) Send(data ArenaMessage, others *ArenaMessage,
 			MessageType: ServerArenaEventType,
 			Data:        bytes,
 		}
-		for _, player := range arena.Agents {
+
+		altMessage, err := GetAltMessage(data)
+		if err != nil {
+			return err
+		}
+
+		altBytes, err := json.Marshal(altMessage)
+		if err != nil {
+			return err
+		}
+
+		for idx, player := range arena.Agents {
+			if idx == int(sendTo) {
+				continue
+			}
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
-				Data:        bytes,
+				Data:        altBytes,
 			}
 		}
 	case PLAYER:
@@ -94,7 +108,7 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 		ArenaMessage{
 			MessageType: PlayerJoinedEventType,
 			Data:        bytes,
-		}, GLOBAL)
+		}, GLOBAL, 0)
 
 	if err != nil {
 		panic(err)
@@ -127,7 +141,7 @@ func (arena *Arena) driveGame() error {
 			arena.Send(ArenaMessage{
 				MessageType: ArenaBoardEventType,
 				Data:        event,
-			}, sendInfo.SendTo)
+			}, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 
@@ -166,7 +180,7 @@ func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
 					},
 				},
 			},
-		}, nil, Visibility(idx))
+		}, PLAYER, uint8(idx))
 
 		if err != nil {
 			panic(err)
@@ -191,7 +205,7 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 			arena.Send(ArenaMessage{
 				MessageType: ArenaBoardEventType,
 				Data:        event,
-			}, sendInfo.SendTo)
+			}, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 

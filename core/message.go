@@ -63,6 +63,34 @@ type PlayerQuitActionData struct{}
 
 type PlayerQuitEventData struct{}
 
+func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
+	var raw struct {
+		MessageType ArenaMessageType `json:"message_type"`
+		Data        json.RawMessage  `json:"data"`
+	}
+
+	if err := json.Unmarshal(rawData, &raw); err != nil {
+		return err
+	}
+
+	msg.MessageType = raw.MessageType
+
+	switch raw.MessageType {
+
+	// case InitialMessageEventType:
+	// 	initialMessageEvent := InitialMessageEventData{}
+	// 	err := json.Unmarshal(raw.Data, &initialMessageEvent)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	msg.Data = initialMessageEvent
+	default:
+		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+	}
+
+	return nil
+}
+
 func ServerArenaDecodeAndDispatch(handler ServerArenaHandler, rawData []byte) error {
 	var raw struct {
 		MessageType ArenaMessageType `json:"message_type"`
