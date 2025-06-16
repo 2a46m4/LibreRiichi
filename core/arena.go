@@ -217,6 +217,10 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 	return nil
 }
 
+func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData) error {
+	panic("NYI")
+}
+
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
 func (arena *Arena) FinishRoundArena() {
 	arena.Game.GetGameResults()

@@ -32,16 +32,16 @@ type ActionData struct {
 	Data       any        `json:"data"`
 }
 
-type ActionHandler interface {
-	HandleRon(RonData) error
-	HandleTsumo(TsumoData) error
-	HandleRiichi(RiichiData) error
-	HandleToss(TossData) error
-	HandleSkip(SkipData) error
-	HandlePon(PonData) error
-	HandleKan(KanData) error
-	HandleChii(ChiiData) error
-	HandleDraw(DrawData) error
+type ActionHandler[T any] interface {
+	HandleRon(RonData, uint8) (T, error)
+	HandleTsumo(TsumoData, uint8) (T, error)
+	HandleRiichi(RiichiData, uint8) (T, error)
+	HandleToss(TossData, uint8) (T, error)
+	HandleSkip(SkipData, uint8) (T, error)
+	HandlePon(PonData, uint8) (T, error)
+	HandleKan(KanData, uint8) (T, error)
+	HandleChii(ChiiData, uint8) (T, error)
+	HandleDraw(DrawData, uint8) (T, error)
 }
 
 type RonData struct {
@@ -82,7 +82,7 @@ type DrawData struct {
 	DrawnTile Tile `json:"drawn_tile"`
 }
 
-func ActionDecodeAndDispatch(handler ActionHandler, rawData []byte) error {
+func (msg *ActionData) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		ActionType ActionType      `json:"action_type"`
 		Data       json.RawMessage `json:"data"`
@@ -92,72 +92,136 @@ func ActionDecodeAndDispatch(handler ActionHandler, rawData []byte) error {
 		return err
 	}
 
-	switch raw.ActionType {
+	msg.ActionType = raw.ActionType
+
+	switch msg.ActionType {
 	case CHII:
 		message := ChiiData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleChii(message)
+		msg.Data = message
 	case DRAW:
 		message := DrawData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleDraw(message)
+		msg.Data = message
 	case KAN:
 		message := KanData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleKan(message)
+		msg.Data = message
 	case PON:
 		message := PonData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandlePon(message)
+		msg.Data = message
 	case RIICHI:
 		message := RiichiData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleRiichi(message)
+		msg.Data = message
 	case RON:
 		message := RonData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleRon(message)
+		msg.Data = message
 	case SKIP:
 		message := SkipData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleSkip(message)
+		msg.Data = message
 	case TOSS:
 		message := TossData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleToss(message)
+		msg.Data = message
 	case TSUMO:
 		message := TsumoData{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		return handler.HandleTsumo(message)
+		msg.Data = message
 	default:
 		return fmt.Errorf("unexpected core.ActionType: %#v", raw.ActionType)
+	}
+	return nil
+}
+
+func ActionDecode[T any](handler ActionHandler[T], data ActionData, fromPlayer uint8) (ret T, err error) {
+	switch data.ActionType {
+	case CHII:
+		message, ok := data.Data.(ChiiData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleChii(message, fromPlayer)
+	case DRAW:
+		message, ok := data.Data.(DrawData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleDraw(message, fromPlayer)
+	case KAN:
+		message, ok := data.Data.(KanData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleKan(message, fromPlayer)
+	case PON:
+		message, ok := data.Data.(PonData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandlePon(message, fromPlayer)
+	case RIICHI:
+		message, ok := data.Data.(RiichiData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleRiichi(message, fromPlayer)
+	case RON:
+		message, ok := data.Data.(RonData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleRon(message, fromPlayer)
+	case SKIP:
+		message, ok := data.Data.(SkipData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleSkip(message, fromPlayer)
+	case TOSS:
+		message, ok := data.Data.(TossData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleToss(message, fromPlayer)
+	case TSUMO:
+		message, ok := data.Data.(TsumoData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleTsumo(message, fromPlayer)
+	default:
+		return ret, fmt.Errorf("unexpected core.ActionType: %#v", data.ActionType)
 	}
 }
 
@@ -176,4 +240,34 @@ const (
 type Setup struct {
 	Type SetupType `json:"setup_type"`
 	Data any       `json:"data"`
+}
+
+func (msg *Setup) UnmarshalJSON(rawData []byte) error {
+	var raw struct {
+		SetupType SetupType       `json:"setup_type"`
+		Data      json.RawMessage `json:"data"`
+	}
+
+	if err := json.Unmarshal(rawData, &raw); err != nil {
+		return err
+	}
+
+	msg.Type = raw.SetupType
+
+	switch msg.Type {
+	case DORA:
+	case INITIAL_TILES:
+	case PLAYER_NUMBER:
+	case PLAYER_ORDER:
+	case ROUND_NUMBER:
+	case ROUND_WIND:
+	case STARTING_POINTS:
+	default:
+		panic(fmt.Sprintf("unexpected core.SetupType: %#v", msg.Type))
+	}
+	return nil
+}
+
+func SetupDecode[T any](handler ActionHandler[T], data ActionData) error {
+	panic("NYI")
 }

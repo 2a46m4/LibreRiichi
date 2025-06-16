@@ -47,9 +47,9 @@ type BoardEventHandler interface {
 	HandleGameEndEventType(GameEndEventData) error
 }
 
-func BoardEventDecodeAndDispatch(handler BoardEventHandler, rawData []byte) error {
+func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
-		MessageType BoardEventType  `json:"message_type"`
+		MessageType BoardEventType  `json:"event_type"`
 		Data        json.RawMessage `json:"data"`
 	}
 
@@ -57,32 +57,65 @@ func BoardEventDecodeAndDispatch(handler BoardEventHandler, rawData []byte) erro
 		return err
 	}
 
+	msg.EventType = raw.MessageType
 	switch raw.MessageType {
 	case GameEndEventType:
 		data := GameEndEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		return handler.HandleGameEndEventType(data)
+		msg.Data = data
 	case GameSetupEventType:
 		data := GameSetupEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		return handler.HandleGameSetupEventType(data)
+		msg.Data = data
 	case PlayerActionEventType:
 		data := PlayerActionEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		return handler.HandlePlayerActionEventType(data)
+		msg.Data = data
 	case PotentialActionEventType:
 		data := PotentialActionEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		return handler.HandlePotentialActionEventType(data)
+		msg.Data = data
 	default:
-		panic(fmt.Sprintf("unexpected core.BoardEventType: %#v", raw.MessageType))
+		return fmt.Errorf("unexpected core.BoardEventType: %#v", raw.MessageType)
+	}
+	return nil
+}
+
+func BoardEventDispatch(handler BoardEventHandler, event BoardEvent) error {
+	switch event.EventType {
+	case GameEndEventType:
+		message, ok := event.Data.(GameEndEventData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandleGameEndEventType(message)
+	case GameSetupEventType:
+		message, ok := event.Data.(GameSetupEventData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandleGameSetupEventType(message)
+	case PlayerActionEventType:
+		message, ok := event.Data.(PlayerActionEventData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandlePlayerActionEventType(message)
+	case PotentialActionEventType:
+		message, ok := event.Data.(PotentialActionEventData)
+		if !ok {
+			return BadTypeError{}
+		}
+		return handler.HandlePotentialActionEventType(message)
+	default:
+		return fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
 	}
 }

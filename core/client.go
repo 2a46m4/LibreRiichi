@@ -49,10 +49,12 @@ func (client Client) Loop() {
 				panic(err)
 			}
 
-			err := ServerDecodeAndDispatch(&client, recv.([]byte))
+			msg := Message{}
+			err := json.Unmarshal(recv.([]byte), &msg)
 			if err != nil {
 				continue
 			}
+			ServerDispatch(&client, msg)
 		}
 	}
 }
@@ -61,14 +63,15 @@ func (client Client) Loop() {
 func (client *Client) HandleJoinArenaAction(data JoinArenaActionData) error {
 	if client.Arena != nil {
 		return errors.New("Already in an arena")
-	} else {
-		arena := GetArena(data.ArenaName)
-		arena.JoinChannel <- client
-		if client.Arena == nil {
-			return errors.New("Could not join arena")
-		}
-		return nil
 	}
+
+	arena := GetArena(data.ArenaName)
+	err := arena.JoinArena(client, true)
+	if err != nil {
+		return err
+	}
+	client.Arena = arena
+	return nil
 }
 
 func (client *Client) HandleInitialMessageAction(data InitialMessageActionData) error {
@@ -82,7 +85,10 @@ func (client *Client) HandleInitialMessageAction(data InitialMessageActionData) 
 }
 
 func (client *Client) HandleServerArenaAction(action ServerArenaActionData) error {
-	return nil
+	if client.Arena != nil {
+		return ServerArenaDispatch(client.Arena, action.ArenaMessage)
+	}
+	return errors.New("No arena found")
 }
 
 func (client Client) GetSendChannel() chan<- Message {

@@ -17,7 +17,6 @@ const (
 	// Messages that are sent from player (client) to game (server)
 	StartGameActionType
 	PlayerActionType
-	PlayerJoinActionType
 	PlayerQuitActionType
 )
 
@@ -32,12 +31,11 @@ type ServerArenaHandler interface {
 	HandleStartGameAction(StartGameActionData) error
 	HandlePlayerAction(PlayerActionData) error
 	HandlePlayerQuitAction(PlayerQuitActionData) error
-	HandlePlayerJoinAction(PlayerJoinActionData) error
 }
 
 type ClientArenaHandler interface {
 	HandlePlayerJoinedEvent(PlayerJoinedEventData) error
-	HandlePlayerQuitAction(PlayerQuitEventData) error
+	HandlePlayerQuitEvent(PlayerQuitEventData) error
 	HandleGameStartedEvent(GameStartedEventData) error
 	HandleArenaBoardEvent(ArenaBoardEventData) error
 }
@@ -46,8 +44,6 @@ type PlayerJoinedEventData struct {
 }
 
 type GameStartedEventData struct{}
-
-type PlayerJoinActionData struct{}
 
 type StartGameActionData struct{}
 
@@ -78,18 +74,53 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 	switch raw.MessageType {
 	case ArenaBoardEventType:
 		data := ArenaBoardEventData{}
-		err := json.Unmarshal(raw.Data, &initialMessageEvent)
+		err := json.Unmarshal(raw.Data, &data)
 		if err != nil {
 			return err
 		}
-		msg.Data = InitialMessageEvent
+		msg.Data = data
 	case GameStartedEventType:
+		data := GameStartedEventData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	case PlayerActionType:
-	case PlayerJoinActionType:
+		data := PlayerActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	case PlayerJoinedEventType:
+		data := PlayerJoinedEventData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	case PlayerQuitActionType:
+		data := PlayerQuitActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	case PlayerQuitEventType:
+		data := PlayerQuitEventData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	case StartGameActionType:
+		data := StartGameActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	default:
 		panic(fmt.Sprintf("unexpected core.ArenaMessageType: %#v", raw.MessageType))
 	}
@@ -97,90 +128,58 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func ServerArenaDecodeAndDispatch(handler ServerArenaHandler, rawData []byte) error {
-	var raw struct {
-		MessageType ArenaMessageType `json:"message_type"`
-		Data        json.RawMessage  `json:"data"`
-	}
-
-	if err := json.Unmarshal(rawData, &raw); err != nil {
-		return err
-	}
-
-	switch raw.MessageType {
+func ServerArenaDispatch(handler ServerArenaHandler, msg ArenaMessage) error {
+	switch msg.MessageType {
 	case PlayerActionType:
-		message := PlayerActionData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(PlayerActionData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandlePlayerAction(message)
-	case PlayerJoinActionType:
-		message := PlayerJoinActionData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
-		}
-		return handler.HandlePlayerJoinAction(message)
 	case PlayerQuitActionType:
-		message := PlayerQuitActionData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(PlayerQuitActionData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandlePlayerQuitAction(message)
 	case StartGameActionType:
-		message := StartGameActionData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(StartGameActionData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandleStartGameAction(message)
 	default:
-		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
+		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}
 }
 
-func ClientArenaDecodeAndDispatch(handler ClientArenaHandler, rawData []byte) error {
-	var raw struct {
-		MessageType ArenaMessageType `json:"message_type"`
-		Data        json.RawMessage  `json:"data"`
-	}
-
-	if err := json.Unmarshal(rawData, &raw); err != nil {
-		return err
-	}
-
-	switch raw.MessageType {
+func ClientArenaDispatch(handler ClientArenaHandler, msg ArenaMessage) error {
+	switch msg.MessageType {
 	case PlayerJoinedEventType:
-		message := PlayerJoinedEventData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(PlayerJoinedEventData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandlePlayerJoinedEvent(message)
 	case PlayerQuitEventType:
-		message := PlayerJoinedEventData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(PlayerQuitEventData)
+		if !ok {
+			return BadTypeError{}
 		}
-		return handler.HandlePlayerJoinedEvent(message)
+		return handler.HandlePlayerQuitEvent(message)
 	case GameStartedEventType:
-		message := GameStartedEventData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(GameStartedEventData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandleGameStartedEvent(message)
 	case ArenaBoardEventType:
-		message := ArenaBoardEventData{}
-		err := json.Unmarshal(raw.Data, &message)
-		if err != nil {
-			return err
+		message, ok := msg.Data.(ArenaBoardEventData)
+		if !ok {
+			return BadTypeError{}
 		}
 		return handler.HandleArenaBoardEvent(message)
 	default:
-		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
+		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}
 }
