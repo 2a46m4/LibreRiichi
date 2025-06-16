@@ -76,16 +76,22 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 	msg.MessageType = raw.MessageType
 
 	switch raw.MessageType {
-
-	// case InitialMessageEventType:
-	// 	initialMessageEvent := InitialMessageEventData{}
-	// 	err := json.Unmarshal(raw.Data, &initialMessageEvent)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	msg.Data = initialMessageEvent
+	case ArenaBoardEventType:
+		data := ArenaBoardEventData{}
+		err := json.Unmarshal(raw.Data, &initialMessageEvent)
+		if err != nil {
+			return err
+		}
+		msg.Data = InitialMessageEvent
+	case GameStartedEventType:
+	case PlayerActionType:
+	case PlayerJoinActionType:
+	case PlayerJoinedEventType:
+	case PlayerQuitActionType:
+	case PlayerQuitEventType:
+	case StartGameActionType:
 	default:
-		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+		panic(fmt.Sprintf("unexpected core.ArenaMessageType: %#v", raw.MessageType))
 	}
 
 	return nil
