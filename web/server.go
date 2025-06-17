@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"codeberg.org/ijnakashiar/LibreRiichi/core"
@@ -21,7 +22,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 	fmt.Println("Got connection")
 	go func() {
 		err := conn.WriteJSON(core.Message{
-			MessageType: core.InitialMessageType,
+			MessageType: core.InitialMessageEventType,
 			Data:        nil,
 		})
 		if err != nil {
@@ -43,23 +44,23 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 		fmt.Println(string(buffer))
-		err = ret.DecodeMessage(buffer)
+		err = json.Unmarshal(buffer, ret)
 		if err != nil {
 			conn.Close()
 			return
 		}
 
-		if ret.MessageType != core.InitialMessageReturnType {
+		if ret.MessageType != core.InitialMessageActionType {
 			conn.Close()
 			return
 		}
-		res, ok := ret.Data.(*InitialMessageReturnData)
+		res, ok := ret.Data.(core.InitialMessageActionData)
 		if !ok {
 			conn.Close()
 			return
 		}
 
-		uuid, exist := server.Names[res.Name]
+		_, exist := server.Names[res.Name]
 		if exist {
 			fmt.Println("Not found")
 			// Consider a failure message type here instead
@@ -67,7 +68,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		client, err := core.MakeClient(res.Name, server.Rooms[uuid], conn)
+		client, err := core.MakeClient(conn)
 		if err != nil {
 			fmt.Println("Client fail")
 			conn.Close()
