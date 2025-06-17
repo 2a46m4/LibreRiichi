@@ -181,14 +181,17 @@ func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
 }
 
 func encodePotentialAction(data ActionData) ArenaBoardEventData {
-	return ArenaBoardEventData{
-		BoardEvent{
-			EventType: PotentialActionEventType,
-			Data: PotentialActionEventData{
-				ActionData: data,
-			},
-		},
-	}
+	return encodeBoardEvent(
+		PotentialActionEventType,
+		PotentialActionEventData{data},
+	)
+}
+
+func encodePlayerAction(data ActionData, fromPlayer uint8) ArenaBoardEventData {
+	return encodeBoardEvent(
+		PlayerActionEventType,
+		PlayerActionEventData{data, fromPlayer},
+	)
 }
 
 func makeMessage(visibility Visibility, sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
@@ -202,6 +205,16 @@ func makeMessage(visibility Visibility, sendTo uint8, data ...ArenaBoardEventDat
 func makeGlobalMessage(data ...ArenaBoardEventData) MessageSendInfo {
 	return MessageSendInfo{
 		Events:     data,
+		Visibility: GLOBAL,
+		SendTo:     0,
+	}
+}
+
+func globalPlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
+	return MessageSendInfo{
+		Events: []ArenaBoardEventData{
+			encodePlayerAction(data, fromPlayer),
+		},
 		Visibility: GLOBAL,
 		SendTo:     0,
 	}
@@ -394,19 +407,7 @@ func (game *MahjongGame) HandleChii(chiiData ChiiData, fromPlayer uint8) ([]Mess
 	game.CurrentTurnOrder = fromPlayer
 
 	return []MessageSendInfo{
-		makeGlobalMessage(encodeBoardEvent(
-			PlayerActionEventType,
-			PlayerActionEventData{
-				ActionData{
-					CHII,
-					ChiiData{
-						TileToChii:  chiiData.TileToChii,
-						TilesInHand: chiiSequence,
-					},
-				},
-				fromPlayer,
-			},
-		)),
+		globalPlayerAction(ActionData{CHII, chiiData}, fromPlayer),
 	}, nil
 }
 
@@ -425,21 +426,12 @@ func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []Me
 
 		info = []MessageSendInfo{
 			makeGlobalMessage(
-				encodeBoardEvent(
-					PlayerActionEventType,
-					PlayerActionEventData{
-						ActionData{
-							ActionType: KAN,
-							Data:       kanData,
-						},
-						fromPlayer,
-					},
-				),
+				encodePlayerAction(ActionData{KAN, kanData}, fromPlayer),
 			),
 		}
 
 	case CURRENT_TURN_PLAYED: // Daiminkan
-		if action.FromPlayer == game.currentPlayerIdx() {
+		if fromPlayer == game.currentPlayerIdx() {
 			break
 		}
 
@@ -448,21 +440,22 @@ func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []Me
 			break
 		}
 
-		err = game.Players[action.FromPlayer].Daiminkan(kanData.TileToKan)
+		err = game.Players[fromPlayer].Daiminkan(kanData.TileToKan)
 		if err != nil {
 			break
 		}
 
-		game.CurrentTurnOrder = action.FromPlayer
-		actions = []ActionResult{
-			{action, false, GLOBAL},
+		game.CurrentTurnOrder = fromPlayer
+		info = []MessageSendInfo{
+			globalPlayerAction(ActionData{KAN, kanData}, fromPlayer),
 		}
-		validMove = true
 
 	case POST_TURN_PLAYED: // Invalid
+		err = BadActionError{}
 	case GAME_ENDED: // Invalid
+		err = BadActionError{}
 	}
-	return actions, validMove
+	return info, err
 }
 
 func (game *MahjongGame) HandlePon(ponData PonData, fromPlayer uint8) ([]MessageSendInfo, error) {
@@ -474,38 +467,38 @@ func (game *MahjongGame) HandlePon(ponData PonData, fromPlayer uint8) ([]Message
 	if game.GameState != CURRENT_TURN_PLAYED {
 		return nil, BadActionError{}
 	}
-	if action.FromPlayer != game.nextPlayerIdx() {
+	if fromPlayer != game.nextPlayerIdx() {
 		return nil, BadActionError{}
 	}
 
-	err = game.Players[action.FromPlayer].Pon(onTile)
+	err = game.Players[fromPlayer].Pon(onTile)
 	if err != nil {
 		return nil, BadActionError{}
 	}
-	game.CurrentTurnOrder = action.FromPlayer
+	game.CurrentTurnOrder = fromPlayer
 
 	return []MessageSendInfo{
-		{action, false, GLOBAL},
-	}, true
+		globalPlayerAction(ActionData{PON, ponData}, fromPlayer),
+	}, nil
 
 }
 
 func (game *MahjongGame) HandleRon(ronData RonData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
-	if action.FromPlayer == game.currentPlayerIdx() {
+	if fromPlayer == game.currentPlayerIdx() {
 		return nil, BadActionError{}
 	}
-	_, err := game.findAction(action)
+	_, err := game.findAction(ActionData{RON, ronData}, fromPlayer)
 	if err != nil {
 		return nil, BadActionError{}
 	}
 
-	result, err := game.Players[action.FromPlayer].Ron(ronData.TileToRon)
+	result, err := game.Players[fromPlayer].Ron(ronData.TileToRon)
 	if err != nil {
 		return nil, BadActionError{}
 	}
 
-	gameResult := GenerateGameResult(result, action.FromPlayer)
+	gameResult := GenerateGameResult(result, fromPlayer)
 	err = gameResult.Apply(game)
 	if err != nil {
 		return nil, BadActionError{}
