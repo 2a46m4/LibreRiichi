@@ -39,6 +39,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 				Data:        bytes,
 			}
 		}
+
 	case PARTIAL:
 		arena.Agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
@@ -64,6 +65,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 				Data:        altBytes,
 			}
 		}
+
 	case PLAYER:
 		arena.Agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
@@ -195,9 +197,9 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 	arena.Lock()
 	defer arena.Unlock()
 
-	sendInfos, valid := arena.Game.RespondToAction(data)
-	if !valid {
-		return errors.New("Invalid move")
+	sendInfos, err := ActionDecode(&arena.Game, data.ActionData, 0)
+	if err != nil {
+		return err
 	}
 
 	for _, sendInfo := range sendInfos {
@@ -209,7 +211,7 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 		}
 	}
 
-	err := arena.driveGame()
+	err = arena.driveGame()
 	if err != nil {
 		panic("TODO: Error handling")
 	}

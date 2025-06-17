@@ -407,32 +407,36 @@ func (game *MahjongGame) HandleChii(chiiData ChiiData, fromPlayer uint8) ([]Mess
 				fromPlayer,
 			},
 		)),
-		// {action, false, GLOBAL},
 	}, nil
 }
 
-func (game *MahjongGame) HandleKan(action PlayerAction) (actions []ActionResult, validMove bool) {
-	kanData := action.Data.(KanData)
+func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []MessageSendInfo, err error) {
 	switch game.GameState {
 	case CURRENT_TURN: // Ankan
 
-		if action.FromPlayer != game.currentPlayerIdx() {
-			break
+		if fromPlayer != game.currentPlayerIdx() {
+			return nil, BadActionError{}
 		}
 
-		err := game.Players[action.FromPlayer].Ankan(kanData.TileToKan)
+		err := game.Players[fromPlayer].Ankan(kanData.TileToKan)
 		if err != nil {
 			break
 		}
 
-		actions = []ActionResult{
-			{
-				ActionPerformed: action,
-				IsPotential:     false,
-				VisibleTo:       GLOBAL,
-			},
+		info = []MessageSendInfo{
+			makeGlobalMessage(
+				encodeBoardEvent(
+					PlayerActionEventType,
+					PlayerActionEventData{
+						ActionData{
+							ActionType: KAN,
+							Data:       kanData,
+						},
+						fromPlayer,
+					},
+				),
+			),
 		}
-		validMove = true
 
 	case CURRENT_TURN_PLAYED: // Daiminkan
 		if action.FromPlayer == game.currentPlayerIdx() {
@@ -461,8 +465,7 @@ func (game *MahjongGame) HandleKan(action PlayerAction) (actions []ActionResult,
 	return actions, validMove
 }
 
-func (game *MahjongGame) HandlePon(action PlayerAction) (actions []ActionResult, validMove bool) {
-	ponData := action.Data.(PonData)
+func (game *MahjongGame) HandlePon(ponData PonData, fromPlayer uint8) ([]MessageSendInfo, error) {
 	last, err := game.lastTile()
 	onTile := ponData.TileToPon
 	if err != nil || onTile != last {
@@ -481,14 +484,13 @@ func (game *MahjongGame) HandlePon(action PlayerAction) (actions []ActionResult,
 	}
 	game.CurrentTurnOrder = action.FromPlayer
 
-	return []ActionResult{
+	return []MessageSendInfo{
 		{action, false, GLOBAL},
 	}, true
 
 }
 
-func (game *MahjongGame) HandleRon(action PlayerAction) ([]ActionResult, bool) {
-	ronData := action.Data.(RonData)
+func (game *MahjongGame) HandleRon(ronData RonData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
 	if action.FromPlayer == game.currentPlayerIdx() {
 		return nil, BadActionError{}
@@ -511,13 +513,12 @@ func (game *MahjongGame) HandleRon(action PlayerAction) ([]ActionResult, bool) {
 
 	game.Results = &gameResult
 	game.GameState = GAME_ENDED
-	return []ActionResult{
+	return []MessageSendInfo{
 		{action, false, GLOBAL},
 	}, true
 }
 
-func (game *MahjongGame) HandleRiichi(action PlayerAction) ([]ActionResult, bool) {
-	riichiData := action.Data.(RiichiData)
+func (game *MahjongGame) HandleRiichi(riichiData RiichiData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
 	tileDrawn, err := game.lastTile()
 	if err != nil || riichiData.TileToRiichi != tileDrawn {
@@ -537,13 +538,12 @@ func (game *MahjongGame) HandleRiichi(action PlayerAction) ([]ActionResult, bool
 
 	game.GameState = CURRENT_TURN_PLAYED
 
-	return []ActionResult{
+	return []MessageSendInfo{
 		{action, false, GLOBAL},
 	}, true
 }
 
-func (game *MahjongGame) HandleSkip(action PlayerAction) ([]ActionResult, bool) {
-	skipData := action.Data.(SkipData)
+func (game *MahjongGame) HandleSkip(skipData SkipData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
 	// We aren't finding the skip action itself but the action that is being skipped
 	idx, err := game.findAction(PlayerAction{
@@ -555,13 +555,12 @@ func (game *MahjongGame) HandleSkip(action PlayerAction) ([]ActionResult, bool) 
 		return nil, BadActionError{}
 	}
 	Remove(&game.PendingPostActions, idx)
-	return []ActionResult{
+	return []MessageSendInfo{
 		{action, false, Visibility(action.FromPlayer)},
 	}, true
 }
 
-func (game *MahjongGame) HandleToss(action PlayerAction) ([]ActionResult, bool) {
-	tossData := action.Data.(TossData)
+func (game *MahjongGame) HandleToss(tossData TossData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
 	onTile := tossData.TileToToss
 	if game.GameState != CURRENT_TURN {
@@ -576,15 +575,14 @@ func (game *MahjongGame) HandleToss(action PlayerAction) ([]ActionResult, bool) 
 	}
 
 	game.GameState = CURRENT_TURN_PLAYED
-	actions := []ActionResult{
+	actions := []MessageSendInfo{
 		{action, false, GLOBAL},
 	}
 
 	return actions, true
 }
 
-func (game *MahjongGame) HandleTsumo(action PlayerAction) ([]ActionResult, bool) {
-	tsumoData := action.Data.(TsumoData)
+func (game *MahjongGame) HandleTsumo(tsumoData TsumoData, fromPlayer uint8) ([]MessageSendInfo, error) {
 
 	if action.FromPlayer != game.currentPlayerIdx() {
 		return nil, BadActionError{}
@@ -607,10 +605,12 @@ func (game *MahjongGame) HandleTsumo(action PlayerAction) ([]ActionResult, bool)
 
 	game.Results = &gameResult
 	game.GameState = GAME_ENDED
-	return []ActionResult{
+	return []MessageSendInfo{
 		{action, false, GLOBAL},
 	}, true
 }
+
+func (game *MahjongGame) HandleDraw(drawData DrawData, fromPlayer uint8) ([]MessageSendInfo, error)
 
 // Checks the post-toss actions that can be made
 func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
