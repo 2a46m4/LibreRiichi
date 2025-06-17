@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import {MessageType} from "./Message";
+import {MessageType, ArenaMessageType, InitialMessageEvent, InitialMessageAction} from "./Message";
 
 // Try to connect to websockets
 let socket = new WebSocket("ws://localhost:3000/game");
@@ -37,16 +37,13 @@ function notify() {
 
 function find_room() {
   console.log(room_name.value)
-  let message = JSON.stringify({
-    message_type: MessageType.InitialMessageReturn,
-    data: {
-      name: "dabanya",
-      room: "bigjoeroom"
-    }
-  })
+  let message = JSON.stringify(InitialMessageEvent)
   console.log("Sending message:", message)
   socket.send(message)
   console.log("Message sent:", message)
+  let msg2 = JSON.stringify(new InitialMessageAction())
+  console.log("Sending message:", msg2)
+
 }
 </script>
 

@@ -48,7 +48,7 @@ type ClientHandler interface {
 type InitialMessageEventData struct{}
 
 type ServerArenaMessageEventData struct {
-	ArenaMessage ArenaMessage
+	ArenaMessage ArenaMessage `json:"arena_message"`
 }
 
 type InitialMessageActionData struct {
@@ -56,11 +56,15 @@ type InitialMessageActionData struct {
 }
 
 type ServerArenaActionData struct {
-	ArenaMessage ArenaMessage
+	ArenaMessage ArenaMessage `json:"arena_message"`
 }
 
 type JoinArenaActionData struct {
-	ArenaName uuid.UUID
+	ArenaName uuid.UUID `json:"arena_name"`
+}
+
+type JoinArenaEventData struct {
+	Success bool `json:"success"`
 }
 
 func (msg *Message) UnmarshalJSON(rawData []byte) error {
