@@ -1,10 +1,17 @@
 export enum MessageType {
+    // Messages that are sent from server to client
     InitialMessageEvent,
     JoinArenaEvent,
     ServerArenaEvent,
+    ListArenasEvent,
+    CreateArenaEvent,
+
+// Messages that are sent from client to server
     InitialMessageAction,
     JoinArenaAction,
     ServerArenaAction,
+    ListArenasAction,
+    CreateArenaAction,
 }
 
 export enum ArenaMessageType {
@@ -33,35 +40,35 @@ export class InitialMessageEvent extends Message {
 
 export class InitialMessageAction extends Message {
     readonly message_type = MessageType.InitialMessageAction
-    data = { name: '' }
+    data = {name: ''}
 
     constructor(name: string) {
         super()
-        this.data = { name: name }
+        this.data = {name: name}
     }
 }
 
-export class ServerArenaEvent {
+export class ServerArenaEvent extends Message {
     readonly message_type = MessageType.ServerArenaEvent
     data: { arena_message: ArenaMessage }
 }
 
-export type ServerArenaAction = {
-    message_type: MessageType.ServerArenaAction,
+export class ServerArenaAction extends Message {
+    readonly message_type = MessageType.ServerArenaAction
     data: {
         arena_message: ArenaMessage
     }
 }
 
-export type JoinArenaActionData = {
-    message_type: MessageType.JoinArenaAction,
+export class JoinArenaActionData extends Message {
+    readonly message_type = MessageType.JoinArenaAction
     data: {
         arena_name: string
     }
 }
 
-export type JoinArenaEventData = {
-    message_type: MessageType.JoinArenaEvent,
+export class JoinArenaEventData extends Message {
+    readonly message_type = MessageType.JoinArenaEvent
     data: {
         success: boolean
     }

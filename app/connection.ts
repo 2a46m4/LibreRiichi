@@ -1,15 +1,24 @@
-import {InitialMessageAction, Message} from "./Message";
+import {InitialMessageAction, Message} from "./message";
 
 export class Connection {
     socket: WebSocket;
+    ready: Promise<void>;
 
     constructor(name: string, websocket: WebSocket) {
         this.socket = websocket;
-        this.socket.onopen = () => {
-            this.Send(new InitialMessageAction(name))
-        }
+        this.ready = new Promise((resolve) => {
+            this.socket.onopen = (ev) => {
+                console.log("Connection opened");
+                this.Send(new InitialMessageAction(name))
+                resolve();
+            }
+        })
         this.socket.onmessage = this.Receive
-        this.socket.onclose()
+        this.socket.onclose = () => {}
+    }
+
+    async WaitUntilReady(): Promise<void> {
+        await this.ready
     }
 
     Send(msg: Message) {

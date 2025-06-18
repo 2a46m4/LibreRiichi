@@ -46,7 +46,9 @@ func (client Client) Loop() {
 			client.Connection.Send(bytes)
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
-				panic(err)
+				fmt.Println(err)
+				client.Connection.CloseConnChan()
+				return
 			}
 
 			msg := Message{}

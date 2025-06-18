@@ -7,6 +7,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@parcel/transformer-vue": "2.15.2",
+		"buffer": "^5.5.0||^6.0.0",
 		"concurrently": "^9.1.2",
 		"parcel": "^2.15.2",
 		"typescript": "^5.8.3"
@@ -19,8 +20,13 @@
 		"watch": "concurrently -k \"npm:frontend\" \"npm:backend\""
 	},
 	"dependencies": {
+		"@tailwindcss/postcss": "^4.1.10",
+		"autoprefixer": "^10.4.21",
+		"pinia": "^3.0.3",
+		"tailwindcss": "^4.1.10",
 		"typescript-json-schema": "^0.65.1",
 		"uuid": "^11.1.0",
-		"vue": "^3.5.16"
+		"vue": "^3.5.16",
+		"vue-router": "4"
 	}
 }

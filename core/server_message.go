@@ -60,7 +60,7 @@ type JoinArenaEventData struct {
 }
 
 type ListArenasEventData struct {
-	ArenaList []uuid.UUID `json:arena_list`
+	ArenaList []uuid.UUID `json:"arena_list"`
 }
 
 type CreateArenaEventData struct {
