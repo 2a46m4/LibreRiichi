@@ -76,7 +76,8 @@ type ServerArenaActionData struct {
 }
 
 type JoinArenaActionData struct {
-	ArenaName uuid.UUID `json:"arena_name"`
+	ArenaName string    `json:"arena_name"`
+	ArenaID   uuid.UUID `json:"arena_id"`
 }
 
 type ListArenasActionData struct{}
@@ -126,6 +127,13 @@ func (msg *Message) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.Data = initialMessageEvent
+	case JoinArenaActionType:
+		data := JoinArenaActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
 	default:
 		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
 	}

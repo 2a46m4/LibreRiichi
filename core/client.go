@@ -54,6 +54,7 @@ func (client Client) Loop() {
 			msg := Message{}
 			err := json.Unmarshal(recv.([]byte), &msg)
 			if err != nil {
+				fmt.Println("Error unmarshalling:", err)
 				continue
 			}
 			ServerDispatch(&client, msg)
@@ -67,7 +68,7 @@ func (client *Client) HandleJoinArenaAction(data JoinArenaActionData) error {
 		return errors.New("Already in an arena")
 	}
 
-	arena := GetArena(data.ArenaName)
+	arena := GetArena(data.ArenaID)
 	err := arena.JoinArena(client, true)
 	if err != nil {
 		return err

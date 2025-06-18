@@ -64,11 +64,12 @@ export class JoinArenaActionData extends Message {
     readonly message_type = MessageType.JoinArenaAction
     data: {
         arena_name: string
+        arena_id: Uint8Array
     }
 
-    constructor(arena_name: string) {
+    constructor(arena_name: string, arena_id: Uint8Array) {
         super();
-        this.data = {arena_name: arena_name}
+        this.data = {arena_name: arena_name, arena_id: arena_id}
     }
 }
 
