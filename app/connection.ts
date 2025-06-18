@@ -1,5 +1,7 @@
 import {InitialMessageAction, Message} from "./message";
 
+export const websocket_address = "ws://localhost:3000/game";
+
 export class Connection {
     socket: WebSocket;
     ready: Promise<void>;

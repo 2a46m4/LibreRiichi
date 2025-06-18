@@ -1,30 +1,61 @@
 <script setup lang="ts">
 import {JoinArenaActionData} from "./message";
 import {useGlobalStore} from "./global_store";
+import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
+import {ref} from "vue";
 const globalStore = useGlobalStore();
-console.log("NMIGGSFD")
-console.log(globalStore.getConnection().Send("SDKLFJSLDFKJ"));
+
+const room_name = ref('')
+const create_room_name = ref('')
 
 function make_room() {
 
 }
 
+function check_avail_rooms() {}
+
+
 function find_room() {
-  connection.Send(new JoinArenaActionData())
+  try {
+    globalStore.connection.Send(new JoinArenaActionData(room_name.value))
+    globalStore.connection.Receive()
+  } catch (error) {
+    console.log(error)
+  }
 }
+
+function create_room() {}
+
 </script>
 
 <template>
-  <h2>Join Room</h2>
+  <div :class="BoxStyling">
+  <h1 :class="H1Styling">Join Room</h1>
   <p>Room Name</p>
-  <input v-model="room_name">
-  <button @click="find_room">Find</button>
+  <input
+      :class="InputStyling"
+      v-model="room_name">
+  <button
+      :class="ButtonStyling"
+      @click="find_room">Find</button>
+  </div>
 
-  <h2>Available rooms</h2>
-  <h2>Create room</h2>
-  <p>Room name</p>
-  <input v-model="create_room_name">
-  <button @click="make_room">Create</button>
+  <div :class="BoxStyling">
+    <h1 :class="H1Styling">Create room</h1>
+    <input
+        :class="InputStyling"
+        v-model="create_room_name">
+    <button
+        :class="ButtonStyling"
+        @click="create_room">Create</button>
+  </div>
+
+  <div :class="BoxStyling">
+    <h1 :class="H1Styling">Available rooms</h1>
+    <button :class="ButtonStyling" @click="check_avail_rooms">Find</button>
+  </div>
+
+
 </template>
 
 <style scoped>

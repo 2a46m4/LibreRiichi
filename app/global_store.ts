@@ -1,9 +1,9 @@
 import {defineStore} from "pinia";
-import {ref} from "vue";
+import {Ref, ref} from "vue";
 import {Connection} from "./connection";
 
 export const useGlobalStore = defineStore('globalStore', ()=>{
-    let connection = ref(null)
+    let connection: Ref<Connection | null> = ref(null)
     function setConnection(conn: Connection): void {
         connection.value = conn
     }

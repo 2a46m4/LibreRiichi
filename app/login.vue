@@ -4,6 +4,7 @@ import {JoinArenaActionData} from "./message";
 import {Connection} from "./connection";
 import {useRoute, useRouter} from "vue-router";
 import {useGlobalStore} from "./global_store";
+import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 
 const globalStore = useGlobalStore();
 
@@ -21,14 +22,14 @@ async function connect() {
 </script>
 
 <template>
-  <div class="container items-center m-10 p-10 bg-white rounded shadow-md max-w-md">
-    <h1 class="font-bold text-xl">LibreRiichi</h1>
+  <div :class="BoxStyling">
+    <h1 :class="H1Styling">LibreRiichi</h1>
     <p>Username</p>
     <input
-        class="outline p-1"
+        :class="InputStyling"
         v-model="user_name">
     <button
-        class="outline p-1"
+        :class="ButtonStyling"
         @click="connect">Connect</button>
   </div>
 </template>

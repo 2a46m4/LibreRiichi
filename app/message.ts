@@ -65,6 +65,11 @@ export class JoinArenaActionData extends Message {
     data: {
         arena_name: string
     }
+
+    constructor(arena_name: string) {
+        super();
+        this.data = {arena_name: arena_name}
+    }
 }
 
 export class JoinArenaEventData extends Message {
