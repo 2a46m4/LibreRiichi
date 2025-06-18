@@ -14,11 +14,15 @@ const (
 	InitialMessageEventType MessageType = iota
 	JoinArenaEventType
 	ServerArenaEventType
+	ListArenasEventType
+	CreateArenaEventType
 
 	// Messages that are sent from client to server
 	InitialMessageActionType
 	JoinArenaActionType
 	ServerArenaActionType
+	ListArenasActionType
+	CreateArenaActionType
 )
 
 type BadTypeError struct{}
@@ -51,6 +55,18 @@ type ServerArenaMessageEventData struct {
 	ArenaMessage ArenaMessage `json:"arena_message"`
 }
 
+type JoinArenaEventData struct {
+	Success bool `json:"success"`
+}
+
+type ListArenasEventData struct {
+	ArenaList []uuid.UUID `json:arena_list`
+}
+
+type CreateArenaEventData struct {
+	Success bool `json:"success"`
+}
+
 type InitialMessageActionData struct {
 	Name string `json:"name"`
 }
@@ -63,8 +79,10 @@ type JoinArenaActionData struct {
 	ArenaName uuid.UUID `json:"arena_name"`
 }
 
-type JoinArenaEventData struct {
-	Success bool `json:"success"`
+type ListArenasActionData struct{}
+
+type CreateArenaActionData struct {
+	ArenaName uuid.UUID `json:"arena_name"`
 }
 
 func (msg *Message) UnmarshalJSON(rawData []byte) error {

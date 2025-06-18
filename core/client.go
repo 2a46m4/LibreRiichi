@@ -17,14 +17,14 @@ type Client struct {
 	Arena      *Arena       `json:"-"`
 }
 
-func MakeClient(connection *websocket.Conn) (Client, error) {
+func MakeClient(name string, connection *websocket.Conn) (Client, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		return Client{}, err
 	}
 
 	client := Client{
-		Name:       uuid.String(),
+		Name:       name,
 		ID:         uuid,
 		Connection: MakeChannelFromWebsocket(connection),
 		Recv:       make(chan Message, 32),

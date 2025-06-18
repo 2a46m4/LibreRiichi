@@ -1,17 +1,12 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import {MessageType, ArenaMessageType, InitialMessageEvent, InitialMessageAction} from "./Message";
+import {Connection} from "./connection";
+
 
 // Try to connect to websockets
 let socket = new WebSocket("ws://localhost:3000/game");
-socket.onopen = function(e) {
-  console.log("Socket opened:", e)
-}
-
-socket.onmessage = function (e) {
-  console.log(e.data)
-  console.log("Message recv:", JSON.parse(e.data))
-}
+let connection = new Connection(socket)
 
 const message = ref('Hello World!')
 
@@ -36,8 +31,7 @@ function notify() {
 }
 
 function find_room() {
-  console.log(room_name.value)
-  let message = JSON.stringify(InitialMessageEvent)
+  let message = JSON.stringify(new InitialMessageEvent())
   console.log("Sending message:", message)
   socket.send(message)
   console.log("Message sent:", message)

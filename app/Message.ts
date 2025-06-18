@@ -21,23 +21,28 @@ export enum ArenaMessageType {
 
 }
 
-export type Message = {
+export class Message {
     message_type: MessageType
     data: any
 }
 
-export const InitialMessageEvent: Message = {
-    message_type: MessageType.InitialMessageEvent,
-    data: null
+export class InitialMessageEvent extends Message {
+    readonly message_type = MessageType.InitialMessageEvent
+    readonly data: null
 }
 
-export class InitialMessageAction {
-    message_type = MessageType.InitialMessageAction
-    data : { name: string } = { name: '' }
+export class InitialMessageAction extends Message {
+    readonly message_type = MessageType.InitialMessageAction
+    data = { name: '' }
+
+    constructor(name: string) {
+        super()
+        this.data = { name: name }
+    }
 }
 
-export type ServerArenaEvent = {
-    message_type: MessageType.ServerArenaEvent,
+export class ServerArenaEvent {
+    readonly message_type = MessageType.ServerArenaEvent
     data: { arena_message: ArenaMessage }
 }
 

@@ -44,13 +44,15 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 		fmt.Println(string(buffer))
-		err = json.Unmarshal(buffer, ret)
+		err = json.Unmarshal(buffer, &ret)
 		if err != nil {
+			fmt.Println("Unmarshal failure")
 			conn.Close()
 			return
 		}
 
 		if ret.MessageType != core.InitialMessageActionType {
+			fmt.Println("Unexpected message")
 			conn.Close()
 			return
 		}
@@ -60,15 +62,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		_, exist := server.Names[res.Name]
-		if exist {
-			fmt.Println("Not found")
-			// Consider a failure message type here instead
-			conn.Close()
-			return
-		}
-
-		client, err := core.MakeClient(conn)
+		client, err := core.MakeClient(res.Name, conn)
 		if err != nil {
 			fmt.Println("Client fail")
 			conn.Close()
