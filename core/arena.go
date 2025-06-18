@@ -2,127 +2,168 @@ package core
 
 import (
 	"encoding/json"
-	"log"
-
-	"github.com/google/uuid"
+	"errors"
+	"fmt"
+	"sync"
 )
-
-// Agent represents a player that has joined the arena.
-type Agent struct {
-	Name       string    `json:"name"`
-	Id         uuid.UUID `json:"id"`
-	Connection ConnChan  `json:"-"`
-}
 
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents     []Agent
-	Spectators []Agent
-	Game       MahjongGame
+	Agents      []*Client
+	Spectators  []*Client
+	GameStarted bool
+	Game        MahjongGame
+	// AwaitingInputs []??? that stores the list of agents that it is waiting on
 
-	JoinChannel chan Agent
+	sync.Mutex
 }
 
-func (arena Arena) Send(data ArenaMessage) error {
-	marshalledData, err := json.Marshal(data)
+type MessageSendInfo struct {
+	Events     []ArenaBoardEventData
+	Visibility Visibility
+	SendTo     uint8
+}
+
+func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
+	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	if data.VisibleTo == GLOBAL {
+	switch visibility {
+	case GLOBAL:
 		for _, player := range arena.Agents {
-			player.Connection.WriteChannel <- marshalledData
+			player.Recv <- Message{
+				MessageType: ServerArenaEventType,
+				Data:        bytes,
+			}
 		}
-	} else {
-		arena.Agents[data.VisibleTo].Connection.WriteChannel <- marshalledData
+
+	case PARTIAL:
+		arena.Agents[sendTo].Recv <- Message{
+			MessageType: ServerArenaEventType,
+			Data:        bytes,
+		}
+
+		altMessage, err := GetAltMessage(data)
+		if err != nil {
+			return err
+		}
+
+		altBytes, err := json.Marshal(altMessage)
+		if err != nil {
+			return err
+		}
+
+		for idx, player := range arena.Agents {
+			if idx == int(sendTo) {
+				continue
+			}
+			player.Recv <- Message{
+				MessageType: ServerArenaEventType,
+				Data:        altBytes,
+			}
+		}
+
+	case PLAYER:
+		arena.Agents[sendTo].Recv <- Message{
+			MessageType: ServerArenaEventType,
+			Data:        bytes,
+		}
+	default:
+		panic(fmt.Sprintf("unexpected core.Visibility: %#v", sendTo))
 	}
 
 	return nil
 }
 
-func (arena Arena) Loop() {
-
-	for {
-		// Check for new join requests
-		select {
-		case newRequest := <-arena.JoinChannel:
-			err := arena.JoinArena(newRequest, true)
-			if err != nil {
-				// Send a error back to the request
-				continue
-			}
-
-			err = arena.Send(
-				ArenaMessage{
-					MessageType: PlayerJoinedEventType,
-					Data:        PlayerJoinedEventData{newRequest},
-					VisibleTo:   GLOBAL,
-				})
-			if err != nil {
-				panic(err)
-			}
-
-		default:
-			break
-		}
-
-		// Check for new messages from players
-		for _, player := range arena.Agents {
-			select {
-			case msgReceived := <-player.Connection.DataChannel:
-				if err, ok := msgReceived.(error); ok {
-					// Handle problematic connection here
-					panic(err)
-				}
-
-				Message := ArenaMessage{}
-				err := json.Unmarshal(msgReceived.([]byte), &Message)
-				if err != nil {
-					panic(err)
-				}
-
-				switch Message.MessageType {
-				case StartGameActionType:
-					err := arena.StartArena()
-					if err != nil {
-						continue
-					}
-
-					arena.GameLoop()
-					arena.EndArena()
-
-				case QuitActionType:
-					err := arena.EndArena()
-					if err != nil {
-						continue
-					}
-				}
-
-			default:
-				continue
-			}
-		}
+func CreateArena() Arena {
+	return Arena{
+		Agents:      []*Client{},
+		Spectators:  []*Client{},
+		Game:        MahjongGame{},
+		GameStarted: false,
+		Mutex:       sync.Mutex{},
 	}
 }
 
-// Adds an agnet to the arena.
-func (arena *Arena) JoinArena(agent Agent, joinAsPlayer bool) error {
+func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	if !joinAsPlayer {
 		panic("NYI")
 	}
 
-	err := arena.Game.JoinArena(len(arena.Agents))
+	arena.Lock()
+	defer arena.Unlock()
+
+	arena.Agents = append(arena.Agents, agent)
+
+	data := PlayerJoinedEventData{
+		Client: *agent,
+	}
+	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	arena.Agents = append(arena.Agents, agent)
+	err = arena.Send(
+		ArenaMessage{
+			MessageType: PlayerJoinedEventType,
+			Data:        bytes,
+		}, GLOBAL, 0)
+
+	if err != nil {
+		panic(err)
+	}
+
+	agent.Arena = arena
+
 	return nil
 }
 
+func (arena *Arena) DriveGame() error {
+	arena.Lock()
+	defer arena.Unlock()
+	return arena.driveGame()
+}
+
+// Drives the game forward
+func (arena *Arena) driveGame() error {
+
+	sendInfos, gameContinue := arena.Game.GetNextEvent()
+
+	if !gameContinue {
+		arena.FinishRoundArena()
+		return nil
+	}
+
+	// Send the event to the players
+	for _, sendInfo := range sendInfos {
+		for event := range sendInfo.Events {
+			arena.Send(ArenaMessage{
+				MessageType: ArenaBoardEventType,
+				Data:        event,
+			}, sendInfo.Visibility, sendInfo.SendTo)
+		}
+	}
+
+	return nil
+}
+
+// TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena Arena) StartArena() error {
+func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
+	arena.Lock()
+	defer arena.Unlock()
+
+	if arena.GameStarted {
+		return errors.New("Game already started")
+	}
+
+	if len(arena.Agents) != 4 {
+		return errors.New("Not enough agents")
+	}
+
 	setups, err := arena.Game.StartNewGame()
 	if err != nil {
 		return err
@@ -130,88 +171,64 @@ func (arena Arena) StartArena() error {
 
 	// Send over the setups for each player
 	for idx, setup := range setups {
-		err := arena.Send(ArenaMessage{
-			MessageType: SetupEventType,
-			Data:        SetupEventTypeData{setup[idx]},
-			VisibleTo:   Visibility(idx),
-		})
+
+		err = arena.Send(ArenaMessage{
+			MessageType: ArenaBoardEventType,
+			Data: ArenaBoardEventData{
+				BoardEvent{
+					EventType: GameSetupEventType,
+					Data: GameSetupEventData{
+						Setup: setup,
+					},
+				},
+			},
+		}, PLAYER, uint8(idx))
+
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	arena.GameStarted = true
+	return arena.driveGame()
+}
+
+func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
+	arena.Lock()
+	defer arena.Unlock()
+
+	sendInfos, err := ActionDecode(&arena.Game, data.ActionData, 0)
+	if err != nil {
+		return err
+	}
+
+	for _, sendInfo := range sendInfos {
+		for _, event := range sendInfo.Events {
+			arena.Send(ArenaMessage{
+				MessageType: ArenaBoardEventType,
+				Data:        event,
+			}, sendInfo.Visibility, sendInfo.SendTo)
+		}
+	}
+
+	err = arena.driveGame()
+	if err != nil {
+		panic("TODO: Error handling")
 	}
 
 	return nil
 }
 
-func (arena Arena) GameLoop() {
-
-	// Collect data channels
-	dataChannels := make([]chan any, len(arena.Agents))
-	for _, agent := range arena.Agents {
-		dataChannels = append(dataChannels, (agent.Connection.DataChannel))
-	}
-	inputChannel := FanIn(dataChannels)
-
-	gameContinue := true
-	for gameContinue {
-
-		var events []ActionResult
-		events, gameContinue = arena.Game.GetNextEvent()
-
-		// Send the event to the players
-		for _, event := range events {
-			arena.Send(ArenaMessage{
-				MessageType: PlayerActionEventType,
-				Data:        PlayerActionEventTypeData{event},
-				VisibleTo:   event.VisibleTo,
-			})
-		}
-
-		// Wait on the players to make a response
-	Rewait:
-		// TODO: Set timeout here
-
-		input := <-inputChannel
-		if err, ok := input.Data.(error); ok {
-			// Handle problematic connection here
-			panic(err)
-		}
-
-		var action PlayerAction
-		err := action.DecodeAction(input.Data.([]byte))
-		if err != nil {
-			log.Println(err)
-			goto Rewait
-		}
-		if action.FromPlayer != uint8(input.I) {
-			goto Rewait
-		}
-
-		actionResults, validMove := arena.Game.RespondToAction(action)
-		if !validMove {
-			goto Rewait
-		}
-
-		// Send the results to the players
-		for _, actionResult := range actionResults {
-			arena.Send(ArenaMessage{
-				MessageType: PlayerActionEventType,
-				Data:        PlayerActionEventTypeData{actionResult},
-				VisibleTo:   actionResult.VisibleTo,
-			})
-		}
-	}
-
-	arena.Game.GetGameResults()
-	// Broadcast game end and results
+func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData) error {
+	panic("NYI")
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
-func (arena Arena) FinishRoundArena() {
-
+func (arena *Arena) FinishRoundArena() {
+	arena.Game.GetGameResults()
 }
 
 // EndArena is called when the arena is finished and all players should be disconnected
-func (arena Arena) EndArena() error {
+func (arena *Arena) EndArena() error {
 	return nil
 }

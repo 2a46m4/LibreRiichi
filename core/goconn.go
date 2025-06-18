@@ -2,71 +2,171 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // A channel wrapper for a connection
 type ConnChan struct {
-	// Data that will be received
-	DataChannel  chan any
-	CloseChannel chan any
+	// Data that will be received from the connection will be sent
+	// through this channel
+	DataChannel chan any
+	// Receiving
+	CloseChannel chan UnitType
 	WriteChannel chan []byte
-	connection   net.Conn
 }
 
 // Create a ConnChan from a connection
 func MakeChannel(conn net.Conn) ConnChan {
 	ret := ConnChan{
 		make(chan any),
-		make(chan any),
+		make(chan UnitType),
 		make(chan []byte),
-		conn,
 	}
 
 	go func() {
 		buffer := make([]byte, 1024)
 		for {
-			conn.SetDeadline(time.Now().Add(time.Second))
-			read, err := conn.Read(buffer)
-			if errors.Is(err, os.ErrDeadlineExceeded) {
-				continue
-			} else if err != nil {
-				ret.DataChannel <- err
-			}
-
 			select {
 			case <-ret.CloseChannel:
 				close(ret.DataChannel)
-				conn.Close()
+				err := conn.Close()
+				if err != nil {
+					fmt.Println(err)
+				}
 				return
-			case toWrite := <-ret.WriteChannel:
-				conn.SetDeadline(time.Now().Add(time.Second))
-				conn.Write(toWrite)
+			default:
+				read, err := conn.Read(buffer)
+				if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+					ret.DataChannel <- err
+				} else {
+					ret.DataChannel <- buffer[:read]
+				}
+			}
+		}
+	}()
+
+	go func() {
+		select {
+		case <-ret.CloseChannel:
+			return
+		case toWrite := <-ret.WriteChannel:
+			conn.SetDeadline(time.Now().Add(time.Second))
+			_, err := conn.Write(toWrite)
+			if err != nil && errors.Is(err, net.ErrClosed) {
+				// TODO: Handle quit
+				return
+			}
+		default:
+		}
+	}()
+
+	return ret
+}
+
+// Create one from a WebSocket
+func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
+	ret := ConnChan{
+		make(chan any),
+		make(chan UnitType),
+		make(chan []byte),
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ret.CloseChannel:
+				close(ret.DataChannel)
+				err := conn.Close()
+				if err != nil {
+					fmt.Println(err)
+				}
+				return
+			default:
+				fmt.Println("Waiting for message")
+				msgType, buffer, err := conn.ReadMessage()
+				fmt.Println("Recved message")
+				if err != nil {
+					ret.DataChannel <- err
+					continue
+				}
+
+				switch msgType {
+				case websocket.TextMessage:
+					ret.DataChannel <- buffer
+				case websocket.BinaryMessage, websocket.PongMessage, websocket.PingMessage:
+					continue
+				case websocket.CloseMessage:
+					close(ret.DataChannel)
+					conn.Close()
+					return
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-ret.CloseChannel:
+				return
+			case toWrite, ok := <-ret.WriteChannel:
+				if !ok {
+					conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(0, "Closed conection"))
+					return
+				}
+
+				err := conn.WriteMessage(websocket.TextMessage, toWrite)
+				if err != nil {
+					panic(err)
+				}
 			default:
 			}
-
-			ret.DataChannel <- buffer[:read]
-
 		}
-
 	}()
 
 	return ret
 }
 
 // Sends a message through the data channel
+// TODO: Error handling
 func (conn ConnChan) Send(data []byte) {
 	conn.WriteChannel <- data
+}
+
+func (conn ConnChan) SendNonBlock(data []byte) bool {
+	select {
+	case conn.WriteChannel <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 func (conn ConnChan) Close() {
 	conn.CloseChannel <- Unit
 }
 
+// TODO: Error handling
 func (conn ConnChan) Recv() any {
 	return <-conn.DataChannel
+}
+
+func (conn ConnChan) RecvChan() <-chan any {
+	return conn.DataChannel
+}
+
+func (conn ConnChan) RecvNonBlock() (any, bool) {
+	select {
+	case data := <-conn.DataChannel:
+		return data, true
+	default:
+		return nil, false
+	}
 }
 
 // Send the data to all of the channels
@@ -78,7 +178,6 @@ func Broadcast(data []byte, conns []ConnChan) {
 
 // To be called by the data receiver when it's done
 func (conn ConnChan) CloseConnChan() {
-	conn.CloseChannel <- Unit
 	close(conn.CloseChannel)
 	close(conn.WriteChannel)
 }

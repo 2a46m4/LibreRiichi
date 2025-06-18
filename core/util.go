@@ -48,6 +48,13 @@ func Swap[T any](array []T, first, second uint) []T {
 	return array
 }
 
+// Does not preserve order
+func Remove[T any, U int | uint](array *[]T, idx U) *[]T {
+	Swap(*array, uint(idx), uint(len(*array)-1))
+	Pop(array)
+	return array
+}
+
 func Count[T comparable](array []T, find T) (count int) {
 	for _, i := range array {
 		if i == find {
@@ -56,4 +63,3 @@ func Count[T comparable](array []T, find T) (count int) {
 	}
 	return count
 }
-
