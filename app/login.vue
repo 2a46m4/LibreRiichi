@@ -10,14 +10,13 @@ const globalStore = useGlobalStore();
 
 const user_name = ref('')
 
-const router = useRouter()
+const app = globalStore.application
+
+const set_username = (username: string) => app.set_username(username)
 
 async function connect() {
-  console.log("connecting...")
-  let connection = new Connection(user_name.value, new WebSocket("ws://localhost:3000/game"))
-  await connection.WaitUntilReady()
-  globalStore.setConnection(connection);
-  await router.push({name: 'connected_page'})
+  set_username(app.username)
+  app.connect()
 }
 </script>
 

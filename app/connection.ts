@@ -3,32 +3,32 @@ import {InitialMessageAction, Message} from "./message";
 export const websocket_address = "ws://localhost:3000/game";
 
 export class Connection {
-    socket: WebSocket;
-    ready: Promise<void>;
+	socket: WebSocket;
+	ready: Promise<void>;
+	handler: (e: MessageEvent) => any
 
-    constructor(name: string, websocket: WebSocket) {
-        this.socket = websocket;
-        this.ready = new Promise((resolve) => {
-            this.socket.onopen = (ev) => {
-                console.log("Connection opened");
-                this.Send(new InitialMessageAction(name))
-                resolve();
-            }
-        })
-        this.socket.onmessage = this.Receive
-        this.socket.onclose = () => {}
-    }
+	constructor(name: string, websocket: WebSocket, handler: (e: MessageEvent) => any) {
+		this.socket = websocket;
+		this.handler = handler
 
-    async WaitUntilReady(): Promise<void> {
-        await this.ready
-    }
+		this.ready = new Promise((resolve) => {
+			this.socket.onopen = (ev) => {
+				console.log("Connection opened");
+				this.Send(new InitialMessageAction(name))
+				resolve();
+			}
+		})
+		this.socket.onmessage = handler
+		this.socket.onclose = () => {}
+	}
 
-    Send(msg: Message) {
-        console.log(msg)
-        this.socket.send(JSON.stringify(msg))
-    }
+	async WaitUntilReady(): Promise<void> {
+		await this.ready
+	}
 
-    Receive(e: MessageEvent): any {
-        console.log(e)
-    }
+	Send(msg: Message) {
+		console.log(msg)
+		this.socket.send(JSON.stringify(msg))
+	}
+
 }
