@@ -89,7 +89,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 			default:
 				fmt.Println("Waiting for message")
 				msgType, buffer, err := conn.ReadMessage()
-				fmt.Println("Recved message")
+				fmt.Println("Recved message", string(buffer))
 				if err != nil {
 					ret.DataChannel <- err
 					continue
