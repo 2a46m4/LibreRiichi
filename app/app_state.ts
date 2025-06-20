@@ -86,8 +86,9 @@ export class Application {
 		
 	}
 
-	// If it matches an outgoing message, it's a response to the outgoing message. Otherwise it's a fresh event from the server.
+	// If it matches an outgoing message, it's a response to the outgoing message. Otherwise, it's a fresh event from the server.
 	match_outgoing_message(data: any) {
+
 		console.log(data)
 	}
 }

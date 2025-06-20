@@ -1,3 +1,5 @@
+import {z} from "zod/v4"
+
 export enum MessageType {
     // Messages that are sent from server to client
     InitialMessageEvent,
