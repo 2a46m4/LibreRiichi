@@ -30,7 +30,7 @@ export enum ArenaMessageType {
 
 }
 
-export class Message {
+export type Message = {
     message_type: MessageType
     data: any
 }
