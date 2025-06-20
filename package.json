@@ -17,7 +17,7 @@
 		"build-frontend": "parcel build app/index.html",
 		"backend": "go run cmd/main.go",
 		"build-backend": "go build -o dist-server/server cmd/main.go",
-		"watch": "concurrently -k \"npm:frontend\" \"npm:backend\""
+		"watch": "concurrently -k \"yarn:frontend\" \"yarn:backend\""
 	},
 	"dependencies": {
 		"@tailwindcss/postcss": "^4.1.10",

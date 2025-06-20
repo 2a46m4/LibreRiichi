@@ -28,8 +28,9 @@ async function connect() {
         :class="InputStyling"
         v-model="user_name">
     <button
-        :class="ButtonStyling"
-        @click="connect">Connect</button>
+      :class="ButtonStyling"
+      @click="connect"
+      @keyup.enter="connect">Connect</button>
   </div>
 </template>
 

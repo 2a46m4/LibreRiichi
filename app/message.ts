@@ -28,60 +28,46 @@ export enum ArenaMessageType {
 
 }
 
-export class Message {
+export type Message = {
     message_type: MessageType
     data: any
 }
 
-export class InitialMessageEvent extends Message {
-    readonly message_type = MessageType.InitialMessageEvent
-    readonly data: null
+export type InitialMessageEvent = {
+    message_type: MessageType.InitialMessageEvent
+    data: null
 }
 
-export class InitialMessageAction extends Message {
-    readonly message_type = MessageType.InitialMessageAction
-    data = {name: ''}
-
-    constructor(name: string) {
-        super()
-        this.data = {name: name}
-    }
+export type InitialMessageAction = {
+    message_type: MessageType.InitialMessageAction
+    data: { name: '' }
 }
 
-export class ServerArenaEvent extends Message {
-    readonly message_type = MessageType.ServerArenaEvent
+export type ServerArenaEvent = {
+    message_type: MessageType.ServerArenaEvent
     data: { arena_message: ArenaMessage }
 }
 
-export class ServerArenaAction extends Message {
-    readonly message_type = MessageType.ServerArenaAction
+export type ServerArenaAction = {
+    message_type: MessageType.ServerArenaAction
     data: {
         arena_message: ArenaMessage
     }
 }
 
-export class JoinArenaActionData extends Message {
-    readonly message_type = MessageType.JoinArenaAction
+export type JoinArenaActionData = {
+    message_type: MessageType.JoinArenaAction
     data: {
         arena_name: string
         arena_id: Uint8Array
     }
-
-    constructor(arena_name: string, arena_id: Uint8Array) {
-        super();
-        this.data = {arena_name: arena_name, arena_id: arena_id}
-    }
 }
 
-export class JoinArenaEventData extends Message {
-    readonly message_type = MessageType.JoinArenaEvent
+export type JoinArenaEventData = {
+    message_type: MessageType.JoinArenaEvent
     data: {
         success: boolean
     }
-}
-
-export function checkMessage(message: any) {
-
 }
 
 export type ArenaMessage = {
