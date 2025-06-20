@@ -1,3 +1,5 @@
+import {z} from "zod/v4"
+
 export enum MessageType {
     // Messages that are sent from server to client
     InitialMessageEvent,
@@ -78,10 +80,6 @@ export class JoinArenaEventData extends Message {
     data: {
         success: boolean
     }
-}
-
-export function checkMessage(message: any) {
-
 }
 
 export type ArenaMessage = {

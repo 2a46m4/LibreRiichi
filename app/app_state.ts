@@ -79,6 +79,7 @@ export class Application {
 	handle_message_recv(ev: MessageEvent) {
 		try {
 			let data = JSON.parse(ev.data)
+			
 			this.match_outgoing_message(data)
 		} catch (e) {
 			console.log(e)
@@ -88,6 +89,7 @@ export class Application {
 
 	// If it matches an outgoing message, it's a response to the outgoing message. Otherwise it's a fresh event from the server.
 	match_outgoing_message(data: any) {
+
 		console.log(data)
 	}
 }

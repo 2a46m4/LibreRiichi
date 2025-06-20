@@ -3,6 +3,7 @@
 	"version": "1.0.0",
 	"description": "Open Source Mahjong Server",
 	"repository": "git@codeberg.org:ijnakashiar/LibreRiichi.git",
+	"browserslist": "> 0.5%, last 2 versions, not dead",
 	"author": "IJN Akashi AR <dabanya@protonmail.com>",
 	"license": "MIT",
 	"devDependencies": {
@@ -22,6 +23,7 @@
 	"dependencies": {
 		"@tailwindcss/postcss": "^4.1.10",
 		"autoprefixer": "^10.4.21",
+		"google-closure-compiler": "^20250615.0.0",
 		"pinia": "^3.0.3",
 		"tailwindcss": "^4.1.10",
 		"typescript-json-schema": "^0.65.1",
