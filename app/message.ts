@@ -28,10 +28,12 @@ export enum ArenaMessageType {
 
 }
 
-export type Message = {
-    message_type: MessageType
-    data: any
-}
+// export type Message = {
+//     message_type: MessageType
+//     data: any
+// }
+
+export type Message =  InitialMessageEvent | InitialMessageAction | ServerArenaEvent | ServerArenaAction | JoinArenaAction | JoinArenaEvent | ArenaMessage
 
 export type InitialMessageEvent = {
     message_type: MessageType.InitialMessageEvent
@@ -55,15 +57,14 @@ export type ServerArenaAction = {
     }
 }
 
-export type JoinArenaActionData = {
+export type JoinArenaAction = {
     message_type: MessageType.JoinArenaAction
     data: {
         arena_name: string
-        arena_id: string
     }
 }
 
-export type JoinArenaEventData = {
+export type JoinArenaEvent = {
     message_type: MessageType.JoinArenaEvent
     data: {
         success: boolean

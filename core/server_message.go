@@ -171,6 +171,12 @@ func ServerDispatch[Return any](handler ServerHandler[Return], message Message) 
 			return ret, BadTypeError{}
 		}
 		return handler.HandleCreateArenaAction(data)
+	case JoinArenaActionType:
+		data, ok := message.Data.(JoinArenaActionData)
+		if !ok {
+			return ret, BadTypeError{}
+		}
+		return handler.HandleJoinArenaAction(data)
 	default:
 		return ret, fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)
 	}

@@ -3,12 +3,13 @@ import {JoinArenaActionData, MessageType} from "./message";
 import {useGlobalStore} from "./global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 import {ref} from "vue";
-import {v4, parse} from "uuid";
+import Modal from "./modal.vue";
 const globalStore = useGlobalStore();
 
 const room_name = ref('')
 const create_room_name = ref('')
 const room_uuid_list = ref(new Map())
+const show_error = ref(false)
 
 function make_room() {
 
@@ -26,6 +27,7 @@ async function find_room() {
 
   } catch (error) {
     console.log(error)
+    show_error.value = true
   }
 }
 
@@ -60,6 +62,7 @@ function create_room() {}
     <button :class="ButtonStyling" @click="check_avail_rooms">Find</button>
   </div>
 
+  <modal :show="show_error"></modal>
 
 </template>
 

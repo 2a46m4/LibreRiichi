@@ -25,11 +25,11 @@ type SameNameError struct {
 }
 
 func (e ArenaNotFoundError) Error() string {
-	return fmt.Sprint("Arena {} is not found", e.arena_name)
+	return fmt.Sprintf("Arena %v is not found", e.arena_name)
 }
 
 func (e SameNameError) Error() string {
-	return fmt.Sprint("There is already an arena with the same name: {}", e.arena_name)
+	return fmt.Sprintf("There is already an arena with the same name: %v", e.arena_name)
 }
 
 func GetArenaFromName(name string) (*Arena, error) {
