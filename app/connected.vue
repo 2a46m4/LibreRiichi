@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {JoinArenaActionData} from "./message";
+import {JoinArenaActionData, MessageType} from "./message";
 import {useGlobalStore} from "./global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 import {ref} from "vue";
@@ -17,11 +17,13 @@ function make_room() {
 function check_avail_rooms() {}
 
 
-function find_room() {
+async function find_room() {
   try {
-    globalStore.connection.Send(new JoinArenaActionData(room_name.value, parse(v4())))
-    // globalStore.connection.Send(new JoinArenaActionData(room_name.value, room_uuid_list.value[room_name.value]))
-    // globalStore.connection.Receive()
+    await globalStore.application.connect_room(
+        room_name.value,
+        room_uuid_list.value[room_name.value]
+    )
+
   } catch (error) {
     console.log(error)
   }

@@ -1,4 +1,4 @@
-import {InitialMessageAction, Message} from "./message";
+import {Message, MessageType} from "./message";
 
 export const websocket_address = "ws://localhost:3000/game";
 
@@ -14,7 +14,10 @@ export class Connection {
 		this.ready = new Promise((resolve) => {
 			this.socket.onopen = (ev) => {
 				console.log("Connection opened");
-				this.Send(new InitialMessageAction(name))
+				this.Send({
+					message_type: MessageType.InitialMessageAction,
+					data: {name: name}
+				})
 				resolve();
 			}
 		})

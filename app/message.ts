@@ -1,5 +1,3 @@
-import {z} from "zod/v4"
-
 export enum MessageType {
     // Messages that are sent from server to client
     InitialMessageEvent,
@@ -61,7 +59,7 @@ export type JoinArenaActionData = {
     message_type: MessageType.JoinArenaAction
     data: {
         arena_name: string
-        arena_id: Uint8Array
+        arena_id: string
     }
 }
 

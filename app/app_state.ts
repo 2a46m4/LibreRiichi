@@ -1,6 +1,6 @@
 import {Connection, websocket_address} from "./connection";
 import {useRouter, Router} from "vue-router";
-import {Message} from "./message";
+import {Message, MessageType} from "./message";
 
 export enum ApplicationState {
 	NOT_CONNECTED,
@@ -17,12 +17,24 @@ export enum GameState {
 	IN_TURN
 }
 
+type MessageResolver = (v: Message) => void
+
+class OutgoingMessageState {
+	return: Promise<Message>
+	resolve: MessageResolver
+	outgoing: Message
+}
+
 export class Application {
 	connection: Connection;
 	username: string
 	state: ApplicationState
 	router: Router
-	outgoing_messages: Message[]
+	outgoing_messages: {
+		return: Promise<Message>,
+		resolve: MessageResolver,
+		outgoing: Message
+	}[]
 
 	constructor() {
 		this.state = ApplicationState.NOT_CONNECTED
@@ -60,8 +72,33 @@ export class Application {
 		console.log("Connected!")
 	}
 
-	connect_room(room_name: string) {
-		// TODO: Finish
+	async connect_room(room_name: string, id: string) {
+		this.connection.Send({
+			message_type: MessageType.JoinArenaAction,
+			data: {
+				arena_name: room_name,
+				arena_id: id,
+			}
+		})
+
+		let resolveMsg: MessageResolver;
+		let promiseMsg = new Promise((resolve: MessageResolver) => {
+			resolveMsg = resolve
+		});
+
+		this.outgoing_messages.push({
+			return: promiseMsg,
+			resolve: resolveMsg,
+			outgoing: {
+				message_type: MessageType.JoinArenaAction,
+				data: {
+					arena_name: room_name,
+				}
+			}
+		})
+
+		await this.outgoing_messages.at(-1).return
+
 	}
     
 	quit_room() {
@@ -88,7 +125,7 @@ export class Application {
 
 	// If it matches an outgoing message, it's a response to the outgoing message. Otherwise, it's a fresh event from the server.
 	match_outgoing_message(data: any) {
-
+		this.outgoing_messages[0].resolve(data)
 		console.log(data)
 	}
 }
