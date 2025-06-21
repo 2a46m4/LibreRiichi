@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {JoinArenaActionData, MessageType} from "./message";
+import {MessageType} from "./message";
 import {useGlobalStore} from "./global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 import {ref} from "vue";
