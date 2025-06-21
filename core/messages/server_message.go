@@ -52,12 +52,12 @@ type ListArenasResponseData struct {
 
 // ==================== ACTIONS ====================
 
-type ServerActionHandler[Input, Return any] interface {
-	HandleInitialMessage(InitialMessageActionData, ...Input) (Return, error)
-	HandleJoinArena(JoinArenaActionData, ...Input) (Return, error)
-	HandleServerArena(ServerArenaActionData, ...Input) (Return, error)
-	HandleListArenas(ListArenasActionData, ...Input) (Return, error)
-	HandleCreateArena(CreateArenaActionData, ...Input) (Return, error)
+type ServerActionHandler[Return any] interface {
+	HandleInitialMessage(InitialMessageActionData) (Return, error)
+	HandleJoinArena(JoinArenaActionData) (Return, error)
+	HandleServerArena(ServerArenaActionData) (Return, error)
+	HandleListArenas(ListArenasActionData) (Return, error)
+	HandleCreateArena(CreateArenaActionData) (Return, error)
 }
 
 type InitialMessageActionData struct {
@@ -135,38 +135,38 @@ func (msg *Message) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func ServerActionDispatch[Input, Return any](handler ServerActionHandler[Input, Return], message Message, input ...Input) (ret Return, err error) {
+func ServerActionDispatch[Return any](handler ServerActionHandler[Return], message Message) (ret Return, err error) {
 	switch message.MessageType {
 	case InitialMessageActionType:
 		initialMessageReturn, ok := message.Data.(InitialMessageActionData)
 		if !ok {
 			return ret, BadMessage{}
 		}
-		return handler.HandleInitialMessage(initialMessageReturn, input...)
+		return handler.HandleInitialMessage(initialMessageReturn)
 	case ServerArenaActionType:
 		serverArenaAction, ok := message.Data.(ServerArenaActionData)
 		if !ok {
 			return ret, BadMessage{}
 		}
-		return handler.HandleServerArena(serverArenaAction, input...)
+		return handler.HandleServerArena(serverArenaAction)
 	case ListArenasActionType:
 		data, ok := message.Data.(ListArenasActionData)
 		if !ok {
 			return ret, BadMessage{}
 		}
-		handler.HandleListArenas(data, input...)
+		handler.HandleListArenas(data)
 	case CreateArenaActionType:
 		data, ok := message.Data.(CreateArenaActionData)
 		if !ok {
 			return ret, BadMessage{}
 		}
-		return handler.HandleCreateArena(data, input...)
+		return handler.HandleCreateArena(data)
 	case JoinArenaActionType:
 		data, ok := message.Data.(JoinArenaActionData)
 		if !ok {
 			return ret, BadMessage{}
 		}
-		return handler.HandleJoinArena(data, input...)
+		return handler.HandleJoinArena(data)
 	default:
 	}
 	return ret, fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)

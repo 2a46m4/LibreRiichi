@@ -42,6 +42,32 @@ func FormatMessage(msgType MessageType, data any) DispatchResult {
 	}
 }
 
+func SuccessMsg() DispatchResult {
+	return DispatchResult{
+		Message: Message{
+			MessageType: GenericRepsonseType,
+			Data: GenericResponseData{
+				Success:    true,
+				FailReason: "",
+			},
+		},
+		DoSend: true,
+	}
+}
+
+func FailureMsg(err string) DispatchResult {
+	return DispatchResult{
+		Message: Message{
+			MessageType: GenericRepsonseType,
+			Data: GenericResponseData{
+				Success:    false,
+				FailReason: err,
+			},
+		},
+		DoSend: true,
+	}
+}
+
 func MakeClient(name string, connection *websocket.Conn) (Client, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
@@ -82,7 +108,7 @@ func (client Client) Loop() {
 				fmt.Println("Error unmarshalling:", err)
 				continue
 			}
-			dispatchResult, err := ServerDispatch(&client, msg)
+			dispatchResult, err := ServerActionDispatch(&client, msg)
 			if err != nil {
 				fmt.Println("Problem with message during dispatch:", err)
 			}
@@ -94,61 +120,53 @@ func (client Client) Loop() {
 	}
 }
 
+func (client *Client) HandleListArenas(data ListArenasActionData) (DispatchResult, error) {
+	// TODO
+	return DispatchResult{}, nil
+}
+
 // HandleJoinArenaAction implements ServerHandler.
-func (client *Client) HandleJoinArenaAction(data JoinArenaActionData) (DispatchResult, error) {
+func (client *Client) HandleJoinArena(data JoinArenaActionData) (DispatchResult, error) {
 	if client.Arena != nil {
-		return FormatMessage(JoinArenaEventType,
-			JoinArenaEventData{
-				Success: false,
-			}), errors.New("Already in an arena")
+		err := errors.New("Already in an arena")
+		return FailureMsg(err.Error()), err
 	}
 
 	arena, err := GetArenaFromName(data.ArenaName)
 	if err != nil {
-		return FormatMessage(JoinArenaEventType,
-			JoinArenaEventData{
-				Success: false,
-			}), err
+		return FailureMsg(err.Error()), err
 	}
 
 	err = arena.JoinArena(client, true)
 	if err != nil {
-		return FormatMessage(JoinArenaEventType,
-			JoinArenaEventData{
-				Success: false,
-			}), err
+		return FailureMsg(err.Error()), err
 	}
 
 	client.Arena = arena
-	return FormatMessage(JoinArenaEventType,
-		JoinArenaEventData{
-			Success: false,
-		}), nil
+	return SuccessMsg(), nil
 }
 
-func (client *Client) HandleInitialMessageAction(data InitialMessageActionData) (DispatchResult, error) {
+func (client *Client) HandleInitialMessage(data InitialMessageActionData) (DispatchResult, error) {
 	client.Name = data.Name
-	return FormatMessage(InitialMessageEventType,
-		InitialMessageEventData{}), nil
+	return SuccessMsg(), nil
 }
 
-func (client *Client) HandleServerArenaAction(action ServerArenaActionData) (DispatchResult, error) {
+func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchResult, error) {
 	if client.Arena != nil {
 		// TODO: Do something with this result
-		ServerArenaDispatch(client.Arena, action.ArenaMessage)
+		ArenaActionDispatch(client.Arena, action.ArenaMessage)
 		return DispatchResult{}, nil
 	}
-	return DispatchResult{}, errors.New("No arena found")
+	err := errors.New("No arena found")
+	return FailureMsg(err.Error()), err
 }
 
-func (client *Client) HandleCreateArenaAction(data CreateArenaActionData) (DispatchResult, error) {
+func (client *Client) HandleCreateArena(data CreateArenaActionData) (DispatchResult, error) {
 	err := CreateAndAddArena(data.ArenaName)
 	if err != nil {
-		return DispatchResult{}, err
+		return FailureMsg(err.Error()), err
 	}
-	return FormatMessage(CreateArenaEventType, CreateArenaEventData{
-		Success: true,
-	}), nil
+	return SuccessMsg(), nil
 }
 
 func (client Client) GetSendChannel() chan<- Message {
