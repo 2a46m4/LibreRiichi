@@ -153,8 +153,13 @@ func (client *Client) HandleInitialMessage(data InitialMessageActionData) (Dispa
 
 func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchResult, error) {
 	if client.Arena != nil {
+		idx, err := client.Arena.getPlayerIdx(client)
+		if err != nil {
+			return DispatchResult{}, err
+		}
+
 		// TODO: Do something with this result
-		ArenaActionDispatch(client.Arena, action.ArenaMessage)
+		ArenaActionDispatch(client.Arena, action.ArenaMessage, idx)
 		return DispatchResult{}, nil
 	}
 	err := errors.New("No arena found")

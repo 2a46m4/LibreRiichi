@@ -50,10 +50,10 @@ type ArenaBoardEventData struct {
 
 // ==================== ACTIONS ====================
 
-type ArenaActionHandler interface {
-	HandleStartGameAction(StartGameActionData) error
-	HandlePlayerAction(PlayerActionData) error
-	HandlePlayerQuitAction(PlayerQuitActionData) error
+type ArenaActionHandler[Input any] interface {
+	HandleStartGameAction(StartGameActionData, Input) error
+	HandlePlayerAction(PlayerActionData, Input) error
+	HandlePlayerQuitAction(PlayerQuitActionData, Input) error
 }
 
 type StartGameActionData struct{}
@@ -135,26 +135,26 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func ArenaActionDispatch(handler ArenaActionHandler, msg ArenaMessage) error {
+func ArenaActionDispatch[E any](handler ArenaActionHandler[E], msg ArenaMessage, input E) (err error) {
 	switch msg.MessageType {
 	case PlayerActionType:
 		message, ok := msg.Data.(PlayerActionData)
 		if !ok {
 			return BadMessage{}
 		}
-		return handler.HandlePlayerAction(message)
+		return handler.HandlePlayerAction(message, input)
 	case PlayerQuitActionType:
 		message, ok := msg.Data.(PlayerQuitActionData)
 		if !ok {
 			return BadMessage{}
 		}
-		return handler.HandlePlayerQuitAction(message)
+		return handler.HandlePlayerQuitAction(message, input)
 	case StartGameActionType:
 		message, ok := msg.Data.(StartGameActionData)
 		if !ok {
 			return BadMessage{}
 		}
-		return handler.HandleStartGameAction(message)
+		return handler.HandleStartGameAction(message, input)
 	default:
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}

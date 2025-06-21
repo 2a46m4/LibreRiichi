@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"codeberg.org/ijnakashiar/LibreRiichi/core"
+	core "codeberg.org/ijnakashiar/LibreRiichi/core"
+	msg "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -21,8 +22,8 @@ type Server struct {
 func (server Server) AcceptConnection(conn *websocket.Conn) {
 	fmt.Println("Got connection")
 	go func() {
-		err := conn.WriteJSON(core.Message{
-			MessageType: core.InitialMessageEventType,
+		err := conn.WriteJSON(msg.Message{
+			MessageType: msg.GenericRepsonseType,
 			Data:        nil,
 		})
 		if err != nil {
@@ -31,7 +32,7 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		ret := core.Message{}
+		ret := msg.Message{}
 		messageType, buffer, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println("Failed at read")
@@ -51,12 +52,12 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 			return
 		}
 
-		if ret.MessageType != core.InitialMessageActionType {
+		if ret.MessageType != msg.InitialMessageActionType {
 			fmt.Println("Unexpected message")
 			conn.Close()
 			return
 		}
-		res, ok := ret.Data.(core.InitialMessageActionData)
+		res, ok := ret.Data.(msg.InitialMessageActionData)
 		if !ok {
 			conn.Close()
 			return

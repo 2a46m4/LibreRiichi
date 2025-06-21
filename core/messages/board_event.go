@@ -43,11 +43,11 @@ type GameEndEventData struct {
 	GameResult GameResult `json:"result"`
 }
 
-type BoardEventHandler[Input, Return any] interface {
-	HandlePlayerActionEventType(PlayerActionEventData, ...Input) (Return, error)
-	HandlePotentialActionEventType(PotentialActionEventData, ...Input) (Return, error)
-	HandleGameSetupEventType(GameSetupEventData, ...Input) (Return, error)
-	HandleGameEndEventType(GameEndEventData, ...Input) (Return, error)
+type BoardEventHandler interface {
+	HandlePlayerActionEventType(PlayerActionEventData) error
+	HandlePotentialActionEventType(PotentialActionEventData) error
+	HandleGameSetupEventType(GameSetupEventData) error
+	HandleGameEndEventType(GameEndEventData) error
 }
 
 func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
@@ -92,33 +92,33 @@ func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func BoardEventDispatch[Input, Return any](handler BoardEventHandler[Input, Return], event BoardEvent, input ...Input) (ret Return, err error) {
+func BoardEventDispatch(handler BoardEventHandler, event BoardEvent) (err error) {
 	switch event.EventType {
 	case GameEndEventType:
 		message, ok := event.Data.(GameEndEventData)
 		if !ok {
-			return ret, BadMessage{}
+			return BadMessage{}
 		}
-		return handler.HandleGameEndEventType(message, input...)
+		return handler.HandleGameEndEventType(message)
 	case GameSetupEventType:
 		message, ok := event.Data.(GameSetupEventData)
 		if !ok {
-			return ret, BadMessage{}
+			return BadMessage{}
 		}
-		return handler.HandleGameSetupEventType(message, input...)
+		return handler.HandleGameSetupEventType(message)
 	case PlayerActionEventType:
 		message, ok := event.Data.(PlayerActionEventData)
 		if !ok {
-			return ret, BadMessage{}
+			return BadMessage{}
 		}
-		return handler.HandlePlayerActionEventType(message, input...)
+		return handler.HandlePlayerActionEventType(message)
 	case PotentialActionEventType:
 		message, ok := event.Data.(PotentialActionEventData)
 		if !ok {
-			return ret, BadMessage{}
+			return BadMessage{}
 		}
-		return handler.HandlePotentialActionEventType(message, input...)
+		return handler.HandlePotentialActionEventType(message)
 	default:
-		return ret, fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
+		return fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
 	}
 }

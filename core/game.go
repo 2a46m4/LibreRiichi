@@ -512,7 +512,7 @@ func (game *MahjongGame) HandleRon(ronData RonData, fromPlayer uint8) ([]Message
 	}
 
 	gameResult := GenerateGameResult(result, fromPlayer)
-	err = gameResult.Apply(game)
+	// err = gameResult.Apply(game)
 	if err != nil {
 		return nil, BadActionError{}
 	}
@@ -553,7 +553,7 @@ func (game *MahjongGame) HandleSkip(skipData SkipData, fromPlayer uint8) ([]Mess
 
 	// We aren't finding the skip action itself but the action that is being skipped
 	idx, err := game.findAction(
-		skipData.ActionToSkip.ActionData,
+		skipData.ActionToSkip,
 		fromPlayer,
 	)
 	if err != nil {
@@ -602,7 +602,7 @@ func (game *MahjongGame) HandleTsumo(tsumoData TsumoData, fromPlayer uint8) ([]M
 	}
 
 	gameResult := GenerateGameResult(result, fromPlayer)
-	err = gameResult.Apply(game)
+	// err = gameResult.Apply(game)
 	if err != nil {
 		return nil, BadActionError{}
 	}

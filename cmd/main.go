@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
-	web "codeberg.org/ijnakashiar/LibreRiichi/web"
+	web "codeberg.org/ijnakashiar/LibreRiichi/core/web"
 	"github.com/google/uuid"
 )
 

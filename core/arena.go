@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
 // A location where players gather. Controls the flow of the game,
@@ -99,7 +102,8 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	arena.Agents = append(arena.Agents, agent)
 
 	data := PlayerJoinedEventData{
-		Client: *agent,
+		Name: agent.Name,
+		ID:   agent.ID,
 	}
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -150,9 +154,21 @@ func (arena *Arena) driveGame() error {
 	return nil
 }
 
+func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
+	arena.Lock()
+	defer arena.Unlock()
+
+	for i, ptr := range arena.Agents {
+		if ptr == client {
+			return uint8(i), nil
+		}
+	}
+	return 0, errors.New("not found")
+}
+
 // TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
+func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer uint8) error {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -175,7 +191,7 @@ func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
 		err = arena.Send(ArenaMessage{
 			MessageType: ArenaBoardEventType,
 			Data: ArenaBoardEventData{
-				BoardEvent{
+				BoardEvent: BoardEvent{
 					EventType: GameSetupEventType,
 					Data: GameSetupEventData{
 						Setup: setup,
@@ -193,11 +209,11 @@ func (arena *Arena) HandleStartGameAction(StartGameActionData) error {
 	return arena.driveGame()
 }
 
-func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
+func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) error {
 	arena.Lock()
 	defer arena.Unlock()
 
-	sendInfos, err := ActionDecode(&arena.Game, data.ActionData, 0)
+	sendInfos, err := ActionDecode(&arena.Game, data.ActionData, fromPlayer)
 	if err != nil {
 		return err
 	}
@@ -219,7 +235,7 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData) error {
 	return nil
 }
 
-func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData) error {
+func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
 	panic("NYI")
 }
 
