@@ -3,6 +3,9 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
 type BoardEventType uint8
@@ -40,11 +43,11 @@ type GameEndEventData struct {
 	GameResult GameResult `json:"result"`
 }
 
-type BoardEventHandler interface {
-	HandlePlayerActionEventType(PlayerActionEventData) error
-	HandlePotentialActionEventType(PotentialActionEventData) error
-	HandleGameSetupEventType(GameSetupEventData) error
-	HandleGameEndEventType(GameEndEventData) error
+type BoardEventHandler[Input, Return any] interface {
+	HandlePlayerActionEventType(PlayerActionEventData, ...Input) (Return, error)
+	HandlePotentialActionEventType(PotentialActionEventData, ...Input) (Return, error)
+	HandleGameSetupEventType(GameSetupEventData, ...Input) (Return, error)
+	HandleGameEndEventType(GameEndEventData, ...Input) (Return, error)
 }
 
 func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
@@ -89,33 +92,33 @@ func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func BoardEventDispatch(handler BoardEventHandler, event BoardEvent) error {
+func BoardEventDispatch[Input, Return any](handler BoardEventHandler[Input, Return], event BoardEvent, input ...Input) (ret Return, err error) {
 	switch event.EventType {
 	case GameEndEventType:
 		message, ok := event.Data.(GameEndEventData)
 		if !ok {
-			return BadTypeError{}
+			return ret, BadMessage{}
 		}
-		return handler.HandleGameEndEventType(message)
+		return handler.HandleGameEndEventType(message, input...)
 	case GameSetupEventType:
 		message, ok := event.Data.(GameSetupEventData)
 		if !ok {
-			return BadTypeError{}
+			return ret, BadMessage{}
 		}
-		return handler.HandleGameSetupEventType(message)
+		return handler.HandleGameSetupEventType(message, input...)
 	case PlayerActionEventType:
 		message, ok := event.Data.(PlayerActionEventData)
 		if !ok {
-			return BadTypeError{}
+			return ret, BadMessage{}
 		}
-		return handler.HandlePlayerActionEventType(message)
+		return handler.HandlePlayerActionEventType(message, input...)
 	case PotentialActionEventType:
 		message, ok := event.Data.(PotentialActionEventData)
 		if !ok {
-			return BadTypeError{}
+			return ret, BadMessage{}
 		}
-		return handler.HandlePotentialActionEventType(message)
+		return handler.HandlePotentialActionEventType(message, input...)
 	default:
-		return fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
+		return ret, fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
 	}
 }

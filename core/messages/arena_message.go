@@ -3,6 +3,10 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"github.com/google/uuid"
 )
 
 type ArenaMessageType uint8
@@ -27,37 +31,40 @@ type ArenaMessage struct {
 	Data        any              `json:"data"`
 }
 
-type ServerArenaHandler interface {
-	HandleStartGameAction(StartGameActionData) error
-	HandlePlayerAction(PlayerActionData) error
-	HandlePlayerQuitAction(PlayerQuitActionData) error
+// ==================== EVENTS ====================
+
+type PlayerJoinedEventData struct {
+	Name string    `json:"name"`
+	ID   uuid.UUID `json:"id"`
 }
 
-type ClientArenaHandler interface {
-	HandlePlayerJoinedEvent(PlayerJoinedEventData) error
-	HandlePlayerQuitEvent(PlayerQuitEventData) error
-	HandleGameStartedEvent(GameStartedEventData) error
-	HandleArenaBoardEvent(ArenaBoardEventData) error
-}
-type PlayerJoinedEventData struct {
-	Client Client `json:"client"`
+type PlayerQuitEventData struct {
+	Name string `json:"name"`
 }
 
 type GameStartedEventData struct{}
-
-type StartGameActionData struct{}
 
 type ArenaBoardEventData struct {
 	BoardEvent // For handling generic games, this should be replaced
 }
 
+// ==================== ACTIONS ====================
+
+type ArenaActionHandler interface {
+	HandleStartGameAction(StartGameActionData) error
+	HandlePlayerAction(PlayerActionData) error
+	HandlePlayerQuitAction(PlayerQuitActionData) error
+}
+
+type StartGameActionData struct{}
+
+type PlayerQuitActionData struct{}
+
 type PlayerActionData struct {
 	ActionData // For handling generic games, this should be replaced
 }
 
-type PlayerQuitActionData struct{}
-
-type PlayerQuitEventData struct{}
+// ==================== DECODING AND DISPATCH ====================
 
 func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
@@ -122,63 +129,32 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 		}
 		msg.Data = data
 	default:
-		panic(fmt.Sprintf("unexpected core.ArenaMessageType: %#v", raw.MessageType))
+		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
 	}
 
 	return nil
 }
 
-func ServerArenaDispatch(handler ServerArenaHandler, msg ArenaMessage) error {
+func ArenaActionDispatch(handler ArenaActionHandler, msg ArenaMessage) error {
 	switch msg.MessageType {
 	case PlayerActionType:
 		message, ok := msg.Data.(PlayerActionData)
 		if !ok {
-			return BadTypeError{}
+			return BadMessage{}
 		}
 		return handler.HandlePlayerAction(message)
 	case PlayerQuitActionType:
 		message, ok := msg.Data.(PlayerQuitActionData)
 		if !ok {
-			return BadTypeError{}
+			return BadMessage{}
 		}
 		return handler.HandlePlayerQuitAction(message)
 	case StartGameActionType:
 		message, ok := msg.Data.(StartGameActionData)
 		if !ok {
-			return BadTypeError{}
+			return BadMessage{}
 		}
 		return handler.HandleStartGameAction(message)
-	default:
-		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
-	}
-}
-
-func ClientArenaDispatch(handler ClientArenaHandler, msg ArenaMessage) error {
-	switch msg.MessageType {
-	case PlayerJoinedEventType:
-		message, ok := msg.Data.(PlayerJoinedEventData)
-		if !ok {
-			return BadTypeError{}
-		}
-		return handler.HandlePlayerJoinedEvent(message)
-	case PlayerQuitEventType:
-		message, ok := msg.Data.(PlayerQuitEventData)
-		if !ok {
-			return BadTypeError{}
-		}
-		return handler.HandlePlayerQuitEvent(message)
-	case GameStartedEventType:
-		message, ok := msg.Data.(GameStartedEventData)
-		if !ok {
-			return BadTypeError{}
-		}
-		return handler.HandleGameStartedEvent(message)
-	case ArenaBoardEventType:
-		message, ok := msg.Data.(ArenaBoardEventData)
-		if !ok {
-			return BadTypeError{}
-		}
-		return handler.HandleArenaBoardEvent(message)
 	default:
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}

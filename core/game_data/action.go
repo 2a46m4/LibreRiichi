@@ -1,16 +1,9 @@
 package core
 
 import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
 	"encoding/json"
 	"fmt"
-)
-
-type Visibility uint8
-
-const (
-	PLAYER Visibility = iota
-	PARTIAL
-	GLOBAL
 )
 
 type ActionType uint8
@@ -62,7 +55,7 @@ type TossData struct {
 }
 
 type SkipData struct {
-	ActionToSkip PlayerActionData `json:"action_to_skip"`
+	ActionToSkip ActionData `json:"action_to_skip"`
 }
 
 type PonData struct {
@@ -169,105 +162,58 @@ func ActionDecode[T any, E any](handler ActionHandler[T, E], data ActionData, ex
 	case CHII:
 		message, ok := data.Data.(ChiiData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleChii(message, extraData)
 	case DRAW:
 		message, ok := data.Data.(DrawData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleDraw(message, extraData)
 	case KAN:
 		message, ok := data.Data.(KanData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleKan(message, extraData)
 	case PON:
 		message, ok := data.Data.(PonData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandlePon(message, extraData)
 	case RIICHI:
 		message, ok := data.Data.(RiichiData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleRiichi(message, extraData)
 	case RON:
 		message, ok := data.Data.(RonData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleRon(message, extraData)
 	case SKIP:
 		message, ok := data.Data.(SkipData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleSkip(message, extraData)
 	case TOSS:
 		message, ok := data.Data.(TossData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleToss(message, extraData)
 	case TSUMO:
 		message, ok := data.Data.(TsumoData)
 		if !ok {
-			return ret, BadTypeError{}
+			return ret, BadMessage{}
 		}
 		return handler.HandleTsumo(message, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected core.ActionType: %#v", data.ActionType)
 	}
-}
-
-type SetupType uint8
-
-const (
-	INITIAL_TILES SetupType = iota
-	DORA
-	STARTING_POINTS
-	PLAYER_NUMBER
-	PLAYER_ORDER
-	ROUND_WIND
-	ROUND_NUMBER
-)
-
-type Setup struct {
-	Type SetupType `json:"setup_type"`
-	Data any       `json:"data"`
-}
-
-func (msg *Setup) UnmarshalJSON(rawData []byte) error {
-	var raw struct {
-		SetupType SetupType       `json:"setup_type"`
-		Data      json.RawMessage `json:"data"`
-	}
-
-	if err := json.Unmarshal(rawData, &raw); err != nil {
-		return err
-	}
-
-	msg.Type = raw.SetupType
-
-	switch msg.Type {
-	case DORA:
-	case INITIAL_TILES:
-	case PLAYER_NUMBER:
-	case PLAYER_ORDER:
-	case ROUND_NUMBER:
-	case ROUND_WIND:
-	case STARTING_POINTS:
-	default:
-		panic(fmt.Sprintf("unexpected core.SetupType: %#v", msg.Type))
-	}
-	return nil
-}
-
-func SetupDecode[T any, E any](handler ActionHandler[T, E], data ActionData) error {
-	panic("NYI")
 }

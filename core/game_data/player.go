@@ -1,6 +1,7 @@
 package core
 
 import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 	"errors"
 	"slices"
 )
@@ -9,42 +10,12 @@ import (
 
 // ==================== TYPES ====================
 
-type Hand struct {
-	ClosedHand   []Tile
-	Kans         []Tile
-	Pons         []Tile
-	Chiis        []Tile // Chiis are the start of the sequence
-	HandOpen     bool
-	HandInRiichi bool
-}
-
 type Player struct {
 	Hand
 	Discards []Tile // For furiten
 
 	Points   uint32
 	SeatWind Wind
-}
-
-type WinResult struct {
-	Yakus       YakuType
-	WinningHand Hand
-	WinningTile Tile
-	WonByRon    bool
-}
-
-// ==================== ERRORS ====================
-
-type TooManyTilesErr struct{}
-
-func (TooManyTilesErr) Error() string {
-	return "Too many tiles in hand"
-}
-
-type TooLittleTilesErr struct{}
-
-func (TooLittleTilesErr) Error() string {
-	return "Too little tiles in hand"
 }
 
 // ==================== PRIVATE FUNCTIONS ====================

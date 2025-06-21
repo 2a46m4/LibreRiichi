@@ -2,10 +2,6 @@ package core
 
 import "math/rand"
 
-type UnitType struct{}
-
-var Unit = UnitType{}
-
 // Creates a random permutation of the array
 // Modifies the existing array
 func PermuteArray[T any](array []T) []T {

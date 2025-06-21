@@ -1,6 +1,10 @@
 package core
 
 import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+
 	"errors"
 )
 

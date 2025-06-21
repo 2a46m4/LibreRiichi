@@ -7,14 +7,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
 type Client struct {
-	Name       string       `json:"name"`
-	ID         uuid.UUID    `json:"id"`
-	Connection ConnChan     `json:"-"`
-	Recv       chan Message `json:"-"`
-	Arena      *Arena       `json:"-"`
+	Name       string
+	ID         uuid.UUID
+	Connection ConnChan
+	Recv       chan Message
+	Arena      *Arena
 }
 
 type DispatchResult struct {

@@ -1,6 +1,6 @@
 import {Connection, websocket_address} from "./connection";
 import {Router, useRouter} from "vue-router";
-import {Message, MessageType} from "./message";
+import {getMatchingMessageType, Message, MessageType} from "./message";
 
 export enum ApplicationState {
     NOT_CONNECTED,
@@ -63,14 +63,14 @@ export class Application {
         this.connection = new Connection(
             this.username,
             new WebSocket(websocket_address),
-            (ev) => this.handle_message_recv(ev)
+            (ev: MessageEvent<any>) => this.handle_message_recv(ev)
         )
         this.state = ApplicationState.CONNECTING
 
         const promiseMsg = this.push_outgoing_message(
             {
-                message_type: MessageType.InitialMessageAction,
-                data: null,
+                    message_type: MessageType.InitialMessageAction,
+                    data: {name: this.username}
             }
         )
 
@@ -80,12 +80,11 @@ export class Application {
         console.log("Connected!")
     }
 
-    async connect_room(room_name: string, id: string) {
+    async connect_room(room_name: string) {
         this.connection.Send({
             message_type: MessageType.JoinArenaAction,
             data: {
                 arena_name: room_name,
-                arena_id: id,
             }
         })
 
@@ -127,20 +126,20 @@ export class Application {
         // TODO: Finish
     }
 
-    push_outgoing_message(msg: Message) {
-        let resolveMsg: MessageResolver;
-        let promiseMsg = new Promise((resolve: MessageResolver) => {
-            resolveMsg = resolve
-        });
+	push_outgoing_message(msg: Message) {
+		let resolveMsg: MessageResolver = (_: Message) => {};
+		let promiseMsg = new Promise((resolve: MessageResolver) => {
+			resolveMsg = resolve
+		});
 
-        this.outgoing_messages.push({
-            promise: promiseMsg,
-            resolve: resolveMsg,
-            outgoing: msg
-        })
+		this.outgoing_messages.push({
+			promise: promiseMsg,
+			resolve: resolveMsg,
+			outgoing: msg
+		})
 
-        return promiseMsg
-    }
+		return promiseMsg
+	}
 
     handle_message_recv(ev: MessageEvent) {
         try {
@@ -153,8 +152,15 @@ export class Application {
     }
 
     // If it matches an outgoing message, it's a response to the outgoing message. Otherwise, it's a fresh event from the server.
-    match_outgoing_message(data: any) {
-        console.log("Got return: ", data)
-        this.outgoing_messages[0].resolve(data)
+    match_outgoing_message(data: Message) {
+            console.log("Got return: ", data)
+
+	    const matching = getMatchingMessageType(data.message_type)
+	    for (let i = 0; i < this.outgoing_messages.length; i++) {
+		    if (this.outgoing_messages[i].outgoing.message_type === matching) {
+			    this.outgoing_messages.splice(i)
+		    }
+	    }
+            this.outgoing_messages[0].resolve(data)
     }
 }

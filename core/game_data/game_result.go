@@ -18,8 +18,3 @@ func ComputeMahjongScore(result WinResult) uint32 {
 func GenerateGameResult(result WinResult, wonBy uint8) GameResult {
 	return GameResult{}
 }
-
-// TODO
-func (result GameResult) Apply(game *MahjongGame) error {
-	return nil
-}

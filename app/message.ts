@@ -28,6 +28,24 @@ export enum ArenaMessageType {
 
 }
 
+export function getMatchingMessageType(type: MessageType): MessageType {
+	const map = {
+		[MessageType.InitialMessageAction]: MessageType.InitialMessageEvent,
+		[MessageType.JoinArenaAction]: MessageType.JoinArenaEvent,
+		[MessageType.ServerArenaAction]: MessageType.ServerArenaEvent,
+		[MessageType.ListArenasAction]: MessageType.ListArenasEvent,
+		[MessageType.CreateArenaAction]: MessageType.CreateArenaEvent,
+
+		[MessageType.InitialMessageEvent]: MessageType.InitialMessageAction,
+		[MessageType.JoinArenaEvent]: MessageType.JoinArenaAction,
+		[MessageType.ServerArenaEvent]: MessageType.ServerArenaAction,
+		[MessageType.ListArenasEvent]: MessageType.ListArenasAction,
+		[MessageType.CreateArenaEvent]: MessageType.CreateArenaAction,
+	} as const
+
+	return map[type]
+}
+
 type MessageEntry<T extends MessageType = MessageType, D = any> = {
 	message_type: T
 	data: D
@@ -63,50 +81,6 @@ type ConstrainedMap<M extends Record<MessageType, any>> = {
 }
 
 export type Message = ConstrainedMap<MessageMap>[keyof MessageMap]
-
-// export type InitialMessageEvent = {
-// 	message_type: MessageType.InitialMessageEvent
-// 	data: null
-// }
-
-// export type InitialMessageAction = {
-// 	message_type: MessageType.InitialMessageAction
-// 	data: { name: string }
-// }
-
-// export type ServerArenaEvent = {
-// 	message_type: MessageType.ServerArenaEvent
-// 	data: { arena_message: ArenaMessage }
-// }
-
-// export type ServerArenaAction = {
-// 	message_type: MessageType.ServerArenaAction
-// 	data: {
-// 		arena_message: ArenaMessage
-// 	}
-// }
-
-// export type JoinArenaAction = {
-// 	message_type: MessageType.JoinArenaAction
-// 	data: {
-// 		arena_name: string
-// 	}
-// }
-
-// export type JoinArenaEvent = {
-// 	message_type: MessageType.JoinArenaEvent
-// 	data: {
-// 		success: boolean
-// 	}
-// }
-
-// export type CreateArenaEvent = {
-//
-// }
-//
-// export type CreateArenaAction = {
-//
-// }
 
 export type ArenaMessage = {
 	message_type: ArenaMessage
