@@ -82,7 +82,6 @@ func (client Client) Loop() {
 			dispatchResult, err := ServerDispatch(&client, msg)
 			if err != nil {
 				fmt.Println("Problem with message during dispatch:", err)
-				continue
 			}
 
 			if dispatchResult.DoSend {
