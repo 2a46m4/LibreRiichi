@@ -2,3 +2,4 @@ export const BoxStyling = "container outline m-10 p-10 bg-white rounded shadow-m
 export const H1Styling = "font-bold text-xl"
 export const InputStyling = "outline p-1 rounded shadow-md"
 export const ButtonStyling = "outline p-1 rounded shadow-md"
+export const ListStyling = "list-disc list-inside"

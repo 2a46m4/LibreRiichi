@@ -1,3 +1,4 @@
+<script src="styling.tsx"></script>
 <script setup lang="ts">
 import {MessageType} from "./message";
 import {useGlobalStore} from "./global_store";
@@ -8,7 +9,6 @@ const globalStore = useGlobalStore();
 
 const room_name = ref('')
 const create_room_name = ref('')
-const room_uuid_list = ref(new Map())
 const show_error = ref(false)
 
 function make_room() {
@@ -17,7 +17,7 @@ function make_room() {
 
 async function check_avail_rooms() {
   let response = await globalStore.application.list_rooms()
-  
+
 }
 
 
