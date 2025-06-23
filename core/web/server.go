@@ -1,11 +1,10 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
-	msg "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -22,48 +21,7 @@ type Server struct {
 func (server Server) AcceptConnection(conn *websocket.Conn) {
 	fmt.Println("Got connection")
 	go func() {
-		err := conn.WriteJSON(msg.Message{
-			MessageType: msg.GenericRepsonseType,
-			Data:        nil,
-		})
-		if err != nil {
-			fmt.Println("Failed at write")
-			conn.Close()
-			return
-		}
-
-		ret := msg.Message{}
-		messageType, buffer, err := conn.ReadMessage()
-		if err != nil {
-			fmt.Println("Failed at read")
-			conn.Close()
-			return
-		}
-		if messageType != websocket.TextMessage {
-			fmt.Println("Wrong type")
-			conn.Close()
-			return
-		}
-		fmt.Println(string(buffer))
-		err = json.Unmarshal(buffer, &ret)
-		if err != nil {
-			fmt.Println("Unmarshal failure")
-			conn.Close()
-			return
-		}
-
-		if ret.MessageType != msg.InitialMessageActionType {
-			fmt.Println("Unexpected message")
-			conn.Close()
-			return
-		}
-		res, ok := ret.Data.(msg.InitialMessageActionData)
-		if !ok {
-			conn.Close()
-			return
-		}
-
-		client, err := core.MakeClient(res.Name, conn)
+		client, err := core.MakeClient(util.MakeChannelFromWebsocket(conn))
 		if err != nil {
 			fmt.Println("Client fail")
 			conn.Close()
@@ -72,5 +30,4 @@ func (server Server) AcceptConnection(conn *websocket.Conn) {
 
 		go client.Loop()
 	}()
-
 }

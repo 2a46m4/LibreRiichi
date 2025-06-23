@@ -15,16 +15,17 @@ function make_room() {
 
 }
 
-function check_avail_rooms() {}
+async function check_avail_rooms() {
+  let response = await globalStore.application.list_rooms()
+  
+}
 
 
 async function find_room() {
   try {
     await globalStore.application.connect_room(
         room_name.value,
-        room_uuid_list.value[room_name.value]
     )
-
   } catch (error) {
     console.log(error)
     show_error.value = true
@@ -46,7 +47,6 @@ function create_room() {}
       :class="ButtonStyling"
       @click="find_room">Find</button>
   </div>
-
   <div :class="BoxStyling">
     <h1 :class="H1Styling">Create room</h1>
     <input
@@ -62,7 +62,6 @@ function create_room() {}
     <button :class="ButtonStyling" @click="check_avail_rooms">Find</button>
   </div>
 
-  <modal :show="show_error"></modal>
 
 </template>
 

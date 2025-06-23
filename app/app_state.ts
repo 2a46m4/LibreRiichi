@@ -1,6 +1,6 @@
 import {Connection, websocket_address} from "./connection";
 import {Router, useRouter} from "vue-router";
-import {getMatchingMessageType, Message, MessageType} from "./message";
+import {IncomingMessage, Message, MessageType} from "./message";
 
 export enum ApplicationState {
     NOT_CONNECTED,
@@ -19,27 +19,20 @@ export enum GameState {
 
 type MessageResolver = (v: Message) => void
 
-class OutgoingMessageState {
-    return: Promise<Message | undefined>
-    resolve: MessageResolver
-    outgoing: Message
-}
-
 export class Application {
     connection: Connection;
     username: string
     state: ApplicationState
     router: Router
-    outgoing_messages: {
+    outgoing_messages: Map<number, {
         promise: Promise<Message>,
         resolve: MessageResolver,
-        outgoing: Message
-    }[]
+    }>
 
     constructor() {
         this.state = ApplicationState.NOT_CONNECTED
         this.router = useRouter();
-        this.outgoing_messages = [];
+        this.outgoing_messages = new Map();
     }
 
     private check_state(expected: ApplicationState) {
@@ -55,22 +48,23 @@ export class Application {
     async connect() {
         console.log("connecting...")
         if (this.username === null) {
+            // TODO: Give the user some message
             throw new Error("Username is required");
         }
 
         this.check_state(ApplicationState.NOT_CONNECTED)
 
         this.connection = new Connection(
-            this.username,
             new WebSocket(websocket_address),
             (ev: MessageEvent<any>) => this.handle_message_recv(ev)
         )
         this.state = ApplicationState.CONNECTING
+        await this.connection.wait_until_ready()
 
-        const promiseMsg = this.push_outgoing_message(
+        const promiseMsg = this.send_message(
             {
-                    message_type: MessageType.InitialMessageAction,
-                    data: {name: this.username}
+                message_type: MessageType.InitialMessageAction,
+                data: {name: this.username}
             }
         )
 
@@ -81,14 +75,7 @@ export class Application {
     }
 
     async connect_room(room_name: string) {
-        this.connection.Send({
-            message_type: MessageType.JoinArenaAction,
-            data: {
-                arena_name: room_name,
-            }
-        })
-
-        const promiseMsg = this.push_outgoing_message(
+        const promiseMsg = this.send_message(
             {
                 message_type: MessageType.JoinArenaAction,
                 data: {
@@ -104,63 +91,79 @@ export class Application {
             throw new Error("Connection error: Failed to join room")
         }
 
-        if (msg.message_type !== MessageType.JoinArenaEvent) {
+        if (msg.message_type !== MessageType.GenericResponse) {
             throw new Error("Connection error: Wrong type")
         }
 
         if (msg.data.success === false) {
-            throw new Error("Could not join room")
+            throw new Error("Could not join room: " + msg.data.fail_reason)
         }
 
+        console.log("Joined room")
     }
 
     quit_room() {
         // TODO: Finish
     }
 
-    list_rooms() {
-        // TODO: Finish
+    async list_rooms() : Promise<Array<string>> {
+        let promise = this.send_message({
+            message_type: MessageType.ListArenasAction,
+            data: {}
+        })
+
+        let msg = await promise
+        if (msg.message_type !== MessageType.ListArenasResponse) {
+            throw new Error("Wrong type")
+        }
+
+        if (msg.data.success === false) {
+            throw new Error("Failed to list rooms")
+        }
+
+        return msg.data.arena_names
     }
 
     submit_move() {
         // TODO: Finish
     }
 
-	push_outgoing_message(msg: Message) {
-		let resolveMsg: MessageResolver = (_: Message) => {};
-		let promiseMsg = new Promise((resolve: MessageResolver) => {
-			resolveMsg = resolve
-		});
+    send_message(msg: Message) {
+        let resolveMsg: MessageResolver = (_: Message) => {
+        };
+        let promiseMsg = new Promise((resolve: MessageResolver) => {
+            resolveMsg = resolve
+        });
+        let msg_index = this.connection.send(msg)
+        this.outgoing_messages.set(msg_index, {
+            promise: promiseMsg,
+            resolve: resolveMsg,
+        })
 
-		this.outgoing_messages.push({
-			promise: promiseMsg,
-			resolve: resolveMsg,
-			outgoing: msg
-		})
-
-		return promiseMsg
-	}
+        return promiseMsg
+    }
 
     handle_message_recv(ev: MessageEvent) {
-        try {
-            let data = JSON.parse(ev.data)
-            this.match_outgoing_message(data)
-        } catch (e) {
-            console.log(e)
-        }
-
+        let data = JSON.parse(ev.data)
+        this.match_outgoing_message(data)
     }
 
     // If it matches an outgoing message, it's a response to the outgoing message. Otherwise, it's a fresh event from the server.
-    match_outgoing_message(data: Message) {
-            console.log("Got return: ", data)
+    match_outgoing_message(data: IncomingMessage) {
+        console.log("Got return: ", data)
 
-	    const matching = getMatchingMessageType(data.message_type)
-	    for (let i = 0; i < this.outgoing_messages.length; i++) {
-		    if (this.outgoing_messages[i].outgoing.message_type === matching) {
-			    this.outgoing_messages.splice(i)
-		    }
-	    }
-            this.outgoing_messages[0].resolve(data)
+        if (this.outgoing_messages.has(data.message_index)) {
+            console.log("Matched outgoing message")
+            this.outgoing_messages.get(data.message_index).resolve(data)
+            this.outgoing_messages.delete(data.message_index)
+            return
+        }
+
+        this.handle_event(data)
     }
+
+    handle_event(data: Message) {
+        console.log("Got event: ", data)
+    }
+
 }

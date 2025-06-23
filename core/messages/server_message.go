@@ -16,7 +16,7 @@ const (
 	ServerArenaEventType MessageType = iota
 
 	// Messages sent in response to an action
-	GenericRepsonseType
+	GenericResponseType
 	ListArenasResponseType
 
 	// Messages that are sent from client to server
@@ -47,6 +47,7 @@ type GenericResponseData struct {
 }
 
 type ListArenasResponseData struct {
+	Success   bool        `json:"success"`
 	ArenaList []uuid.UUID `json:"arena_list"`
 }
 
@@ -82,8 +83,9 @@ type CreateArenaActionData struct {
 
 func (msg *Message) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
-		MessageType MessageType     `json:"message_type"`
-		Data        json.RawMessage `json:"data"`
+		MessageType  MessageType     `json:"message_type"`
+		MessageIndex uint            `json:"message_index"`
+		Data         json.RawMessage `json:"data"`
 	}
 
 	if err := json.Unmarshal(rawData, &raw); err != nil {
@@ -91,6 +93,7 @@ func (msg *Message) UnmarshalJSON(rawData []byte) error {
 	}
 
 	msg.MessageType = raw.MessageType
+	msg.MessageIndex = raw.MessageIndex
 
 	switch raw.MessageType {
 	case InitialMessageActionType:

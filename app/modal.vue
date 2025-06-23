@@ -6,7 +6,7 @@ const props = defineProps({
 
 <template>
   <div class="flex items-center justify-center h-screen">
-    <div class="bg-gray-200 p-4">Centered</div>
+    <div class="bg-gray-200 p-4" v-if="props.show">CenteredHello</div>
   </div>
 </template>
 

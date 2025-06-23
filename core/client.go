@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
@@ -45,7 +44,7 @@ func FormatMessage(msgType MessageType, data any) DispatchResult {
 func SuccessMsg() DispatchResult {
 	return DispatchResult{
 		Message: Message{
-			MessageType: GenericRepsonseType,
+			MessageType: GenericResponseType,
 			Data: GenericResponseData{
 				Success:    true,
 				FailReason: "",
@@ -58,7 +57,7 @@ func SuccessMsg() DispatchResult {
 func FailureMsg(err string) DispatchResult {
 	return DispatchResult{
 		Message: Message{
-			MessageType: GenericRepsonseType,
+			MessageType: GenericResponseType,
 			Data: GenericResponseData{
 				Success:    false,
 				FailReason: err,
@@ -68,16 +67,16 @@ func FailureMsg(err string) DispatchResult {
 	}
 }
 
-func MakeClient(name string, connection *websocket.Conn) (Client, error) {
+func MakeClient(connection ConnChan) (Client, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		return Client{}, err
 	}
 
 	client := Client{
-		Name:       name,
+		Name:       "Unnamed User",
 		ID:         uuid,
-		Connection: MakeChannelFromWebsocket(connection),
+		Connection: connection,
 		Recv:       make(chan Message, 32),
 		Arena:      nil,
 	}
@@ -114,6 +113,7 @@ func (client Client) Loop() {
 			}
 
 			if dispatchResult.DoSend {
+				dispatchResult.Message.MessageIndex = msg.MessageIndex
 				client.GetSendChannel() <- dispatchResult.Message
 			}
 		}

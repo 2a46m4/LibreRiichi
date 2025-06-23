@@ -4,34 +4,38 @@ export const websocket_address = "ws://localhost:3000/game";
 
 export class Connection {
 	socket: WebSocket;
-	ready: Promise<void>;
+	ready_promise: Promise<void>;
+	ready: boolean;
+	index: number
 	handler: (e: MessageEvent) => any
 
-	constructor(name: string, websocket: WebSocket, handler: (e: MessageEvent) => any) {
+	constructor(websocket: WebSocket, handler: (e: MessageEvent) => any) {
 		this.socket = websocket;
 		this.handler = handler
-
-		this.ready = new Promise((resolve) => {
+		this.ready = false
+		this.index = 0
+		this.ready_promise = new Promise((resolve) => {
 			this.socket.onopen = (ev) => {
-				console.log("Connection opened");
-				this.Send({
-					message_type: MessageType.InitialMessageAction,
-					data: {name: name}
-				})
+				this.ready = true;
 				resolve();
 			}
 		})
+
 		this.socket.onmessage = handler
 		this.socket.onclose = () => {}
 	}
 
-	async WaitUntilReady(): Promise<void> {
-		await this.ready
+	async wait_until_ready(): Promise<void> {
+		await this.ready_promise
 	}
 
-	Send(msg: Message) {
-		console.log(msg)
-		this.socket.send(JSON.stringify(msg))
+	send(msg: Message): number {
+		if (!this.ready) {
+			throw new Error("Not ready")
+		}
+		this.socket.send(JSON.stringify({...msg, message_index: this.index}))
+		this.index += 1
+		return this.index - 1
 	}
 
 }

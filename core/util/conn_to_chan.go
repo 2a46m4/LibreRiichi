@@ -69,6 +69,7 @@ func MakeChannel(conn net.Conn) ConnChan {
 }
 
 // Create one from a WebSocket
+// TODO: Make this more generic by having the user pass functions to handle the messages
 func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 	ret := ConnChan{
 		make(chan any),
@@ -76,6 +77,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 		make(chan []byte),
 	}
 
+	// Incoming channel
 	go func() {
 		for {
 			select {
@@ -98,7 +100,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				switch msgType {
 				case websocket.TextMessage:
 					ret.DataChannel <- buffer
-				case websocket.BinaryMessage, websocket.PongMessage, websocket.PingMessage:
+				case websocket.BinaryMessage, websocket.PingMessage, websocket.PongMessage:
 					continue
 				case websocket.CloseMessage:
 					close(ret.DataChannel)
@@ -109,6 +111,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 		}
 	}()
 
+	// Outgoing channel
 	go func() {
 		for {
 			select {
