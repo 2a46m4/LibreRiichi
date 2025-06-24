@@ -24,6 +24,11 @@ type SameNameError struct {
 	arena_name string
 }
 
+func InitializeMap() {
+	GlobalArenaList.arena = make(map[uuid.UUID]*Arena)
+	GlobalArenaList.name = make(map[string]uuid.UUID)
+}
+
 func (e ArenaNotFoundError) Error() string {
 	return fmt.Sprintf("Arena %v is not found", e.arena_name)
 }

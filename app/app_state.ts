@@ -75,7 +75,7 @@ export class Application {
     }
 
     async connect_room(room_name: string) {
-        const promiseMsg = this.send_message(
+        let msg = await this.send_message(
             {
                 message_type: MessageType.JoinArenaAction,
                 data: {
@@ -83,8 +83,6 @@ export class Application {
                 }
             }
         )
-
-        let msg = await promiseMsg
 
         if (msg === undefined) {
             // TODO: Give a reason for why
@@ -102,17 +100,38 @@ export class Application {
         console.log("Joined room")
     }
 
+    async create_room(room_name: string) {
+        let msg = await this.send_message({
+            message_type: MessageType.CreateArenaAction,
+            data: {
+                arena_name: room_name,
+            }
+        })
+
+        if (msg === undefined) {
+            // TODO: Give a reason for why
+            throw new Error("Connection error: Failed to create room")
+        }
+
+        if (msg.message_type !== MessageType.GenericResponse) {
+            throw new Error("Connection error: Wrong type")
+        }
+
+        if (msg.data.success === false) {
+            throw new Error("Could not create room: " + msg.data.fail_reason)
+        }
+    }
+
     quit_room() {
         // TODO: Finish
     }
 
     async list_rooms() : Promise<Array<string>> {
-        let promise = this.send_message({
+        let msg = await this.send_message({
             message_type: MessageType.ListArenasAction,
             data: {}
         })
 
-        let msg = await promise
         if (msg.message_type !== MessageType.ListArenasResponse) {
             throw new Error("Wrong type")
         }

@@ -1,23 +1,22 @@
-<script src="styling.tsx"></script>
 <script setup lang="ts">
-import {MessageType} from "./message";
 import {useGlobalStore} from "./global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 import {ref} from "vue";
-import Modal from "./modal.vue";
+import ListItem from "./components/list_item.vue";
+
 const globalStore = useGlobalStore();
 
 const room_name = ref('')
 const create_room_name = ref('')
 const show_error = ref(false)
+const avail_rooms = ref([])
 
 function make_room() {
 
 }
 
 async function check_avail_rooms() {
-  let response = await globalStore.application.list_rooms()
-
+  avail_rooms.value = await globalStore.application.list_rooms()
 }
 
 
@@ -32,7 +31,9 @@ async function find_room() {
   }
 }
 
-function create_room() {}
+async function create_room() {
+    await globalStore.application.create_room(create_room_name.value)
+}
 
 </script>
 
@@ -60,6 +61,9 @@ function create_room() {}
   <div :class="BoxStyling">
     <h1 :class="H1Styling">Available rooms</h1>
     <button :class="ButtonStyling" @click="check_avail_rooms">Find</button>
+    <ul v-if="avail_rooms.length !== 0">
+      <ListItem v-for="avail_room in avail_rooms">{{ avail_room }}</ListItem>
+    </ul>
   </div>
 
 

@@ -7,15 +7,15 @@ import (
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 	web "codeberg.org/ijnakashiar/LibreRiichi/core/web"
-	"github.com/google/uuid"
 )
 
 func main() {
 	server := web.Server{
-		Rooms:        map[uuid.UUID]*core.Arena{},
+		Rooms:        &core.GlobalArenaList,
 		ServerConfig: struct{ PortNumber uint16 }{3000},
 	}
 
+	core.InitializeMap()
 	web.SetupHTTP(server.AcceptConnection)
 
 	signals := make(chan os.Signal, 1)

@@ -5,14 +5,11 @@ import (
 
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Server struct {
-	Names map[string]uuid.UUID
-	Rooms map[uuid.UUID]*core.Arena
-
+	Rooms        *core.ArenaList
 	ServerConfig struct {
 		PortNumber uint16
 	}
