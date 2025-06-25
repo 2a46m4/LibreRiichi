@@ -15,7 +15,7 @@ const app = globalStore.application
 const set_username = (username: string) => app.set_username(username)
 
 async function connect() {
-  set_username(app.username)
+  set_username(user_name.value)
   app.connect()
 }
 </script>

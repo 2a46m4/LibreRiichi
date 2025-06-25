@@ -113,5 +113,6 @@ func CreateAndAddArena(name string) error {
 	newArena := CreateArena()
 	GlobalArenaList.arena[newUUID] = &newArena
 
+	fmt.Println("Created arena. Now arena map is:", GlobalArenaList.name)
 	return nil
 }

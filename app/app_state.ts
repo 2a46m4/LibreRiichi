@@ -148,6 +148,7 @@ export class Application {
     }
 
     send_message(msg: Message) {
+        console.log("Sending: ", msg)
         let resolveMsg: MessageResolver = (_: Message) => {
         };
         let promiseMsg = new Promise((resolve: MessageResolver) => {

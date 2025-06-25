@@ -147,8 +147,11 @@ func (client *Client) HandleJoinArena(data JoinArenaActionData) (DispatchResult,
 }
 
 func (client *Client) HandleInitialMessage(data InitialMessageActionData) (DispatchResult, error) {
-	client.Name = data.Name
-	return SuccessMsg(), nil
+	if len(data.Name) != 0 {
+		fmt.Println("Renamed user to", data.Name)
+		client.Name = data.Name
+	}
+	return SuccessMsg(), nil	
 }
 
 func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchResult, error) {
