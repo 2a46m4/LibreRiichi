@@ -121,8 +121,17 @@ func (client Client) Loop() {
 }
 
 func (client *Client) HandleListArenas(data ListArenasActionData) (DispatchResult, error) {
-	// TODO
-	return DispatchResult{}, nil
+	list := ListArenas()
+	return DispatchResult{
+		Message: Message{
+			MessageType: ListArenasResponseType,
+			Data: ListArenasResponseData{
+				Success:   true,
+				ArenaList: list,
+			},
+		},
+		DoSend: true,
+	}, nil
 }
 
 // HandleJoinArenaAction implements ServerHandler.
@@ -151,7 +160,7 @@ func (client *Client) HandleInitialMessage(data InitialMessageActionData) (Dispa
 		fmt.Println("Renamed user to", data.Name)
 		client.Name = data.Name
 	}
-	return SuccessMsg(), nil	
+	return SuccessMsg(), nil
 }
 
 func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchResult, error) {

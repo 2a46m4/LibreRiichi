@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {computed, reactive, ref} from 'vue'
-import {JoinArenaActionData} from "./message";
-import {Connection} from "./connection";
-import {useRoute, useRouter} from "vue-router";
+import {ref} from 'vue'
 import {useGlobalStore} from "./global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
 

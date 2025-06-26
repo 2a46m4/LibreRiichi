@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
-
-	"github.com/google/uuid"
 )
 
 type MessageType uint8
@@ -47,8 +45,8 @@ type GenericResponseData struct {
 }
 
 type ListArenasResponseData struct {
-	Success   bool        `json:"success"`
-	ArenaList []uuid.UUID `json:"arena_list"`
+	Success   bool     `json:"success"`
+	ArenaList []string `json:"arena_list"`
 }
 
 // ==================== ACTIONS ====================
@@ -157,7 +155,7 @@ func ServerActionDispatch[Return any](handler ServerActionHandler[Return], messa
 		if !ok {
 			return ret, BadMessage{}
 		}
-		handler.HandleListArenas(data)
+		return handler.HandleListArenas(data)
 	case CreateArenaActionType:
 		data, ok := message.Data.(CreateArenaActionData)
 		if !ok {
@@ -172,5 +170,6 @@ func ServerActionDispatch[Return any](handler ServerActionHandler[Return], messa
 		return handler.HandleJoinArena(data)
 	default:
 	}
+
 	return ret, fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)
 }

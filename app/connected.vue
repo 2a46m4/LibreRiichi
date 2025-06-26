@@ -17,6 +17,7 @@ function make_room() {
 
 async function check_avail_rooms() {
   avail_rooms.value = await globalStore.application.list_rooms()
+  console.log(avail_rooms.value)
 }
 
 

@@ -53,7 +53,7 @@ type MessageMap = {
 	[MessageType.GenericResponse]: {success: boolean, fail_reason: string}
 	[MessageType.ListArenasResponse]: {
 		success: boolean,
-		arena_names: string[]
+		arena_list: string[]
 	}
 }
 

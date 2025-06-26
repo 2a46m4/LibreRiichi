@@ -98,6 +98,7 @@ export class Application {
         }
 
         console.log("Joined room")
+        this.state = ApplicationState.JOINED_ROOM
     }
 
     async create_room(room_name: string) {
@@ -140,7 +141,7 @@ export class Application {
             throw new Error("Failed to list rooms")
         }
 
-        return msg.data.arena_names
+        return msg.data.arena_list
     }
 
     submit_move() {
@@ -165,6 +166,7 @@ export class Application {
 
     handle_message_recv(ev: MessageEvent) {
         let data = JSON.parse(ev.data)
+        console.log("Got message: ", data)
         this.match_outgoing_message(data)
     }
 

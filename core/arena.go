@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
@@ -13,11 +14,13 @@ import (
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	Agents      []*Client
-	Spectators  []*Client
-	GameStarted bool
-	Game        MahjongGame
+	agents      []*Client
+	spectators  []*Client
+	gameStarted bool
+	game        MahjongGame
 	// AwaitingInputs []??? that stores the list of agents that it is waiting on
+
+	DateCreated time.Time
 
 	sync.Mutex
 }
@@ -28,6 +31,21 @@ type MessageSendInfo struct {
 	SendTo     uint8
 }
 
+type ArenaInfo struct {
+	NumAgents   int
+	GameStarted bool
+	DateCreated time.Time
+}
+
+func (arena *Arena) GetArenaInfo() ArenaInfo {
+	arena.Lock()
+	defer arena.Unlock()
+
+	return ArenaInfo{
+		len(arena.agents), arena.gameStarted, arena.DateCreated,
+	}
+}
+
 func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -36,7 +54,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 
 	switch visibility {
 	case GLOBAL:
-		for _, player := range arena.Agents {
+		for _, player := range arena.agents {
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
 				Data:        bytes,
@@ -44,7 +62,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 		}
 
 	case PARTIAL:
-		arena.Agents[sendTo].Recv <- Message{
+		arena.agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
 			Data:        bytes,
 		}
@@ -59,7 +77,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 			return err
 		}
 
-		for idx, player := range arena.Agents {
+		for idx, player := range arena.agents {
 			if idx == int(sendTo) {
 				continue
 			}
@@ -70,7 +88,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 		}
 
 	case PLAYER:
-		arena.Agents[sendTo].Recv <- Message{
+		arena.agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
 			Data:        bytes,
 		}
@@ -83,10 +101,11 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 
 func CreateArena() Arena {
 	return Arena{
-		Agents:      []*Client{},
-		Spectators:  []*Client{},
-		Game:        MahjongGame{},
-		GameStarted: false,
+		agents:      []*Client{},
+		spectators:  []*Client{},
+		gameStarted: false,
+		game:        MahjongGame{},
+		DateCreated: time.Now(),
 		Mutex:       sync.Mutex{},
 	}
 }
@@ -99,7 +118,7 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	arena.Lock()
 	defer arena.Unlock()
 
-	arena.Agents = append(arena.Agents, agent)
+	arena.agents = append(arena.agents, agent)
 
 	data := PlayerJoinedEventData{
 		Name: agent.Name,
@@ -134,7 +153,7 @@ func (arena *Arena) DriveGame() error {
 // Drives the game forward
 func (arena *Arena) driveGame() error {
 
-	sendInfos, gameContinue := arena.Game.GetNextEvent()
+	sendInfos, gameContinue := arena.game.GetNextEvent()
 
 	if !gameContinue {
 		arena.FinishRoundArena()
@@ -158,7 +177,7 @@ func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
-	for i, ptr := range arena.Agents {
+	for i, ptr := range arena.agents {
 		if ptr == client {
 			return uint8(i), nil
 		}
@@ -172,15 +191,15 @@ func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer u
 	arena.Lock()
 	defer arena.Unlock()
 
-	if arena.GameStarted {
+	if arena.gameStarted {
 		return errors.New("Game already started")
 	}
 
-	if len(arena.Agents) != 4 {
+	if len(arena.agents) != 4 {
 		return errors.New("Not enough agents")
 	}
 
-	setups, err := arena.Game.StartNewGame()
+	setups, err := arena.game.StartNewGame()
 	if err != nil {
 		return err
 	}
@@ -205,7 +224,7 @@ func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer u
 		}
 	}
 
-	arena.GameStarted = true
+	arena.gameStarted = true
 	return arena.driveGame()
 }
 
@@ -213,7 +232,7 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 	arena.Lock()
 	defer arena.Unlock()
 
-	sendInfos, err := ActionDecode(&arena.Game, data.ActionData, fromPlayer)
+	sendInfos, err := ActionDecode(&arena.game, data.ActionData, fromPlayer)
 	if err != nil {
 		return err
 	}
@@ -241,7 +260,7 @@ func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
 func (arena *Arena) FinishRoundArena() {
-	arena.Game.GetGameResults()
+	arena.game.GetGameResults()
 }
 
 // EndArena is called when the arena is finished and all players should be disconnected

@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// TODO: This can potentially use RCU
+
 type ArenaList struct {
 	arena map[uuid.UUID]*Arena
 	name  map[string]uuid.UUID
@@ -35,6 +37,17 @@ func (e ArenaNotFoundError) Error() string {
 
 func (e SameNameError) Error() string {
 	return fmt.Sprintf("There is already an arena with the same name: %v", e.arena_name)
+}
+
+func ListArenas() []string {
+	GlobalArenaList.RLock()
+	defer GlobalArenaList.RUnlock()
+
+	result := make([]string, 0, len(GlobalArenaList.name))
+	for name := range GlobalArenaList.name {
+		result = append(result, name)
+	}
+	return result
 }
 
 func GetArenaFromName(name string) (*Arena, error) {
