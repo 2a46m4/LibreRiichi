@@ -20,6 +20,7 @@ type Arena struct {
 	// AwaitingInputs []??? that stores the list of agents that it is waiting on
 
 	DateCreated time.Time
+	Name string
 
 	sync.Mutex
 }
@@ -31,6 +32,7 @@ type MessageSendInfo struct {
 }
 
 type ArenaInfo struct {
+	Name string
 	NumAgents   int
 	GameStarted bool
 	DateCreated time.Time
