@@ -93,6 +93,7 @@ func (client Client) Loop() {
 			if err != nil {
 				panic(err)
 			}
+			fmt.Println("Sending", string(bytes))
 			client.Connection.Send(bytes)
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
@@ -111,6 +112,8 @@ func (client Client) Loop() {
 			if err != nil {
 				fmt.Println("Problem with message during dispatch:", err)
 			}
+
+			fmt.Println("Sending message: ", dispatchResult)
 
 			if dispatchResult.DoSend {
 				dispatchResult.Message.MessageIndex = msg.MessageIndex

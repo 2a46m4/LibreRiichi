@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -47,32 +46,22 @@ func (arena *Arena) GetArenaInfo() ArenaInfo {
 }
 
 func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
 	switch visibility {
 	case GLOBAL:
 		for _, player := range arena.agents {
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
-				Data:        bytes,
+				Data:        ServerArenaMessageEventData{ArenaMessage: data},
 			}
 		}
 
 	case PARTIAL:
 		arena.agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
-			Data:        bytes,
+			Data:        ServerArenaMessageEventData{ArenaMessage: data},
 		}
 
 		altMessage, err := GetAltMessage(data)
-		if err != nil {
-			return err
-		}
-
-		altBytes, err := json.Marshal(altMessage)
 		if err != nil {
 			return err
 		}
@@ -83,14 +72,24 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 			}
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
-				Data:        altBytes,
+				Data:        ServerArenaMessageEventData{ArenaMessage: altMessage},
 			}
 		}
 
 	case PLAYER:
 		arena.agents[sendTo].Recv <- Message{
 			MessageType: ServerArenaEventType,
-			Data:        bytes,
+			Data:        ServerArenaMessageEventData{ArenaMessage: data},
+		}
+	case EXCLUDE:
+		for i, player := range arena.agents {
+			if i == int(sendTo) {
+				continue
+			}
+			player.Recv <- Message{
+				MessageType: ServerArenaEventType,
+				Data:        ServerArenaMessageEventData{ArenaMessage: data},
+			}
 		}
 	default:
 		panic(fmt.Sprintf("unexpected core.Visibility: %#v", sendTo))
@@ -124,16 +123,12 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 		Name: agent.Name,
 		ID:   agent.ID,
 	}
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
 
-	err = arena.Send(
+	err := arena.Send(
 		ArenaMessage{
 			MessageType: PlayerJoinedEventType,
-			Data:        bytes,
-		}, GLOBAL, 0)
+			Data:        data,
+		}, EXCLUDE, 0)
 
 	if err != nil {
 		panic(err)
@@ -256,6 +251,25 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 
 func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
 	panic("NYI")
+}
+
+func (arena *Arena) HandleListPlayersAction(data ListPlayersActionData, fromPlayer uint8) error {
+	arena.Lock()
+	defer arena.Unlock()
+
+	names := make([]string, len(arena.agents))
+	for _, agent := range arena.agents {
+		names = append(names, agent.Name)
+	}
+
+	arena.Send(ArenaMessage{
+		MessageType: ListPlayersResponseType,
+		Data: ListPlayersResponseData{
+			Names: names,
+		},
+	}, PLAYER, fromPlayer)
+
+	return nil
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

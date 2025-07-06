@@ -1,3 +1,5 @@
+import {ArenaMessage} from "./arena_message";
+
 export enum MessageType {
     // Messages that are sent from server to client in response to an event
     ServerArenaEvent,
@@ -12,20 +14,6 @@ export enum MessageType {
     ServerArenaAction,
     ListArenasAction,
     CreateArenaAction,
-}
-
-export enum ArenaMessageType {
-    // Messages that are sent from game (server) to player (client)
-    PlayerJoinedEvent,
-    PlayerQuitEvent,
-    GameStartedEvent,
-    ArenaBoardEvent,
-
-    // Messages that are sent from player (client) to game (server)
-    StartGameAction,
-    PlayerAction,
-    PlayerQuitAction,
-
 }
 
 export type IncomingMessage = Message & {
@@ -62,12 +50,3 @@ type ConstrainedMap<M extends Record<MessageType, any>> = {
 }
 
 export type Message = ConstrainedMap<MessageMap>[keyof MessageMap]
-
-export type ArenaMessage = {
-    message_type: ArenaMessage
-    data: {
-        message_type: ArenaMessageType
-        data: any
-    }
-}
-

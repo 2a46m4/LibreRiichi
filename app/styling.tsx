@@ -1,5 +1,7 @@
 export const BoxStyling = "container outline m-10 p-10 bg-white rounded shadow-md max-w-md"
+export const FlexBox = "container max-w-md flex items-center space-x-4"
 export const H1Styling = "font-bold text-xl"
 export const InputStyling = "outline p-1 rounded shadow-md"
 export const ButtonStyling = "outline p-1 rounded shadow-md"
-export const ListStyling = "list-disc list-inside"
+export const ListStyling = "list-none list-inside outline mt-4 p-1 rounded shadow-md"
+export const ULStyling = "container rounded mt-4 max-w-md"
