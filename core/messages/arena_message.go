@@ -17,11 +17,13 @@ const (
 	PlayerQuitEventType
 	GameStartedEventType
 	ArenaBoardEventType
+	ListPlayersResponseType
 
 	// Messages that are sent from player (client) to game (server)
 	StartGameActionType
 	PlayerActionType
 	PlayerQuitActionType
+	ListPlayersActionType
 )
 
 // ArenaMessage are messages that are sent between clients and server
@@ -48,12 +50,17 @@ type ArenaBoardEventData struct {
 	BoardEvent // For handling generic games, this should be replaced
 }
 
+type ListPlayersResponseData struct {
+	Names []string `json:"names"`
+}
+
 // ==================== ACTIONS ====================
 
 type ArenaActionHandler[Input any] interface {
 	HandleStartGameAction(StartGameActionData, Input) error
 	HandlePlayerAction(PlayerActionData, Input) error
 	HandlePlayerQuitAction(PlayerQuitActionData, Input) error
+	HandleListPlayersAction(ListPlayersActionData, Input) error
 }
 
 type StartGameActionData struct{}
@@ -63,6 +70,8 @@ type PlayerQuitActionData struct{}
 type PlayerActionData struct {
 	ActionData // For handling generic games, this should be replaced
 }
+
+type ListPlayersActionData struct{}
 
 // ==================== DECODING AND DISPATCH ====================
 
@@ -128,6 +137,18 @@ func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.Data = data
+	case ListPlayersResponseType:
+		data := ListPlayersResponseData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+	case ListPlayersActionType:
+		data := ListPlayersActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", raw.MessageType)
 	}
@@ -155,6 +176,12 @@ func ArenaActionDispatch[E any](handler ArenaActionHandler[E], msg ArenaMessage,
 			return BadMessage{}
 		}
 		return handler.HandleStartGameAction(message, input)
+	case ListPlayersActionType:
+		message, ok := msg.Data.(ListPlayersActionData)
+		if !ok {
+			return BadMessage{}
+		}
+		return handler.HandleListPlayersAction(message, input)
 	default:
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}

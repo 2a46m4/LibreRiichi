@@ -7,10 +7,11 @@
 	"author": "IJN Akashi AR <dabanya@protonmail.com>",
 	"license": "MIT",
 	"devDependencies": {
-		"@parcel/transformer-vue": "2.15.2",
+		"@babel/cli": "^7.28.0",
+		"@parcel/transformer-vue": "^2.15.4",
 		"buffer": "^5.5.0||^6.0.0",
 		"concurrently": "^9.1.2",
-		"parcel": "^2.15.2",
+		"parcel": "^2.15.4",
 		"typescript": "^5.8.3"
 	},
 	"scripts": {
@@ -21,6 +22,10 @@
 		"watch": "concurrently -k \"yarn:frontend\" \"yarn:backend\""
 	},
 	"dependencies": {
+		"@babel/core": "^7.28.0",
+		"@babel/polyfill": "^7.12.1",
+		"@babel/preset-env": "^7.28.0",
+		"@parcel/babel-preset-env": "^2.15.4",
 		"@tailwindcss/postcss": "^4.1.10",
 		"autoprefixer": "^10.4.21",
 		"google-closure-compiler": "^20250615.0.0",
@@ -30,5 +35,15 @@
 		"uuid": "^11.1.0",
 		"vue": "^3.5.16",
 		"vue-router": "4"
+	},
+	"targets": {
+		"default": {
+			"engines": {
+				"browsers": "> 0.5%, not dead",
+				"node": ">=20"
+			},
+			"context": "browser",
+			"includeNodeModules": true
+		}
 	}
 }

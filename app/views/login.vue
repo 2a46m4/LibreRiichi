@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import {ref} from 'vue'
-import {useGlobalStore} from "./global_store";
-import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "./styling";
+import {useGlobalStore} from "../global_store";
+import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
 
 const globalStore = useGlobalStore();
+const app = globalStore.application
 
 const user_name = ref('')
 
-const app = globalStore.application
-
-const set_username = (username: string) => app.set_username(username)
-
 async function connect() {
-  set_username(user_name.value)
-  app.connect()
+  app.set_username(user_name.value)
+  await app.action.connect()
 }
 </script>
 

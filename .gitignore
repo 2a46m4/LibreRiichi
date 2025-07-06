@@ -4,3 +4,4 @@
 /.parcel-cache/
 /dist-server/
 .DS_Store
+app/**/*.js

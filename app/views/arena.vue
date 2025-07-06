@@ -1,0 +1,14 @@
+<script setup lang="ts">
+
+import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
+</script>
+
+<template>
+  <div :class="BoxStyling">
+    <h1 :class="H1Styling">Players</h1>
+  </div>
+</template>
+
+<style scoped>
+
+</style>
