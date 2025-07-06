@@ -16,5 +16,13 @@ export class EventHandler extends EventHandlerInterface {
 
     handle_server_arena_event(data: ArenaMessage) {
         console.log("Handling event:", data)
+        switch (data.message_type) {
+            // Messages that are sent from game (server) to player (client)
+            PlayerJoinedEvent:
+                PlayerQuitEvent:
+                    GameStartedEvent:
+                    ArenaBoardEvent:
+                    ListPlayersResponse:
+        }
     }
 }

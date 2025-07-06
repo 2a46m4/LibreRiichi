@@ -20,7 +20,7 @@ type Arena struct {
 	// AwaitingInputs []??? that stores the list of agents that it is waiting on
 
 	DateCreated time.Time
-	Name string
+	Name        string
 
 	sync.Mutex
 }
@@ -32,7 +32,7 @@ type MessageSendInfo struct {
 }
 
 type ArenaInfo struct {
-	Name string
+	Name        string
 	NumAgents   int
 	GameStarted bool
 	DateCreated time.Time
@@ -43,7 +43,7 @@ func (arena *Arena) GetArenaInfo() ArenaInfo {
 	defer arena.Unlock()
 
 	return ArenaInfo{
-		len(arena.agents), arena.gameStarted, arena.DateCreated,
+		arena.Name, len(arena.agents), arena.gameStarted, arena.DateCreated,
 	}
 }
 
