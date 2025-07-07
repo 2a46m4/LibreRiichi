@@ -28,9 +28,8 @@ export class JoinedRoomState extends ApplicationState {
         }
 
         if (!ret.data.success) {
-            throw new Error("Couldn't start game: ", ret.data.fail_reason)
+            throw new Error("Couldn't start game: " + ret.data.fail_reason)
         }
-
     }
 
     async get_arena_info(): Promise<Arena> {

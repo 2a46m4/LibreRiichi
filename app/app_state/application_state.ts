@@ -1,4 +1,5 @@
 import {Application} from "../application";
+import {Arena} from "../types/arena";
 
 export abstract class ApplicationState {
     app: Application
