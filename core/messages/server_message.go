@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
 )
@@ -16,6 +17,7 @@ const (
 	// Messages sent in response to an action
 	GenericResponseType
 	ListArenasResponseType
+	ArenaInfoResponseType
 
 	// Messages that are sent from client to server
 	InitialMessageActionType
@@ -23,12 +25,17 @@ const (
 	ServerArenaActionType
 	ListArenasActionType
 	CreateArenaActionType
+	ArenaInfoActionType
 )
 
 type Message struct {
 	MessageType  MessageType `json:"message_type"`
 	MessageIndex uint        `json:"message_index"`
 	Data         any         `json:"data"`
+}
+
+type AgentInfo struct {
+	Name string `json:"name"`
 }
 
 // ==================== EVENTS ====================
@@ -49,6 +56,14 @@ type ListArenasResponseData struct {
 	ArenaList []string `json:"arena_list"`
 }
 
+type ArenaInfoResponseData struct {
+	Success bool `json:"success"`
+	Name        string `json:"name"`
+	Agents []AgentInfo `json:"agents"`
+	GameStarted bool `json:"game_started"`
+	DateCreated time.Time `json:"date_created"`
+}
+
 // ==================== ACTIONS ====================
 
 type ServerActionHandler[Return any] interface {
@@ -57,6 +72,7 @@ type ServerActionHandler[Return any] interface {
 	HandleServerArena(ServerArenaActionData) (Return, error)
 	HandleListArenas(ListArenasActionData) (Return, error)
 	HandleCreateArena(CreateArenaActionData) (Return, error)
+	HandleGetArenaInfo(ArenaInfoActionData) (Return, error)
 }
 
 type InitialMessageActionData struct {
@@ -76,6 +92,8 @@ type ListArenasActionData struct{}
 type CreateArenaActionData struct {
 	ArenaName string `json:"arena_name"`
 }
+
+type ArenaInfoActionData struct{}
 
 // ==================== DECODE AND DISPATCH ====================
 
@@ -124,6 +142,13 @@ func (msg *Message) UnmarshalJSON(rawData []byte) error {
 		msg.Data = data
 	case ListArenasActionType:
 		data := ListArenasActionData{}
+		err := json.Unmarshal(raw.Data, &data)
+		if err != nil {
+			return err
+		}
+		msg.Data = data
+	case ArenaInfoActionType:
+		data := ArenaInfoActionData{}
 		err := json.Unmarshal(raw.Data, &data)
 		if err != nil {
 			return err

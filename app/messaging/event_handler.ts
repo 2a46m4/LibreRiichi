@@ -1,6 +1,6 @@
 import {EventHandlerInterface} from "./event_handler_interface";
 import {Message, MessageType} from "./message";
-import {ArenaMessage} from "./arena_message";
+import {ArenaMessage, ArenaMessageType} from "./arena_message";
 
 export class EventHandler extends EventHandlerInterface {
     dispatch_message(data: Message) {
@@ -17,12 +17,12 @@ export class EventHandler extends EventHandlerInterface {
     handle_server_arena_event(data: ArenaMessage) {
         console.log("Handling event:", data)
         switch (data.message_type) {
-            // Messages that are sent from game (server) to player (client)
-            PlayerJoinedEvent:
-                PlayerQuitEvent:
-                    GameStartedEvent:
-                    ArenaBoardEvent:
-                    ListPlayersResponse:
+            case ArenaMessageType.PlayerJoinedEvent:
+            case ArenaMessageType.PlayerQuitEvent:
+            case ArenaMessageType.GameStartedEvent:
+            case ArenaMessageType.ArenaBoardEvent:
+            case ArenaMessageType.ListPlayersResponse:
+                break
         }
     }
 }

@@ -176,7 +176,7 @@ func (game MahjongGame) findAction(action ActionData, fromPlayer uint8) (int, er
 
 func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
 	return ArenaBoardEventData{
-		BoardEvent{
+		BoardEvent: BoardEvent{
 			EventType: eventType,
 			Data:      data,
 		},
@@ -186,14 +186,14 @@ func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
 func encodePotentialAction(data ActionData) ArenaBoardEventData {
 	return encodeBoardEvent(
 		PotentialActionEventType,
-		PotentialActionEventData{data},
+		PotentialActionEventData{ActionData: data},
 	)
 }
 
 func encodePlayerAction(data ActionData, fromPlayer uint8) ArenaBoardEventData {
 	return encodeBoardEvent(
 		PlayerActionEventType,
-		PlayerActionEventData{data, fromPlayer},
+		PlayerActionEventData{ActionData: data, FromPlayer: fromPlayer},
 	)
 }
 
@@ -344,11 +344,11 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 				encodeBoardEvent(
 					PlayerActionEventType,
 					PlayerActionEventData{
-						ActionData{
+						ActionData: ActionData{
 							ActionType: DRAW,
 							Data:       DrawData{tile},
 						},
-						game.currentPlayerIdx(),
+						FromPlayer: game.currentPlayerIdx(),
 					})),
 			makeMessage(
 				PLAYER,

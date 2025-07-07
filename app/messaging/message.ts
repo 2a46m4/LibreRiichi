@@ -7,6 +7,7 @@ export enum MessageType {
 	// Messages sent in response to an action
     GenericResponse,
     ListArenasResponse,
+    ArenaInfoResponse,
 
 	// Messages that are sent from client to server
     InitialMessageAction,
@@ -14,6 +15,7 @@ export enum MessageType {
     ServerArenaAction,
     ListArenasAction,
     CreateArenaAction,
+    ArenaInfoAction,
 }
 
 export type IncomingMessage = Message & {
@@ -43,6 +45,16 @@ type MessageMap = {
 		success: boolean,
 		arena_list: string[]
 	}
+    [MessageType.ArenaInfoResponse]: {
+        success: boolean,
+        name: string,
+        agents: Array<{
+            name: string
+        }>,
+        game_started: boolean,
+        date_created: string
+    }
+    [MessageType.ArenaInfoAction]: {}
 }
 
 type ConstrainedMap<M extends Record<MessageType, any>> = {

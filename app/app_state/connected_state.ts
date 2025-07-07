@@ -27,7 +27,7 @@ export class ConnectedState extends ApplicationState {
             throw new Error("Connection error: Wrong type")
         }
 
-        if (ret.data.success === false) {
+        if (!ret.data.success) {
             throw new Error("Could not join room: " + ret.data.fail_reason)
         }
 

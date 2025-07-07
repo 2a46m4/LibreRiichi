@@ -13,12 +13,6 @@ export enum ArenaMessageType {
     ListPlayersAction,
 }
 
-export type ArenaMessage = {
-    message_type: ArenaMessage
-    data: ArenaMessageData
-}
-
-
 type MessageEntry<T extends ArenaMessageType = ArenaMessageType, D = any> = {
     message_type: T
     data: D
@@ -53,4 +47,4 @@ type ConstrainedMap<M extends Record<ArenaMessageType, any>> = {
     [K in keyof M & ArenaMessageType]: MessageEntry<K, M[K]>
 }
 
-export type ArenaMessageData = ConstrainedMap<MessageMap>[keyof MessageMap]
+export type ArenaMessage = ConstrainedMap<MessageMap>[keyof MessageMap]

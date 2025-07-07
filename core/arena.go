@@ -31,19 +31,20 @@ type MessageSendInfo struct {
 	SendTo     uint8
 }
 
-type ArenaInfo struct {
-	Name        string
-	NumAgents   int
-	GameStarted bool
-	DateCreated time.Time
-}
-
-func (arena *Arena) GetArenaInfo() ArenaInfo {
+func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 	arena.Lock()
 	defer arena.Unlock()
 
-	return ArenaInfo{
-		arena.Name, len(arena.agents), arena.gameStarted, arena.DateCreated,
+	agents := make([]AgentInfo, len(arena.agents))
+	for _, agent := range arena.agents {
+		agents = append(agents, AgentInfo{Name: agent.Name})
+	}
+
+	return ArenaInfoResponseData{
+		Name: arena.Name,
+		Agents: agents,
+		GameStarted: arena.gameStarted,
+		DateCreated: arena.DateCreated,
 	}
 }
 
@@ -253,25 +254,6 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 
 func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
 	panic("NYI")
-}
-
-func (arena *Arena) HandleListPlayersAction(data ListPlayersActionData, fromPlayer uint8) error {
-	arena.Lock()
-	defer arena.Unlock()
-
-	names := make([]string, len(arena.agents))
-	for _, agent := range arena.agents {
-		names = append(names, agent.Name)
-	}
-
-	arena.Send(ArenaMessage{
-		MessageType: ListPlayersResponseType,
-		Data: ListPlayersResponseData{
-			Names: names,
-		},
-	}, PLAYER, fromPlayer)
-
-	return nil
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

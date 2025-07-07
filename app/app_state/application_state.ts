@@ -13,11 +13,11 @@ export abstract class ApplicationState {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 
-    async connect_room(room_name:string) {
+    async connect_room(room_name: string) {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 
-    async create_room(room_name:string) {
+    async create_room(room_name: string) {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 
@@ -26,6 +26,10 @@ export abstract class ApplicationState {
     }
 
     async list_rooms(): Promise<Array<string>> {
+        throw new Error(`Wrong state: ${this.get_state_name()}`)
+    }
+
+    async get_arena_info(): Promise<Arena> {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 

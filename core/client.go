@@ -113,9 +113,8 @@ func (client Client) Loop() {
 				fmt.Println("Problem with message during dispatch:", err)
 			}
 
-			fmt.Println("Sending message: ", dispatchResult)
-
 			if dispatchResult.DoSend {
+				fmt.Println("Sending message: ", dispatchResult)
 				dispatchResult.Message.MessageIndex = msg.MessageIndex
 				client.GetSendChannel() <- dispatchResult.Message
 			}
@@ -187,6 +186,20 @@ func (client *Client) HandleCreateArena(data CreateArenaActionData) (DispatchRes
 		return FailureMsg(err.Error()), err
 	}
 	return SuccessMsg(), nil
+}
+
+func (client *Client) HandleGetArenaInfo(data ArenaInfoActionData) (DispatchResult, error) {
+	if client.Arena == nil {
+		return FailureMsg("Not in arena"), nil
+	}
+
+	return DispatchResult{
+		Message: Message{
+			MessageType: ArenaInfoResponseType,
+			Data:        client.Arena.GetArenaInfo(),
+		},
+		DoSend: true,
+	}, nil
 }
 
 func (client Client) GetSendChannel() chan<- Message {
