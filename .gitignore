@@ -1,0 +1,7 @@
+/node_modules/
+/main
+/dist/
+/.parcel-cache/
+/dist-server/
+.DS_Store
+app/**/*.js
