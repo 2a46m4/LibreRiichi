@@ -35,12 +35,13 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 	arena.Lock()
 	defer arena.Unlock()
 
-	agents := make([]AgentInfo, len(arena.agents))
+	agents := make([]AgentInfo, 0)
 	for _, agent := range arena.agents {
 		agents = append(agents, AgentInfo{Name: agent.Name})
 	}
 
 	return ArenaInfoResponseData{
+		Success: true,
 		Name: arena.Name,
 		Agents: agents,
 		GameStarted: arena.gameStarted,
@@ -103,8 +104,8 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 
 func CreateArena() Arena {
 	return Arena{
-		agents:      []*Client{},
-		spectators:  []*Client{},
+		agents:      make([]*Client, 0),
+		spectators:  make([]*Client, 0),
 		gameStarted: false,
 		game:        MahjongGame{},
 		DateCreated: time.Now(),

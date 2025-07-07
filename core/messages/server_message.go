@@ -155,7 +155,7 @@ func (msg *Message) UnmarshalJSON(rawData []byte) error {
 		}
 		msg.Data = data
 	default:
-		return fmt.Errorf("unexpected web.MessageType: %#v", raw.MessageType)
+		return fmt.Errorf("unexpected web.MessageType: %#v during unmarshalling", raw.MessageType)
 	}
 
 	return nil
@@ -193,8 +193,14 @@ func ServerActionDispatch[Return any](handler ServerActionHandler[Return], messa
 			return ret, BadMessage{}
 		}
 		return handler.HandleJoinArena(data)
+	case ArenaInfoActionType:
+		data, ok := message.Data.(ArenaInfoActionData)
+		if !ok {
+			return ret, BadMessage{}
+		}
+		return handler.HandleGetArenaInfo(data)
 	default:
 	}
 
-	return ret, fmt.Errorf("unexpected web.MessageType: %#v", message.MessageType)
+	return ret, fmt.Errorf("unexpected web.MessageType: %#v during dispatch", message.MessageType)
 }
