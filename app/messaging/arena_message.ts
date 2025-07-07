@@ -4,13 +4,11 @@ export enum ArenaMessageType {
     PlayerQuitEvent,
     GameStartedEvent,
     ArenaBoardEvent,
-    ListPlayersResponse,
 
     // Messages that are sent from player (client) to game (server)
     StartGameAction,
     PlayerAction,
     PlayerQuitAction,
-    ListPlayersAction,
 }
 
 type MessageEntry<T extends ArenaMessageType = ArenaMessageType, D = any> = {
@@ -30,16 +28,11 @@ type MessageMap = {
     [ArenaMessageType.ArenaBoardEvent]: {
         // TODO
     }
-    [ArenaMessageType.ListPlayersResponse]: {
-        success: boolean,
-        player_list: string[]
-    }
     [ArenaMessageType.StartGameAction]: {}
     [ArenaMessageType.PlayerAction]: {
         // TODO
     }
     [ArenaMessageType.PlayerQuitAction]: {}
-    [ArenaMessageType.ListPlayersAction]: {}
 
 }
 

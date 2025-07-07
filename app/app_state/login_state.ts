@@ -21,7 +21,7 @@ export class LoginState extends ApplicationState {
         this.app.conn = new Connection(
             new WebSocket(websocket_address),
             (ev: MessageEvent<any>) => {
-                this.app.msg_state.handle_message_recv(ev)
+                this.app.msg_state.handle_message_event(ev)
             }
         )
 

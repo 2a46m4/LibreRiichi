@@ -8,6 +8,8 @@ import (
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	"github.com/google/uuid"
 )
 
 // A location where players gather. Controls the flow of the game,
@@ -21,6 +23,7 @@ type Arena struct {
 
 	DateCreated time.Time
 	Name        string
+	uuid uuid.UUID
 
 	sync.Mutex
 }
@@ -41,9 +44,9 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 	}
 
 	return ArenaInfoResponseData{
-		Success: true,
-		Name: arena.Name,
-		Agents: agents,
+		Success:     true,
+		Name:        arena.Name,
+		Agents:      agents,
 		GameStarted: arena.gameStarted,
 		DateCreated: arena.DateCreated,
 	}
@@ -52,7 +55,8 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
 	switch visibility {
 	case GLOBAL:
-		for _, player := range arena.agents {
+		for i, player := range arena.agents {
+			fmt.Println("Sending index: ", i)
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
 				Data:        ServerArenaMessageEventData{ArenaMessage: data},
@@ -71,6 +75,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 		}
 
 		for idx, player := range arena.agents {
+			fmt.Println("Sending index: ", idx)
 			if idx == int(sendTo) {
 				continue
 			}
@@ -87,9 +92,12 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 		}
 	case EXCLUDE:
 		for i, player := range arena.agents {
+			fmt.Println("Exclude: sending index: ", i)
 			if i == int(sendTo) {
+				fmt.Println("Exclude: Skipping: ", i)
 				continue
 			}
+			fmt.Println("Exclude: Continuing with: ", i)
 			player.Recv <- Message{
 				MessageType: ServerArenaEventType,
 				Data:        ServerArenaMessageEventData{ArenaMessage: data},
@@ -102,7 +110,7 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 	return nil
 }
 
-func CreateArena() Arena {
+func CreateArena(name string, uuid uuid.UUID) Arena {
 	return Arena{
 		agents:      make([]*Client, 0),
 		spectators:  make([]*Client, 0),
@@ -110,6 +118,8 @@ func CreateArena() Arena {
 		game:        MahjongGame{},
 		DateCreated: time.Now(),
 		Mutex:       sync.Mutex{},
+		Name:        name,
+		uuid:        uuid,
 	}
 }
 
@@ -132,7 +142,7 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 		ArenaMessage{
 			MessageType: PlayerJoinedEventType,
 			Data:        data,
-		}, EXCLUDE, 0)
+		}, EXCLUDE, uint8(len(arena.agents)-1))
 
 	if err != nil {
 		panic(err)
@@ -254,7 +264,25 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 }
 
 func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
-	panic("NYI")
+	arena.Lock()
+	defer arena.Unlock()
+	if arena.gameStarted {
+		// Replace with AI
+
+	} else if len(arena.agents) == 1 {
+		fmt.Println("Removing arena")
+		RemoveArena(arena.Name)
+	} else {
+		agent := arena.agents[fromPlayer]
+		Remove(&arena.agents, uint(fromPlayer))
+		arena.Send(ArenaMessage{
+			MessageType: PlayerQuitEventType,
+			Data: PlayerQuitEventData{
+				Name: agent.Name,
+			},
+		}, GLOBAL, 0)
+	}
+	return nil
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

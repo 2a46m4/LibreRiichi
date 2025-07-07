@@ -97,8 +97,9 @@ func (client Client) Loop() {
 			client.Connection.Send(bytes)
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
-				fmt.Println(err)
+				fmt.Println("Error: ", err)
 				client.Connection.CloseConnChan()
+				client.HandleClientDestruction()
 				return
 			}
 
@@ -114,7 +115,6 @@ func (client Client) Loop() {
 			}
 
 			if dispatchResult.DoSend {
-				fmt.Println("Sending message: ", dispatchResult)
 				dispatchResult.Message.MessageIndex = msg.MessageIndex
 				client.GetSendChannel() <- dispatchResult.Message
 			}
@@ -200,6 +200,20 @@ func (client *Client) HandleGetArenaInfo(data ArenaInfoActionData) (DispatchResu
 		},
 		DoSend: true,
 	}, nil
+}
+
+func (client *Client) HandleClientDestruction() {
+	if client.Arena != nil {
+		idx, err := client.Arena.getPlayerIdx(client)
+		if err != nil {
+			return
+		}
+
+		err = client.Arena.HandlePlayerQuitAction(PlayerQuitActionData{}, idx)
+		if err != nil {
+			return
+		}
+	}
 }
 
 func (client Client) GetSendChannel() chan<- Message {

@@ -2,7 +2,6 @@ import {Connection, websocket_address} from "./messaging/connection";
 import {Router, useRouter} from "vue-router";
 import {ApplicationState} from "./app_state/application_state";
 import {LoginState} from "./app_state/login_state";
-import {EventHandlerInterface} from "./messaging/event_handler_interface";
 import {MessageState} from "./messaging/message_state";
 import {EventHandler} from "./messaging/event_handler";
 
@@ -12,13 +11,15 @@ export class Application {
     public state: ApplicationState
     router: Router
     msg_state: MessageState
+    handler: EventHandler
 
     constructor() {
         this.state = new LoginState(this)
         this.connection = null
         this.username = "No username set"
         this.router = useRouter()
-        this.msg_state = new MessageState(new EventHandler())
+        this.handler = new EventHandler()
+        this.msg_state = new MessageState(this.handler)
     }
 
     public get action() {

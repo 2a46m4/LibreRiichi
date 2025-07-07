@@ -9,10 +9,14 @@
 	"devDependencies": {
 		"@babel/cli": "^7.28.0",
 		"@parcel/transformer-vue": "^2.15.4",
+		"assert": "^2.1.0",
 		"buffer": "^5.5.0||^6.0.0",
 		"concurrently": "^9.1.2",
+		"console-browserify": "^1.2.0",
 		"parcel": "^2.15.4",
-		"typescript": "^5.8.3"
+		"process": "^0.11.10",
+		"typescript": "^5.8.3",
+		"util": "^0.12.5"
 	},
 	"scripts": {
 		"frontend": "parcel app/index.html",

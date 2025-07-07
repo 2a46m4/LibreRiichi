@@ -85,6 +85,7 @@ func RemoveArena(name string) error {
 
 	uuid, ok := GlobalArenaList.name[name]
 	if !ok {
+		fmt.Println("Did not find arena: ", name)
 		return ArenaNotFoundError{name}
 	}
 
@@ -123,7 +124,7 @@ func CreateAndAddArena(name string) error {
 	newUUID := uuid.New()
 	GlobalArenaList.name[name] = newUUID
 
-	newArena := CreateArena()
+	newArena := CreateArena(name, newUUID)
 	GlobalArenaList.arena[newUUID] = &newArena
 
 	fmt.Println("Created arena. Now arena map is:", GlobalArenaList.name)

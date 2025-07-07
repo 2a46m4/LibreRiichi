@@ -1,6 +1,5 @@
 import {IncomingMessage, Message, MessageType} from "./message";
 import {EventHandler} from "./event_handler";
-import {EventHandlerInterface} from "./event_handler_interface";
 
 type MessageResolver = (v: Message) => void
 
@@ -9,16 +8,15 @@ export class MessageState {
         resolve: MessageResolver,
         reject: MessageResolver,
     }>
-    event_handler: EventHandlerInterface
+    event_handler: EventHandler
 
-    constructor(handler: EventHandlerInterface) {
+    constructor(handler: EventHandler) {
         this.outgoing_messages = new Map();
         this.event_handler = handler
     }
 
-    handle_message_recv(ev: MessageEvent) {
+    handle_message_event(ev: MessageEvent) {
         let data = JSON.parse(ev.data)
-        console.log("Got message: ", data)
         this.match_message(data)
     }
 
@@ -35,14 +33,9 @@ export class MessageState {
     }
 
     match_message(data: IncomingMessage) {
-        console.log("Got return: ", data)
+        console.log("Got a message: ", data)
 
-        if (data.message_type === MessageType.ServerArenaEvent) {
-            this.event_handler.dispatch_message(data)
-            return
-        }
-
-        else if (this.outgoing_messages.has(data.message_index)) {
+        if (this.outgoing_messages.has(data.message_index)) {
             console.log("Matched outgoing message")
             this.outgoing_messages.get(data.message_index)?.resolve(data)
             this.outgoing_messages.delete(data.message_index)
@@ -53,7 +46,7 @@ export class MessageState {
             console.log("No match for message: ", data)
             console.log("Calling event handler")
 
-            this.event_handler.dispatch_message(data)
+            this.event_handler.handle_server_message(data)
         }
     }
 }

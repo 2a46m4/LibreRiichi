@@ -1,5 +1,5 @@
 import {ApplicationState} from "./application_state";
-import {Message, MessageType} from "../messaging/message";
+import {MessageType} from "../messaging/message";
 import {JoinedRoomState} from "./joined_room_state";
 import {Application} from "../application";
 

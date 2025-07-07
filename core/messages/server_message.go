@@ -57,11 +57,11 @@ type ListArenasResponseData struct {
 }
 
 type ArenaInfoResponseData struct {
-	Success bool `json:"success"`
-	Name        string `json:"name"`
-	Agents []AgentInfo `json:"agents"`
-	GameStarted bool `json:"game_started"`
-	DateCreated time.Time `json:"date_created"`
+	Success     bool        `json:"success"`
+	Name        string      `json:"name"`
+	Agents      []AgentInfo `json:"agents"`
+	GameStarted bool        `json:"game_started"`
+	DateCreated time.Time   `json:"date_created"`
 }
 
 // ==================== ACTIONS ====================

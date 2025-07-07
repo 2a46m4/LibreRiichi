@@ -2,7 +2,7 @@ import {ApplicationState} from "./application_state";
 import {Application} from "../application";
 import {MessageType} from "../messaging/message";
 import {Arena} from "../types/arena";
-import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
+import {ArenaMessageType} from "../messaging/arena_message";
 
 export class JoinedRoomState extends ApplicationState {
     constructor(app: Application) {

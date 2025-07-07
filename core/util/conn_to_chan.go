@@ -91,7 +91,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 			default:
 				fmt.Println("Waiting for message")
 				msgType, buffer, err := conn.ReadMessage()
-				fmt.Println("Recved message", string(buffer))
+				fmt.Println("Recved message: ", string(buffer))
 				if err != nil {
 					ret.DataChannel <- err
 					continue
@@ -119,12 +119,14 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				return
 			case toWrite, ok := <-ret.WriteChannel:
 				if !ok {
+					fmt.Println("Closing connection")
 					conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(0, "Closed conection"))
 					return
 				}
 
 				err := conn.WriteMessage(websocket.TextMessage, toWrite)
 				if err != nil {
+					fmt.Println("Couldn't write message")
 					panic(err)
 				}
 			default:

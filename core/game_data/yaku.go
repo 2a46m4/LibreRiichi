@@ -59,7 +59,7 @@ const (
 
 func iterateYaku(yakus YakuType, operate func(singleYaku YakuType)) {
 	for itr := 0; itr != 64; itr += 1 {
-		if (yakus >> itr) & 1 == 1 {
+		if (yakus>>itr)&1 == 1 {
 			operate(yakus & (1 << itr))
 		}
 	}
@@ -68,7 +68,7 @@ func iterateYaku(yakus YakuType, operate func(singleYaku YakuType)) {
 func (yaku YakuType) Han() int {
 
 	yakuHan := map[YakuType]int{
-		NO_YAKU:      0,
+		NO_YAKU:           0,
 		MENZEN_TSUMO_YAKU: 1,
 		RIICHI_YAKU:       1,
 		IPPATSU_YAKU:      1,
@@ -220,7 +220,7 @@ func (yaku YakuType) OpenHand() bool {
 
 	isOpen := false
 	iterateYaku(yaku, func(singleYaku YakuType) {
-		isOpen = isOpen || canBeOpen[singleYaku]	
+		isOpen = isOpen || canBeOpen[singleYaku]
 	})
 
 	return isOpen
