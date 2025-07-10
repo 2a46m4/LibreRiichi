@@ -65,6 +65,8 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
       <ListItem v-for="player in players">{{ player }}</ListItem>
     </ul>
   </div>
+<!--  <div v-for=""-->
+  {{something}}
 </template>
 
 <style scoped>

@@ -2,6 +2,8 @@
 import {ref} from 'vue'
 import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
+import Tile from "../components/tile.vue";
+import {test} from "../assets/tiles";
 
 const globalStore = useGlobalStore();
 const app = globalStore.application
@@ -26,6 +28,7 @@ async function connect() {
       @click="connect"
       @keyup.enter="connect">Connect</button>
   </div>
+  <Tile :tile_path="test"></Tile>
 </template>
 
 <style>
