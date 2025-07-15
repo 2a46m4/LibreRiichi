@@ -28,8 +28,8 @@ async function connect() {
       @click="connect"
       @keyup.enter="connect">Connect</button>
   </div>
-  <Tile :tile_path="test"></Tile>
-  <Tile :tile_path="test2"></Tile>
+  <Tile :tile_paths="[test, test2]"></Tile>
+
 </template>
 
 <style>

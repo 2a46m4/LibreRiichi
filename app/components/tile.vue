@@ -1,13 +1,22 @@
 <script setup lang="ts">
+  import Tile from "./tile.vue";
+
   const props = defineProps<{
-    tile_path: URL
+    tile_paths: URL[]
   }>()
+
 </script>
 
 <template>
-  <img :src=props.tile_path.toString() alt="A tile"/>
+  <img v-for="tile_path in props.tile_paths" :src=tile_path.toString() alt="A tile"/>
 </template>
 
 <style scoped>
-
+div {
+  position: relative;
+  display: inline;
+}
+img {
+  position: absolute;
+}
 </style>
