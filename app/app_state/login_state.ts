@@ -1,8 +1,8 @@
 import {ApplicationState} from "./application_state";
 import {Connection, websocket_address} from "../messaging/connection";
 import {MessageType} from "../messaging/message";
-import {ConnectedState} from "./connected_state";
 import {Application} from "../application";
+import {ConnectedState} from "./connected_state";
 
 export class LoginState extends ApplicationState {
     constructor(app: Application) {

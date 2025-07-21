@@ -5,6 +5,7 @@ import {useGlobalStore} from "../global_store";
 import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
+import GameBoard from "../components/game_board.vue";
 
 const store = useGlobalStore()
 const app = store.application
@@ -22,7 +23,7 @@ async function get_arena_info() {
   room_name.value = arena.name
 }
 
-await get_arena_info()
+get_arena_info()
 let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
   console.log("Arena listener called")
   switch (data.message_type) {
@@ -47,26 +48,33 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
   }
 })
 
-function start_game() {
-  action.
+async function start_game() {
+  await action.start_game()
 }
 
 </script>
 
 <template>
-  <div :class="BoxStyling">
-    <h1 :class="H1Styling">{{ room_name }}</h1>
-  </div>
-  <div :class="BoxStyling">
-    <div :class="FlexBox">
-      <h1 :class="H1Styling">Players {{ players.length }} / 4</h1>
+  <Suspense>
+    <div>
+      <div :class="BoxStyling">
+        <h1 :class="H1Styling">{{ room_name }}</h1>
+      </div>
+      <div :class="BoxStyling">
+        <div :class="FlexBox">
+          <h1 :class="H1Styling">Players {{ players.length }} / 4</h1>
+        </div>
+        <ul :class="ULStyling" v-if="players.length !== 0">
+          <ListItem v-for="player in players">{{ player }}</ListItem>
+        </ul>
+      </div>
+      <button :class="ButtonStyling + Spacing"
+              @click="start_game">Start game</button>
+      <div v-if="in_game">
+        <GameBoard></GameBoard>
+      </div>
     </div>
-    <ul :class="ULStyling" v-if="players.length !== 0">
-      <ListItem v-for="player in players">{{ player }}</ListItem>
-    </ul>
-  </div>
-  <button :class="ButtonStyling + Spacing"
-          @click="start_game">Start game</button>
+  </Suspense>
 </template>
 
 <style scoped>

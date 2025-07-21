@@ -5,7 +5,7 @@ import "math/rand"
 // Creates a random permutation of the array
 // Modifies the existing array
 func PermuteArray[T any](array []T) []T {
-	for i := len(array); i > 0; i -= 1 {
+	for i := len(array) - 1; i > 0; i -= 1 {
 		rand := rand.Intn(i)
 		temp := array[i]
 		array[i] = array[rand]
