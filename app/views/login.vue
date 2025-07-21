@@ -4,15 +4,23 @@ import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
 import Tile from "../components/tile.vue";
 import {test, test2} from "../assets/tiles";
+import ErrorDisplay from "../components/error_display.vue";
 
 const globalStore = useGlobalStore();
 const app = globalStore.application
 
 const user_name = ref('')
+const status = ref("")
 
 async function connect() {
   app.set_username(user_name.value)
-  await app.action.connect()
+  try {
+    await app.action.connect()
+  } catch (error) {
+    if (error instanceof Error) {
+      status.value = error.message
+    }
+  }
 }
 </script>
 
@@ -27,8 +35,8 @@ async function connect() {
       :class="ButtonStyling"
       @click="connect"
       @keyup.enter="connect">Connect</button>
+    <ErrorDisplay :error="status" v-if="status.length !== 0"></ErrorDisplay>
   </div>
-  <Tile :tile_paths="[test, test2]"></Tile>
 
 </template>
 

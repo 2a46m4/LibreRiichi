@@ -14,7 +14,7 @@ export class LoginState extends ApplicationState {
     }
 
     async connect() {
-        if (this.app.username === null) {
+        if (this.app.username === null || this.app.username === "") {
             throw new Error("Username is required")
         }
 

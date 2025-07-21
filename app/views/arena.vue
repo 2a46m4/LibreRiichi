@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import {BoxStyling, FlexBox, H1Styling, ULStyling} from "../styling";
+import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from "../styling";
 import {useGlobalStore} from "../global_store";
 import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
@@ -22,7 +22,7 @@ async function get_arena_info() {
   room_name.value = arena.name
 }
 
-get_arena_info()
+await get_arena_info()
 let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
   console.log("Arena listener called")
   switch (data.message_type) {
@@ -30,14 +30,10 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
       players.value.push(data.data.name);
       break;
     case ArenaMessageType.PlayerQuitEvent:
-      if (in_game) {
-        throw new Error("NYI")
-      } else {
         players.value = players.value.filter((v) => v !== data.data.name)
-      }
       break;
     case ArenaMessageType.GameStartedEvent:
-      in_game = true;
+      in_game = true
       break;
     case ArenaMessageType.ArenaBoardEvent:
       if (!in_game) {
@@ -51,6 +47,10 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
   }
 })
 
+function start_game() {
+  action.
+}
+
 </script>
 
 <template>
@@ -59,14 +59,14 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
   </div>
   <div :class="BoxStyling">
     <div :class="FlexBox">
-      <h1 :class="H1Styling">Players</h1>
+      <h1 :class="H1Styling">Players {{ players.length }} / 4</h1>
     </div>
     <ul :class="ULStyling" v-if="players.length !== 0">
       <ListItem v-for="player in players">{{ player }}</ListItem>
     </ul>
   </div>
-<!--  <div v-for=""-->
-  {{something}}
+  <button :class="ButtonStyling + Spacing"
+          @click="start_game">Start game</button>
 </template>
 
 <style scoped>

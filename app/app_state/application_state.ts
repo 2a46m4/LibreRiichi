@@ -37,4 +37,8 @@ export abstract class ApplicationState {
     async submit_move() {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
+
+    async start_game() {
+        throw new Error(`Wrong state: ${this.get_state_name()}`)
+    }
 }
