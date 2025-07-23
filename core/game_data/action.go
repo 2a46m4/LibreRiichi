@@ -39,7 +39,7 @@ type ActionHandler[T any, E any] interface {
 
 type RonData struct {
 	TileToRon Tile      `json:"tile_to_ron"`
-	WinResult WinResult `json:"win_result"`
+	WinResult WinResult `json:"win_result"` // TODO: Remove
 }
 
 type TsumoData struct {
@@ -215,5 +215,88 @@ func ActionDecode[T any, E any](handler ActionHandler[T, E], data ActionData, ex
 		return handler.HandleTsumo(message, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected core.ActionType: %#v", data.ActionType)
+	}
+}
+
+func MakeRon(ron Tile) ActionData {
+	return ActionData{
+		ActionType: RON,
+		Data:       RonData{
+			TileToRon: ron,
+			WinResult: WinResult{},
+		},
+	}
+}
+
+func MakeTsumo(tsumo Tile) ActionData {
+	return ActionData{
+		ActionType: TSUMO,
+		Data:       TsumoData{
+			TileToTsumo: tsumo,
+		},
+	}
+}
+
+func MakeRiichi(riichi Tile) ActionData {
+	return ActionData{
+		ActionType: RIICHI,
+		Data:       RiichiData{
+			TileToRiichi: riichi,
+		},
+	}
+}
+
+func MakeToss(toss Tile) ActionData {
+	return ActionData{
+		ActionType: TOSS,
+		Data:       TossData{
+			TileToToss: toss,
+		},
+	}
+}
+
+func MakeSkip(skip ActionData) ActionData {
+	return ActionData{
+		ActionType: SKIP,
+		Data:       SkipData{
+			ActionToSkip: skip,
+		},
+	}
+}
+
+func MakePon(pon Tile) ActionData {
+	return ActionData{
+		ActionType: PON,
+		Data:       PonData{
+			TileToPon: pon,
+		},
+	}
+}
+
+func MakeKan(kan Tile) ActionData {
+	return ActionData{
+		ActionType: KAN,
+		Data:       KanData{
+			TileToKan: kan,
+		},
+	}
+}
+
+func MakeChii(chii Tile, tilesInHand [2]Tile) ActionData {
+	return ActionData{
+		ActionType: CHII,
+		Data:       ChiiData{
+			TileToChii: chii,
+			TilesInHand: tilesInHand,
+		},
+	}
+}
+
+func MakeDraw(draw Tile) ActionData {
+	return ActionData{
+		ActionType: DRAW,
+		Data:       DrawData{
+			DrawnTile: draw,
+		},
 	}
 }

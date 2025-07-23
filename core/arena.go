@@ -28,10 +28,39 @@ type Arena struct {
 	sync.Mutex
 }
 
+// Information needed to send a messsage
 type MessageSendInfo struct {
 	Events     []ArenaBoardEventData
 	Visibility Visibility
 	SendTo     uint8
+}
+
+type InfoList []MessageSendInfo
+
+func (list *InfoList) Add(data ...MessageSendInfo) *InfoList {
+	*list = append(*list, data...)
+	return list
+}
+
+func (list *InfoList) AddGlobalMessage(data ...ArenaBoardEventData) *InfoList {
+	global := GlobalMessage()
+	global.Add(data...)
+	*list = append(*list, global)
+	return list	
+}
+
+func (list *InfoList) AddPrivateMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
+	private := PrivateMessage(sendTo)
+	private.Add(data...)
+	*list = append(*list, private)
+	return list	
+}
+
+func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
+	partial := PartialMessage(sendTo)
+	partial.Add(data...)
+	*list = append(*list, partial)
+	return list	
 }
 
 func GlobalMessage() MessageSendInfo {
@@ -58,12 +87,10 @@ func PartialMessage(sendTo uint8) MessageSendInfo {
 	}
 }
 
-func (info MessageSendInfo) Add(data ...ArenaBoardEventData) MessageSendInfo {
-	return MessageSendInfo{
-		append(info.Events, data...),
-		info.Visibility,
-		info.SendTo,
-	}
+// Add an event to the send info
+func (info *MessageSendInfo) Add(data ...ArenaBoardEventData) *MessageSendInfo {
+	info.Events = append(info.Events, data...)
+	return info
 }
 
 func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
