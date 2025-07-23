@@ -159,3 +159,50 @@ func ArenaActionDispatch[E any](handler ArenaActionHandler[E], msg ArenaMessage,
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}
 }
+
+// ==================== METHODS ====================
+
+func PlayerActionEvent(data ActionData, fromPlayer uint8) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent: BoardEvent{
+			EventType: PlayerActionEventType,
+			Data:      PlayerActionEventData{
+				ActionData: data,
+				FromPlayer: fromPlayer,
+			},
+		},
+	}
+}
+
+func PotentialActionEvent(data ActionData) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent: BoardEvent{
+			EventType: PotentialActionEventType,
+			Data:      PotentialActionEventData{
+				ActionData: data,
+			},
+		},
+	}
+}
+
+func GameSetupEvent(data []Setup) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent: BoardEvent{
+			EventType: GameSetupEventType,
+			Data:      GameSetupEventData{
+				Setup: data,
+			},
+		},
+	}
+}
+
+func GameEndEvent(data GameResult) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent: BoardEvent{
+			EventType: GameEndEventType,
+			Data:      GameEndEventData{
+				GameResult: data,
+			},
+		},
+	}
+}
