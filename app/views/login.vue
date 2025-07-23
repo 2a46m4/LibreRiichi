@@ -2,7 +2,7 @@
 import {ref} from 'vue'
 import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
-import Tile from "../components/tile.vue";
+import TileComponent from "../components/tile_component.vue";
 import {test, test2} from "../assets/tiles";
 import ErrorDisplay from "../components/error_display.vue";
 

@@ -23,7 +23,7 @@ type Arena struct {
 
 	DateCreated time.Time
 	Name        string
-	uuid uuid.UUID
+	uuid        uuid.UUID
 
 	sync.Mutex
 }
@@ -32,6 +32,38 @@ type MessageSendInfo struct {
 	Events     []ArenaBoardEventData
 	Visibility Visibility
 	SendTo     uint8
+}
+
+func GlobalMessage() MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEventData{},
+		Visibility: GLOBAL,
+		SendTo:     0,
+	}
+}
+
+func PrivateMessage(sendTo uint8) MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEventData{},
+		Visibility: PLAYER,
+		SendTo:     sendTo,
+	}
+}
+
+func PartialMessage(sendTo uint8) MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEventData{},
+		Visibility: PARTIAL,
+		SendTo:     sendTo,
+	}
+}
+
+func (info MessageSendInfo) Add(data ...ArenaBoardEventData) MessageSendInfo {
+	return MessageSendInfo{
+		append(info.Events, data...),
+		info.Visibility,
+		info.SendTo,
+	}
 }
 
 func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {

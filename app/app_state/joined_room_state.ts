@@ -3,6 +3,7 @@ import {Application} from "../application";
 import {MessageType} from "../messaging/message";
 import {Arena} from "../types/arena";
 import {ArenaMessageType} from "../messaging/arena_message";
+import {InGameState} from "./in_game_state";
 
 export class JoinedRoomState extends ApplicationState {
     constructor(app: Application) {
@@ -30,6 +31,8 @@ export class JoinedRoomState extends ApplicationState {
         if (!ret.data.success) {
             throw new Error("Couldn't start game: " + ret.data.fail_reason)
         }
+
+        this.transition(new InGameState(this.app))
     }
 
     async get_arena_info(): Promise<Arena> {
@@ -50,14 +53,6 @@ export class JoinedRoomState extends ApplicationState {
         }
 
         return ret.data
-    }
-
-    async submit_move() {
-        // TODO: Finish
-    }
-
-    async quit_room() {
-        // TODO: Finish
     }
 
     get_state_name(): string {

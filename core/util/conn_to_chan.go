@@ -100,8 +100,11 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				switch msgType {
 				case websocket.TextMessage:
 					ret.DataChannel <- buffer
-				case websocket.BinaryMessage, websocket.PingMessage, websocket.PongMessage:
+				case websocket.BinaryMessage:
 					continue
+				case websocket.PingMessage:
+					conn.WriteMessage(websocket.PongMessage, []byte{})
+				case websocket.PongMessage:
 				case websocket.CloseMessage:
 					close(ret.DataChannel)
 					conn.Close()

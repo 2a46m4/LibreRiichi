@@ -37,11 +37,7 @@ let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
       in_game = true
       break;
     case ArenaMessageType.ArenaBoardEvent:
-      if (!in_game) {
-        throw new Error("Not in correct state")
-      } else {
-        throw new Error("NYI")
-      }
+      app.state.handle_arena_event(data.data)
       break;
     default:
       throw new Error("Unexpected message")

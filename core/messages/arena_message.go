@@ -45,7 +45,7 @@ type PlayerQuitEventData struct {
 type GameStartedEventData struct{}
 
 type ArenaBoardEventData struct {
-	BoardEvent // For handling generic games, this should be replaced
+	BoardEvent `json:"board_event"` // For handling generic games, this should be replaced
 }
 
 // ==================== ACTIONS ====================

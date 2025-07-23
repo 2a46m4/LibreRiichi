@@ -1,5 +1,6 @@
 import {Application} from "../application";
 import {Arena} from "../types/arena";
+import {ArenaMessage} from "../messaging/arena_message";
 
 export abstract class ApplicationState {
     app: Application
@@ -9,6 +10,10 @@ export abstract class ApplicationState {
     }
 
     abstract get_state_name(): string;
+
+    transition(new_state: ApplicationState): void {
+        this.app.state = new_state
+    }
 
     async connect() {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
@@ -39,6 +44,10 @@ export abstract class ApplicationState {
     }
 
     async start_game() {
+        throw new Error(`Wrong state: ${this.get_state_name()}`)
+    }
+
+    async handle_arena_event(msg: ArenaMessage) {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 }

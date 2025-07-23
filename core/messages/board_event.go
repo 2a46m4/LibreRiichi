@@ -27,12 +27,12 @@ type BoardEvent struct {
 }
 
 type PlayerActionEventData struct {
-	ActionData
+	ActionData `json:"action_data"`
 	FromPlayer uint8 `json:"from_player"`
 }
 
 type PotentialActionEventData struct {
-	ActionData
+	ActionData `json:"action_data"`
 }
 
 type GameSetupEventData struct {

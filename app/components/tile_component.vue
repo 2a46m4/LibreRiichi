@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import Tile from "./tile.vue";
+import Tile from "./tile_component.vue";
 
   const props = defineProps<{
     tile_paths: URL[]

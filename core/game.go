@@ -233,6 +233,15 @@ func privatePlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
 	}
 }
 
+func gameEndMessage(data GameResult) ArenaBoardEventData {
+	return ArenaBoardEventData{
+		BoardEvent: BoardEvent{
+			EventType: GameEndEventType,
+			Data:      data,
+		},
+	}
+}
+
 // ==================== PUBLIC FUNCTIONS ====================
 
 // Returns data to send to clients when a new game can be started, otherwise an error

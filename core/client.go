@@ -95,6 +95,7 @@ func (client Client) Loop() {
 			}
 			fmt.Println("Sending", string(bytes))
 			client.Connection.Send(bytes)
+
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
 				fmt.Println("Error: ", err)
@@ -169,7 +170,7 @@ func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchR
 	if client.Arena != nil {
 		idx, err := client.Arena.getPlayerIdx(client)
 		if err != nil {
-			return DispatchResult{}, err
+			return FailureMsg(err.Error()), err
 		}
 
 		err = ArenaActionDispatch(client.Arena, action.ArenaMessage, idx)

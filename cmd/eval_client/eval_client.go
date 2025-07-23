@@ -1,20 +1,37 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
+	"errors"
+	"fmt"
 	"log"
+	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 func main() {
+
 	url := "ws://localhost:3000/game"
-	conn, resp, err := websocket.DefaultDialer.Dial(url, nil)
-	if err != nil {
-		log.Fatalf("Dial failed: %v (status: %v)", err, resp)
+	var err error = errors.New("Hello")
+	var conn *websocket.Conn
+	var resp *http.Response
+	conns := [4]*websocket.Conn{}
+	for i := range 4 {
+		header := http.Header{}
+		header.Set("Origin", "http://localhost")
+		conn, resp, err = websocket.DefaultDialer.Dial(url, header)
+		if err != nil {
+			log.Printf("Dial failed: %v (status: %v)", err, resp)
+		} else {
+			conns[i] = conn
+			fmt.Println("New conn")
+		}
 	}
+
 	defer conn.Close()
 
-	err = conn.WriteMessage(websocket.TextMessage, []byte("Hello WebSocket!"))
-	if err != nil {
+	for err != nil {
+		err = conn.WriteMessage(websocket.TextMessage, []byte("Hello WebSocket!"))
 		log.Println("Write error:", err)
 	}
 

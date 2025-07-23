@@ -1,3 +1,5 @@
+import {BoardEvent} from "./board_event";
+
 export enum ArenaMessageType {
     // Messages that are sent from game (server) to player (client)
     PlayerJoinedEvent,
@@ -26,7 +28,7 @@ type MessageMap = {
     }
     [ArenaMessageType.GameStartedEvent]: {}
     [ArenaMessageType.ArenaBoardEvent]: {
-        // TODO
+        board_event: BoardEvent
     }
     [ArenaMessageType.StartGameAction]: {}
     [ArenaMessageType.PlayerAction]: {
