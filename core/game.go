@@ -392,7 +392,11 @@ func (game *MahjongGame) HandleChii(chiiData ChiiData, fromPlayer uint8) (infos 
 
 	game.CurrentTurnOrder = fromPlayer
 
-	return *infos.AddGlobalMessage(PlayerActionEvent(MakeChii(chiiData.TileToChii, chiiData.TilesInHand), fromPlayer)), nil
+	return *infos.AddGlobalMessage(
+		PlayerActionEvent(MakeChii(
+			chiiData.TileToChii,
+			chiiData.TilesInHand),
+			fromPlayer)), nil
 }
 
 func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info InfoList, err error) {
