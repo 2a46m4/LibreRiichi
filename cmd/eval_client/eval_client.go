@@ -28,6 +28,7 @@ func main() {
 			conn, resp, err = websocket.DefaultDialer.Dial(url, header)
 			if err != nil {
 				log.Printf("Dial failed: %v (status: %v)", err, resp)
+				time.Sleep(100 * time.Millisecond)
 			} else {
 				conns[i] = conn
 				fmt.Println("New conn")
