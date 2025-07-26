@@ -20,7 +20,7 @@ export class InGameState extends ApplicationState {
     }
 
     async handle_arena_event(msg: ArenaMessage): Promise<void> {
-
+        
     }
 
 }

@@ -74,7 +74,7 @@ func (game *MahjongGame) setupGame() {
 	for i := range game.PlayerToOrder {
 		game.PlayerToOrder[i] = uint8(i)
 	}
-	game.OrderToPlayer = make([]uint8, 0)
+	game.OrderToPlayer = make([]uint8, 4)
 
 	PermuteArray(game.PlayerToOrder)
 	for idx, order := range game.PlayerToOrder {

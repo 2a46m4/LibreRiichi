@@ -130,7 +130,7 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				err := conn.WriteMessage(websocket.TextMessage, toWrite)
 				if err != nil {
 					fmt.Println("Couldn't write message")
-					panic(err)
+					return
 				}
 			default:
 			}
