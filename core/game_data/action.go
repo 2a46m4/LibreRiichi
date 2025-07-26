@@ -221,7 +221,7 @@ func ActionDecode[T any, E any](handler ActionHandler[T, E], data ActionData, ex
 func MakeRon(ron Tile) ActionData {
 	return ActionData{
 		ActionType: RON,
-		Data:       RonData{
+		Data: RonData{
 			TileToRon: ron,
 			WinResult: WinResult{},
 		},
@@ -231,7 +231,7 @@ func MakeRon(ron Tile) ActionData {
 func MakeTsumo(tsumo Tile) ActionData {
 	return ActionData{
 		ActionType: TSUMO,
-		Data:       TsumoData{
+		Data: TsumoData{
 			TileToTsumo: tsumo,
 		},
 	}
@@ -240,7 +240,7 @@ func MakeTsumo(tsumo Tile) ActionData {
 func MakeRiichi(riichi Tile) ActionData {
 	return ActionData{
 		ActionType: RIICHI,
-		Data:       RiichiData{
+		Data: RiichiData{
 			TileToRiichi: riichi,
 		},
 	}
@@ -249,7 +249,7 @@ func MakeRiichi(riichi Tile) ActionData {
 func MakeToss(toss Tile) ActionData {
 	return ActionData{
 		ActionType: TOSS,
-		Data:       TossData{
+		Data: TossData{
 			TileToToss: toss,
 		},
 	}
@@ -258,7 +258,7 @@ func MakeToss(toss Tile) ActionData {
 func MakeSkip(skip ActionData) ActionData {
 	return ActionData{
 		ActionType: SKIP,
-		Data:       SkipData{
+		Data: SkipData{
 			ActionToSkip: skip,
 		},
 	}
@@ -267,7 +267,7 @@ func MakeSkip(skip ActionData) ActionData {
 func MakePon(pon Tile) ActionData {
 	return ActionData{
 		ActionType: PON,
-		Data:       PonData{
+		Data: PonData{
 			TileToPon: pon,
 		},
 	}
@@ -276,7 +276,7 @@ func MakePon(pon Tile) ActionData {
 func MakeKan(kan Tile) ActionData {
 	return ActionData{
 		ActionType: KAN,
-		Data:       KanData{
+		Data: KanData{
 			TileToKan: kan,
 		},
 	}
@@ -285,8 +285,8 @@ func MakeKan(kan Tile) ActionData {
 func MakeChii(chii Tile, tilesInHand [2]Tile) ActionData {
 	return ActionData{
 		ActionType: CHII,
-		Data:       ChiiData{
-			TileToChii: chii,
+		Data: ChiiData{
+			TileToChii:  chii,
 			TilesInHand: tilesInHand,
 		},
 	}
@@ -295,7 +295,7 @@ func MakeChii(chii Tile, tilesInHand [2]Tile) ActionData {
 func MakeDraw(draw Tile) ActionData {
 	return ActionData{
 		ActionType: DRAW,
-		Data:       DrawData{
+		Data: DrawData{
 			DrawnTile: draw,
 		},
 	}
