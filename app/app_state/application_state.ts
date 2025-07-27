@@ -47,7 +47,7 @@ export abstract class ApplicationState {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 
-    async handle_arena_event(msg: ArenaMessage) {
+    handle_arena_event(msg: ArenaMessage) {
         throw new Error(`Wrong state: ${this.get_state_name()}`)
     }
 }

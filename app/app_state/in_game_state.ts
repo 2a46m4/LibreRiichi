@@ -19,7 +19,7 @@ export class InGameState extends ApplicationState {
         return "in game";
     }
 
-    async handle_arena_event(msg: ArenaMessage): Promise<void> {
+    handle_arena_event(msg: ArenaMessage) {
         console.log("Handling arena event: ", msg)
     }
 

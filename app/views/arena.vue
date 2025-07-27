@@ -6,6 +6,7 @@ import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
 import GameBoard from "../components/game_board.vue";
+import ArenaHandler from "../messaging/arena_handler";
 
 const store = useGlobalStore()
 const app = store.application
@@ -23,26 +24,29 @@ async function get_arena_info() {
   room_name.value = arena.name
 }
 
-get_arena_info()
-let listener_idx = handler.register_arena_listener((data: ArenaMessage) => {
+await get_arena_info()
+let callback = (data: ArenaMessage) => {
   console.log("Arena listener called")
   switch (data.message_type) {
     case ArenaMessageType.PlayerJoinedEvent:
       players.value.push(data.data.name);
       break;
     case ArenaMessageType.PlayerQuitEvent:
-        players.value = players.value.filter((v) => v !== data.data.name)
+      players.value = players.value.filter((v) => v !== data.data.name)
       break;
     case ArenaMessageType.GameStartedEvent:
       in_game = true
       break;
     case ArenaMessageType.ArenaBoardEvent:
+      handler.register_server_listener()
       app.state.handle_arena_event(data.data)
       break;
     default:
       throw new Error("Unexpected message")
   }
-})
+}
+let arena_handler = new ArenaHandler(handler)
+let callback_idx = arena_handler.register_arena_listener(callback)
 
 async function start_game() {
   await action.start_game()

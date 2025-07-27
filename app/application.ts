@@ -19,7 +19,8 @@ export class Application {
         this.username = "No username set"
         this.router = useRouter()
         this.handler = new EventHandler()
-        this.msg_state = new MessageState(this.handler)
+        this.msg_state = new MessageState()
+        this.handler.register_server_listener(this.msg_state.match_message.bind(this.msg_state))
     }
 
     public get action() {

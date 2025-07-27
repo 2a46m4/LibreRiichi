@@ -8,16 +8,9 @@ export class MessageState {
         resolve: MessageResolver,
         reject: MessageResolver,
     }>
-    event_handler: EventHandler
 
-    constructor(handler: EventHandler) {
+    constructor() {
         this.outgoing_messages = new Map();
-        this.event_handler = handler
-    }
-
-    handle_message_event(ev: MessageEvent) {
-        let data = JSON.parse(ev.data)
-        this.match_message(data)
     }
 
     // TODO: Timeout option
@@ -33,20 +26,10 @@ export class MessageState {
     }
 
     match_message(data: IncomingMessage) {
-        console.log("Got a message: ", data)
-
         if (this.outgoing_messages.has(data.message_index)) {
             console.log("Matched outgoing message")
             this.outgoing_messages.get(data.message_index)?.resolve(data)
             this.outgoing_messages.delete(data.message_index)
-            return
-        }
-
-        else {
-            console.log("No match for message: ", data)
-            console.log("Calling event handler")
-
-            this.event_handler.handle_server_message(data)
         }
     }
 }
