@@ -1,7 +1,20 @@
 package core
 
+import "encoding/json"
+
+type ActionMessage struct {
+	ActionType ActionType `json:"action_type"`
+	Data       any        `json:"data"`
+}
+
+type Game interface {
+	CurrentPlayerIdx() uint8
+	IsPendingAction(Action, fromPlayer uint8)
+	ApplyGameResult(result GameResult)
+}
+
 type Action interface {
-	PerformAction()
+	PerformAction(game Game, fromPlayer uint8)
 }
 
 type ActionWrapper struct {
@@ -11,6 +24,10 @@ type ActionWrapper struct {
 func (action ActionWrapper) MarshalJSON() ([]byte, error) {
 	switch action.Action.(type) {
 	case Ron:
+		json.Marshal(ActionMessage{
+			RON,
+			action,
+		})
 	}
 	return nil, nil
 }
