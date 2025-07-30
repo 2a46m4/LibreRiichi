@@ -36,10 +36,14 @@ let callback = (data: ArenaMessage) => {
       break;
     case ArenaMessageType.GameStartedEvent:
       in_game = true
+        
       break;
     case ArenaMessageType.ArenaBoardEvent:
-      handler.register_server_listener()
-      app.state.handle_arena_event(data.data)
+      if (!in_game) {
+        throw new Error("Game not started")
+      }
+
+
       break;
     default:
       throw new Error("Unexpected message")
