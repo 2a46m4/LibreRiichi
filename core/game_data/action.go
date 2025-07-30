@@ -1,7 +1,6 @@
 package core
 
 import (
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
 	"encoding/json"
 	"fmt"
 )
@@ -20,62 +19,134 @@ const (
 	DRAW
 )
 
-type ActionData struct {
-	ActionType ActionType `json:"action_type"`
-	Data       any        `json:"data"`
+type ActionWrapper struct {
+	ActionData
+}
+
+type ActionData interface {
+	Data() any
 }
 
 type ActionHandler[T any, E any] interface {
-	HandleRon(RonData, E) (T, error)
-	HandleTsumo(TsumoData, E) (T, error)
-	HandleRiichi(RiichiData, E) (T, error)
-	HandleToss(TossData, E) (T, error)
-	HandleSkip(SkipData, E) (T, error)
-	HandlePon(PonData, E) (T, error)
-	HandleKan(KanData, E) (T, error)
-	HandleChii(ChiiData, E) (T, error)
-	HandleDraw(DrawData, E) (T, error)
+	HandleRon(Ron, E) (T, error)
+	HandleTsumo(Tsumo, E) (T, error)
+	HandleRiichi(Riichi, E) (T, error)
+	HandleToss(Toss, E) (T, error)
+	HandleSkip(Skip, E) (T, error)
+	HandlePon(Pon, E) (T, error)
+	HandleKan(Kan, E) (T, error)
+	HandleChii(Chii, E) (T, error)
+	HandleDraw(Draw, E) (T, error)
 }
 
-type RonData struct {
+type Ron struct {
 	TileToRon Tile      `json:"tile_to_ron"`
 	WinResult WinResult `json:"win_result"` // TODO: Remove
 }
 
-type TsumoData struct {
+func (data Ron) Data() any {
+	return data
+}
+
+type Tsumo struct {
 	TileToTsumo Tile `json:"tile_to_tsumo"`
 }
 
-type RiichiData struct {
+func (data Tsumo) Data() any {
+	return data
+}
+
+type Riichi struct {
 	TileToRiichi Tile `json:"tile_to_riichi"`
 }
 
-type TossData struct {
+func (data Riichi) Data() any {
+	return data
+}
+
+type Toss struct {
 	TileToToss Tile `json:"tile_to_toss"`
 }
 
-type SkipData struct {
+func (data Toss) Data() any {
+	return data
+}
+
+type Skip struct {
 	ActionToSkip ActionData `json:"action_to_skip"`
 }
 
-type PonData struct {
+func (data Skip) Data() any {
+	return data
+}
+
+type Pon struct {
 	TileToPon Tile `json:"tile_to_pon"`
 }
 
-type KanData struct {
+func (data Pon) Data() any {
+	return data
+}
+
+type Kan struct {
 	TileToKan Tile `json:"tile_to_kan"`
 }
 
-type ChiiData struct {
+func (data Kan) Data() any {
+	return data
+}
+
+type Chii struct {
 	TileToChii  Tile    `json:"tile_to_chii"`
 	TilesInHand [2]Tile `json:"tiles_in_hand"`
 }
 
-type DrawData struct {
+func (data Chii) Data() any {
+	return data
+}
+
+type Draw struct {
 	DrawnTile Tile `json:"drawn_tile"`
 }
 
-func (msg *ActionData) UnmarshalJSON(rawData []byte) error {
+func (data Draw) Data() any {
+	return data
+}
+
+func (msg *ActionWrapper) MarshalJSON() ([]byte, error) {
+	var raw struct {
+		ActionType ActionType `json:"action_type"`
+		Data       ActionData `json:"data"`
+	}
+
+	switch msg.ActionData.(type) {
+	case Chii:
+		raw.ActionType = CHII
+	case Draw:
+		raw.ActionType = DRAW
+	case Kan:
+		raw.ActionType = KAN
+	case Pon:
+		raw.ActionType = PON
+	case Riichi:
+		raw.ActionType = RIICHI
+	case Ron:
+		raw.ActionType = RON
+	case Skip:
+		raw.ActionType = SKIP
+	case Toss:
+		raw.ActionType = TOSS
+	case Tsumo:
+		raw.ActionType = TSUMO
+	default:
+		panic(fmt.Sprintf("unexpected core.ActionData: %#v", msg.ActionData))
+	}
+	raw.Data = msg.ActionData
+
+	return json.Marshal(raw)
+}
+
+func (msg *ActionWrapper) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		ActionType ActionType      `json:"action_type"`
 		Data       json.RawMessage `json:"data"`
@@ -85,72 +156,70 @@ func (msg *ActionData) UnmarshalJSON(rawData []byte) error {
 		return err
 	}
 
-	msg.ActionType = raw.ActionType
-
-	switch msg.ActionType {
+	switch raw.ActionType {
 	case CHII:
-		message := ChiiData{}
+		message := Chii{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case DRAW:
-		message := DrawData{}
+		message := Draw{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case KAN:
-		message := KanData{}
+		message := Kan{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case PON:
-		message := PonData{}
+		message := Pon{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case RIICHI:
-		message := RiichiData{}
+		message := Riichi{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case RON:
-		message := RonData{}
+		message := Ron{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case SKIP:
-		message := SkipData{}
+		message := Skip{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case TOSS:
-		message := TossData{}
+		message := Toss{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	case TSUMO:
-		message := TsumoData{}
+		message := Tsumo{}
 		err := json.Unmarshal(raw.Data, &message)
 		if err != nil {
 			return err
 		}
-		msg.Data = message
+		msg.ActionData = message
 	default:
 		return fmt.Errorf("unexpected core.ActionType: %#v", raw.ActionType)
 	}
@@ -158,145 +227,26 @@ func (msg *ActionData) UnmarshalJSON(rawData []byte) error {
 }
 
 func ActionDecode[T any, E any](handler ActionHandler[T, E], data ActionData, extraData E) (ret T, err error) {
-	switch data.ActionType {
-	case CHII:
-		message, ok := data.Data.(ChiiData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleChii(message, extraData)
-	case DRAW:
-		message, ok := data.Data.(DrawData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleDraw(message, extraData)
-	case KAN:
-		message, ok := data.Data.(KanData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleKan(message, extraData)
-	case PON:
-		message, ok := data.Data.(PonData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandlePon(message, extraData)
-	case RIICHI:
-		message, ok := data.Data.(RiichiData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleRiichi(message, extraData)
-	case RON:
-		message, ok := data.Data.(RonData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleRon(message, extraData)
-	case SKIP:
-		message, ok := data.Data.(SkipData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleSkip(message, extraData)
-	case TOSS:
-		message, ok := data.Data.(TossData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleToss(message, extraData)
-	case TSUMO:
-		message, ok := data.Data.(TsumoData)
-		if !ok {
-			return ret, BadMessage{}
-		}
-		return handler.HandleTsumo(message, extraData)
+	switch v := data.(type) {
+	case Chii:
+		return handler.HandleChii(v, extraData)
+	case Draw:
+		return handler.HandleDraw(v, extraData)
+	case Kan:
+		return handler.HandleKan(v, extraData)
+	case Pon:
+		return handler.HandlePon(v, extraData)
+	case Riichi:
+		return handler.HandleRiichi(v, extraData)
+	case Ron:
+		return handler.HandleRon(v, extraData)
+	case Skip:
+		return handler.HandleSkip(v, extraData)
+	case Toss:
+		return handler.HandleToss(v, extraData)
+	case Tsumo:
+		return handler.HandleTsumo(v, extraData)
 	default:
-		return ret, fmt.Errorf("unexpected core.ActionType: %#v", data.ActionType)
-	}
-}
-
-func MakeRon(ron Tile) ActionData {
-	return ActionData{
-		ActionType: RON,
-		Data: RonData{
-			TileToRon: ron,
-			WinResult: WinResult{},
-		},
-	}
-}
-
-func MakeTsumo(tsumo Tile) ActionData {
-	return ActionData{
-		ActionType: TSUMO,
-		Data: TsumoData{
-			TileToTsumo: tsumo,
-		},
-	}
-}
-
-func MakeRiichi(riichi Tile) ActionData {
-	return ActionData{
-		ActionType: RIICHI,
-		Data: RiichiData{
-			TileToRiichi: riichi,
-		},
-	}
-}
-
-func MakeToss(toss Tile) ActionData {
-	return ActionData{
-		ActionType: TOSS,
-		Data: TossData{
-			TileToToss: toss,
-		},
-	}
-}
-
-func MakeSkip(skip ActionData) ActionData {
-	return ActionData{
-		ActionType: SKIP,
-		Data: SkipData{
-			ActionToSkip: skip,
-		},
-	}
-}
-
-func MakePon(pon Tile) ActionData {
-	return ActionData{
-		ActionType: PON,
-		Data: PonData{
-			TileToPon: pon,
-		},
-	}
-}
-
-func MakeKan(kan Tile) ActionData {
-	return ActionData{
-		ActionType: KAN,
-		Data: KanData{
-			TileToKan: kan,
-		},
-	}
-}
-
-func MakeChii(chii Tile, tilesInHand [2]Tile) ActionData {
-	return ActionData{
-		ActionType: CHII,
-		Data: ChiiData{
-			TileToChii:  chii,
-			TilesInHand: tilesInHand,
-		},
-	}
-}
-
-func MakeDraw(draw Tile) ActionData {
-	return ActionData{
-		ActionType: DRAW,
-		Data: DrawData{
-			DrawnTile: draw,
-		},
+		return ret, fmt.Errorf("unexpected core.ActionType: %#v", data)
 	}
 }
