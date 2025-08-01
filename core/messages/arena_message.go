@@ -162,47 +162,35 @@ func ArenaActionDispatch[E any](handler ArenaActionHandler[E], msg ArenaMessage,
 
 // ==================== METHODS ====================
 
-func PlayerActionEvent(data ActionData, fromPlayer uint8) ArenaBoardEventData {
+func PlayerActionEvent(data Action, fromPlayer uint8) ArenaBoardEventData {
 	return ArenaBoardEventData{
-		BoardEvent: BoardEvent{
-			EventType: PlayerActionEventType,
-			Data:      PlayerActionEventData{
-				ActionData: data,
-				FromPlayer: fromPlayer,
-			},
-		},
+		BoardEvent: PlayerActionEventData{
+			ActionData: data,
+			FromPlayer: fromPlayer,
+		}.BoardEventWrapper(),
 	}
 }
 
 func PotentialActionEvent(data ActionData) ArenaBoardEventData {
 	return ArenaBoardEventData{
-		BoardEvent: BoardEvent{
-			EventType: PotentialActionEventType,
-			Data:      PotentialActionEventData{
-				ActionData: data,
-			},
-		},
+		BoardEvent: PotentialActionEventData{
+			ActionData: data,
+		}.BoardEventWrapper(),
 	}
 }
 
 func GameSetupEvent(data []Setup) ArenaBoardEventData {
 	return ArenaBoardEventData{
-		BoardEvent: BoardEvent{
-			EventType: GameSetupEventType,
-			Data:      GameSetupEventData{
-				Setup: data,
-			},
-		},
+		BoardEvent: GameSetupEventData{
+			Setup: data,
+		}.BoardEventWrapper(),
 	}
 }
 
 func GameEndEvent(data GameResult) ArenaBoardEventData {
 	return ArenaBoardEventData{
-		BoardEvent: BoardEvent{
-			EventType: GameEndEventType,
-			Data:      GameEndEventData{
-				GameResult: data,
-			},
-		},
+		BoardEvent: GameEndEventData{
+			GameResult: data,
+		}.BoardEventWrapper(),
 	}
 }

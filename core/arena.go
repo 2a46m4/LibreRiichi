@@ -46,21 +46,21 @@ func (list *InfoList) AddGlobalMessage(data ...ArenaBoardEventData) *InfoList {
 	global := GlobalMessage()
 	global.Add(data...)
 	*list = append(*list, global)
-	return list	
+	return list
 }
 
 func (list *InfoList) AddPrivateMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
 	private := PrivateMessage(sendTo)
 	private.Add(data...)
 	*list = append(*list, private)
-	return list	
+	return list
 }
 
 func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
 	partial := PartialMessage(sendTo)
 	partial.Add(data...)
 	*list = append(*list, partial)
-	return list	
+	return list
 }
 
 func GlobalMessage() MessageSendInfo {
@@ -278,11 +278,8 @@ func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer u
 		err = arena.Send(ArenaMessage{
 			MessageType: ArenaBoardEventType,
 			Data: ArenaBoardEventData{
-				BoardEvent: BoardEvent{
-					EventType: GameSetupEventType,
-					Data: GameSetupEventData{
-						Setup: setup,
-					},
+				BoardEvent: GameSetupEventData{
+					Setup: setup,
 				},
 			},
 		}, PLAYER, uint8(idx))

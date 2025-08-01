@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/errors"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
@@ -21,26 +20,45 @@ const (
 	GameEndEventType
 )
 
-type BoardEvent struct {
-	EventType BoardEventType `json:"event_type"`
-	Data      any            `json:"data"`
+type BoardEventWrapper struct {
+	BoardEvent
+}
+
+type BoardEvent interface {
+	BoardEventWrapper() BoardEventWrapper
 }
 
 type PlayerActionEventData struct {
-	ActionData `json:"action_data"`
+	Action     `json:"action_data"`
 	FromPlayer uint8 `json:"from_player"`
+}
+
+func (data PlayerActionEventData) BoardEventWrapper() BoardEventWrapper {
+	return BoardEventWrapper{data}
 }
 
 type PotentialActionEventData struct {
 	ActionData `json:"action_data"`
 }
 
+func (data PotentialActionEventData) BoardEventWrapper() BoardEventWrapper {
+	return BoardEventWrapper{data}
+}
+
 type GameSetupEventData struct {
 	Setup []Setup `json:"setup"`
 }
 
+func (data GameSetupEventData) BoardEventWrapper() BoardEventWrapper {
+	return BoardEventWrapper{data}
+}
+
 type GameEndEventData struct {
 	GameResult GameResult `json:"result"`
+}
+
+func (data GameEndEventData) BoardEventWrapper() BoardEventWrapper {
+	return BoardEventWrapper{data}
 }
 
 type BoardEventHandler interface {
@@ -50,7 +68,9 @@ type BoardEventHandler interface {
 	HandleGameEndEventType(GameEndEventData) error
 }
 
-func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
+func (msg *BoardEventWrapper) MarshalJSON()
+
+func (msg *BoardEventWrapper) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		MessageType BoardEventType  `json:"event_type"`
 		Data        json.RawMessage `json:"data"`
@@ -60,32 +80,31 @@ func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
 		return err
 	}
 
-	msg.EventType = raw.MessageType
 	switch raw.MessageType {
 	case GameEndEventType:
 		data := GameEndEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		msg.Data = data
+		msg.BoardEvent = data
 	case GameSetupEventType:
 		data := GameSetupEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		msg.Data = data
+		msg.BoardEvent = data
 	case PlayerActionEventType:
 		data := PlayerActionEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		msg.Data = data
+		msg.BoardEvent = data
 	case PotentialActionEventType:
 		data := PotentialActionEventData{}
 		if err := json.Unmarshal(raw.Data, &data); err != nil {
 			return err
 		}
-		msg.Data = data
+		msg.BoardEvent = data
 	default:
 		return fmt.Errorf("unexpected core.BoardEventType: %#v", raw.MessageType)
 	}
@@ -93,32 +112,16 @@ func (msg *BoardEvent) UnmarshalJSON(rawData []byte) error {
 }
 
 func BoardEventDispatch(handler BoardEventHandler, event BoardEvent) (err error) {
-	switch event.EventType {
-	case GameEndEventType:
-		message, ok := event.Data.(GameEndEventData)
-		if !ok {
-			return BadMessage{}
-		}
-		return handler.HandleGameEndEventType(message)
-	case GameSetupEventType:
-		message, ok := event.Data.(GameSetupEventData)
-		if !ok {
-			return BadMessage{}
-		}
-		return handler.HandleGameSetupEventType(message)
-	case PlayerActionEventType:
-		message, ok := event.Data.(PlayerActionEventData)
-		if !ok {
-			return BadMessage{}
-		}
-		return handler.HandlePlayerActionEventType(message)
-	case PotentialActionEventType:
-		message, ok := event.Data.(PotentialActionEventData)
-		if !ok {
-			return BadMessage{}
-		}
-		return handler.HandlePotentialActionEventType(message)
+	switch v := event.(type) {
+	case GameEndEventData:
+		return handler.HandleGameEndEventType(v)
+	case GameSetupEventData:
+		return handler.HandleGameSetupEventType(v)
+	case PlayerActionEventData:
+		return handler.HandlePlayerActionEventType(v)
+	case PotentialActionEventData:
+		return handler.HandlePotentialActionEventType(v)
 	default:
-		return fmt.Errorf("unexpected core.BoardEventType: %#v", event.EventType)
+		return fmt.Errorf("unexpected core.BoardEventType: %#v", event)
 	}
 }

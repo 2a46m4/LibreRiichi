@@ -7,6 +7,7 @@ import (
 
 type ActionType uint8
 
+//go:generate go run generate_actions.go -- Action
 const (
 	RON ActionType = iota
 	TSUMO
@@ -19,11 +20,7 @@ const (
 	DRAW
 )
 
-type ActionWrapper struct {
-	ActionData
-}
-
-type ActionData interface {
+type Action interface {
 	Data() any
 }
 
@@ -44,56 +41,28 @@ type Ron struct {
 	WinResult WinResult `json:"win_result"` // TODO: Remove
 }
 
-func (data Ron) Data() any {
-	return data
-}
-
 type Tsumo struct {
 	TileToTsumo Tile `json:"tile_to_tsumo"`
-}
-
-func (data Tsumo) Data() any {
-	return data
 }
 
 type Riichi struct {
 	TileToRiichi Tile `json:"tile_to_riichi"`
 }
 
-func (data Riichi) Data() any {
-	return data
-}
-
 type Toss struct {
 	TileToToss Tile `json:"tile_to_toss"`
 }
 
-func (data Toss) Data() any {
-	return data
-}
-
 type Skip struct {
-	ActionToSkip ActionData `json:"action_to_skip"`
-}
-
-func (data Skip) Data() any {
-	return data
+	ActionToSkip Action `json:"action_to_skip"`
 }
 
 type Pon struct {
 	TileToPon Tile `json:"tile_to_pon"`
 }
 
-func (data Pon) Data() any {
-	return data
-}
-
 type Kan struct {
 	TileToKan Tile `json:"tile_to_kan"`
-}
-
-func (data Kan) Data() any {
-	return data
 }
 
 type Chii struct {
@@ -101,19 +70,11 @@ type Chii struct {
 	TilesInHand [2]Tile `json:"tiles_in_hand"`
 }
 
-func (data Chii) Data() any {
-	return data
-}
-
 type Draw struct {
 	DrawnTile Tile `json:"drawn_tile"`
 }
 
-func (data Draw) Data() any {
-	return data
-}
-
-func (msg *ActionWrapper) MarshalJSON() ([]byte, error) {
+func (msg *Action) MarshalJSON() ([]byte, error) {
 	var raw struct {
 		ActionType ActionType `json:"action_type"`
 		Data       ActionData `json:"data"`
@@ -146,7 +107,7 @@ func (msg *ActionWrapper) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-func (msg *ActionWrapper) UnmarshalJSON(rawData []byte) error {
+func (msg *Action) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		ActionType ActionType      `json:"action_type"`
 		Data       json.RawMessage `json:"data"`
