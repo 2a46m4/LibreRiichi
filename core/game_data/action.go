@@ -1,6 +1,6 @@
 package core
 
-//go:generate go run generate_actions.go -- Action
+//go:generate go run ../generate_message.go -- Action
 
 type Action interface {
 	Data()

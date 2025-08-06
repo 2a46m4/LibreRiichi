@@ -42,6 +42,7 @@ type AgentInfo struct {
 
 type ServerArenaMessageEventData struct {
 	ArenaMessage ArenaMessage `json:"arena_message"`
+	// ArenaMessage ArenaMessageWrapper `json:"arena_message"` <-- Need to specify wrapper for concrete type
 }
 
 // ==================== RESPONSES ====================
