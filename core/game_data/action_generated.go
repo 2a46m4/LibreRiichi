@@ -25,18 +25,19 @@ const (
 )
 func (Ron) Data() {}
 func (obj Ron) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        TileToRon Tile `json:"tile_to_ron"`
-        WinResult WinResult `json:"win_result"`
+		TileToRon Tile `json:"tile_to_ron"`
+		WinResult WinResult `json:"win_result"`
 	}
 
-    raw.ActionType = RON
-    raw.TileToRon = obj.TileToRon
-    raw.WinResult = obj.WinResult
+	raw.ActionType = RON
+	raw.TileToRon = obj.TileToRon
+	raw.WinResult = obj.WinResult
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
+
 func (Tsumo) Data() {}
 func (obj Tsumo) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -49,6 +50,7 @@ func (obj Tsumo) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Riichi) Data() {}
 func (obj Riichi) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -61,6 +63,7 @@ func (obj Riichi) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Toss) Data() {}
 func (obj Toss) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -73,6 +76,7 @@ func (obj Toss) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Skip) Data() {}
 func (obj Skip) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -85,6 +89,18 @@ func (obj Skip) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
+func (obj Skip) UnmarshalJSON(rawData []byte) error {
+    var raw struct {
+        ActionType ActionType `json:"action_type"`
+        ActionToSkip ActionUnpacker `json:"action_to_skip"`
+	}
+
+	err := json.Unmarshal(rawData, &raw)
+
+    return err
+}
+
 func (Pon) Data() {}
 func (obj Pon) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -97,6 +113,7 @@ func (obj Pon) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Kan) Data() {}
 func (obj Kan) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -109,6 +126,7 @@ func (obj Kan) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Chii) Data() {}
 func (obj Chii) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -123,6 +141,7 @@ func (obj Chii) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 func (Draw) Data() {}
 func (obj Draw) MarshalJSON() ([]byte, error) {
     var raw struct {
@@ -135,6 +154,7 @@ func (obj Draw) MarshalJSON() ([]byte, error) {
 
     return json.Marshal(raw)
 }
+
 
 func (msg *ActionUnpacker) Uncover() Action {
 	return msg.Action
@@ -233,24 +253,24 @@ type ActionHandler[T any, E any] interface {
 
 func ActionDecode[T any, E any](handler ActionHandler[T, E], data Action, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case Ron:
-        return handler.HandleRon(v, extraData)
-    case Tsumo:
-        return handler.HandleTsumo(v, extraData)
-    case Riichi:
-        return handler.HandleRiichi(v, extraData)
-    case Toss:
-        return handler.HandleToss(v, extraData)
-    case Skip:
-        return handler.HandleSkip(v, extraData)
-    case Pon:
-        return handler.HandlePon(v, extraData)
-    case Kan:
-        return handler.HandleKan(v, extraData)
-    case Chii:
-        return handler.HandleChii(v, extraData)
-    case Draw:
-        return handler.HandleDraw(v, extraData)
+	case Ron:
+		return handler.HandleRon(v, extraData)
+	case Tsumo:
+		return handler.HandleTsumo(v, extraData)
+	case Riichi:
+		return handler.HandleRiichi(v, extraData)
+	case Toss:
+		return handler.HandleToss(v, extraData)
+	case Skip:
+		return handler.HandleSkip(v, extraData)
+	case Pon:
+		return handler.HandlePon(v, extraData)
+	case Kan:
+		return handler.HandleKan(v, extraData)
+	case Chii:
+		return handler.HandleChii(v, extraData)
+	case Draw:
+		return handler.HandleDraw(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

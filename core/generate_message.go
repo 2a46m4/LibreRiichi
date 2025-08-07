@@ -149,7 +149,7 @@ func main() {
 			} else if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok.String() == "import" {
 				for _, spec := range gd.Specs {
 					typeSpec := spec.(*ast.ImportSpec)
-					imports = append(imports, typeSpec.Path.Value + " " + typeSpec.Name.Name)
+					imports = append(imports, typeSpec.Name.Name + " " + typeSpec.Path.Value)
 				}
 			}
 		}
@@ -161,6 +161,7 @@ func main() {
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,
 	}).Parse(registryTemplate))
+	
 	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0]+"_generated.go")
 	if err != nil {
 		log.Fatal(err)
@@ -171,10 +172,12 @@ func main() {
 		InterfaceName string
 		InterfaceImpl string
 		Decls         StructDecls
+		Imports []string
 	}{
 		interfaceName,
 		interfaceImplementor,
 		structDecls,
+		imports,
 	})
 
 	if err != nil {
@@ -189,7 +192,7 @@ import (
     "encoding/json"
     "fmt"
     {{- range .Imports }}
-	    {{upper .Name }} {{$.InterfaceName}}Type = iota
+    {{.}}
     {{- end }}
 )
 
