@@ -35,65 +35,65 @@ func (obj PlayerActionEventData) MarshalJSON() ([]byte, error) {
 }
 
 func (obj PlayerActionEventData) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        BoardEventType BoardEventType `json:"boardevent_type"`
-        Action ActionUnpacker `json:"action_data"`
-        FromPlayer uint8 `json:"from_player"`
+	var raw struct {
+		BoardEventType BoardEventType `json:"boardevent_type"`
+		Action ActionUnpacker `json:"action_data"`
+		FromPlayer uint8 `json:"from_player"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
 
-    return err
+	return err
 }
 
 func (PotentialActionEventData) BoardEventWrapper() {}
 func (obj PotentialActionEventData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		BoardEventType BoardEventType `json:"boardevent_type"`
-        Action Action `json:"action_data"`
+		Action Action `json:"action_data"`
 	}
 
-    raw.BoardEventType = POTENTIALACTIONEVENTDATA
-    raw.Action = obj.Action
+	raw.BoardEventType = POTENTIALACTIONEVENTDATA
+	raw.Action = obj.Action
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj PotentialActionEventData) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        BoardEventType BoardEventType `json:"boardevent_type"`
-        Action ActionUnpacker `json:"action_data"`
+	var raw struct {
+		BoardEventType BoardEventType `json:"boardevent_type"`
+		Action ActionUnpacker `json:"action_data"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
 
-    return err
+	return err
 }
 
 func (GameSetupEventData) BoardEventWrapper() {}
 func (obj GameSetupEventData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		BoardEventType BoardEventType `json:"boardevent_type"`
-        Setup []Setup `json:"setup"`
+		Setup []Setup `json:"setup"`
 	}
 
-    raw.BoardEventType = GAMESETUPEVENTDATA
-    raw.Setup = obj.Setup
+	raw.BoardEventType = GAMESETUPEVENTDATA
+	raw.Setup = obj.Setup
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (GameEndEventData) BoardEventWrapper() {}
 func (obj GameEndEventData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		BoardEventType BoardEventType `json:"boardevent_type"`
-        GameResult GameResult `json:"result"`
+		GameResult GameResult `json:"result"`
 	}
 
-    raw.BoardEventType = GAMEENDEVENTDATA
-    raw.GameResult = obj.GameResult
+	raw.BoardEventType = GAMEENDEVENTDATA
+	raw.GameResult = obj.GameResult
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 
@@ -146,10 +146,10 @@ func (msg *BoardEventUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type BoardEventHandler[T any, E any] interface {
-    HandlePlayerActionEventData(PlayerActionEventData, E) (T, error)
-    HandlePotentialActionEventData(PotentialActionEventData, E) (T, error)
-    HandleGameSetupEventData(GameSetupEventData, E) (T, error)
-    HandleGameEndEventData(GameEndEventData, E) (T, error)
+	HandlePlayerActionEventData(PlayerActionEventData, E) (T, error)
+	HandlePotentialActionEventData(PotentialActionEventData, E) (T, error)
+	HandleGameSetupEventData(GameSetupEventData, E) (T, error)
+	HandleGameEndEventData(GameEndEventData, E) (T, error)
 }
 
 func BoardEventDecode[T any, E any](handler BoardEventHandler[T, E], data BoardEvent, extraData E) (ret T, err error) {
