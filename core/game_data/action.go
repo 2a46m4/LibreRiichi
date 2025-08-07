@@ -24,7 +24,7 @@ type Toss struct {
 }
 
 type Skip struct {
-	ActionToSkip Action `json:"action_to_skip"`
+	ActionToSkip Action `json:"action_to_skip"` // wrap
 }
 
 type Pon struct {
