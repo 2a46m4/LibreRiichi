@@ -76,6 +76,8 @@ func main() {
 	var interfaceImplementor string
 	structDecls := make([]StructDecl, 0)
 
+	var imports []string
+
 	for _, fname := range files {
 		f, err := parser.ParseFile(fset, fname, nil, parser.ParseComments)
 		if err != nil {
@@ -144,6 +146,11 @@ func main() {
 						panic(fmt.Sprintf("unexpected ast.Expr: %#v", typeSpec.Type))
 					}
 				}
+			} else if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok.String() == "import" {
+				for _, spec := range gd.Specs {
+					typeSpec := spec.(*ast.ImportSpec)
+					imports = append(imports, typeSpec.Path.Value + " " + typeSpec.Name.Name)
+				}
 			}
 		}
 		fmt.Println("list: ", structDecls)
@@ -154,7 +161,7 @@ func main() {
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,
 	}).Parse(registryTemplate))
-	out, err := os.Create(os.Getenv("GOFILE")+"_generated.go")
+	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0]+"_generated.go")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -181,6 +188,9 @@ package core
 import (
     "encoding/json"
     "fmt"
+    {{- range .Imports }}
+	    {{upper .Name }} {{$.InterfaceName}}Type = iota
+    {{- end }}
 )
 
 type {{.InterfaceName}}Type uint8
