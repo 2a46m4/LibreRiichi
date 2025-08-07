@@ -39,6 +39,7 @@ type StructDecls []StructDecl
 func parseStruct(structType *ast.StructType, fset *token.FileSet) (decls []FieldDecl) {
 	for _, field := range structType.Fields.List {
 		if len(field.Names) != 1 {
+			fmt.Println(field.Names)
 			panic("Unexpected")
 		}
 
@@ -65,7 +66,7 @@ func parseStruct(structType *ast.StructType, fset *token.FileSet) (decls []Field
 
 func main() {
 	fset := token.NewFileSet()
-	files := []string{"action.go"}
+	files := []string{os.Getenv("GOFILE")}
 
 	typeIdentName := os.Args[1]
 	fmt.Println(typeIdentName)
@@ -153,7 +154,7 @@ func main() {
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,
 	}).Parse(registryTemplate))
-	out, err := os.Create("action_generated.go")
+	out, err := os.Create(os.Getenv("GOFILE")+"_generated.go")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -224,7 +225,6 @@ func (obj {{ .Name}}) UnmarshalJSON(rawData []byte) error {
 	}
 
 	err := json.Unmarshal(rawData, &raw)
-	obj.ActionToSkip = raw.ActionToSkip
 
     return err
 }
