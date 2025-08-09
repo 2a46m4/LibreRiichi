@@ -22,15 +22,15 @@ type Names []string
 type Tags []string
 
 type FieldDecl struct {
-	Name string
-	Type string
-	Tag  string
+	Name       string
+	Type       string
+	Tag        string
 	ShouldWrap bool
 }
 
 type StructDecl struct {
-	Name   string
-	Fields []FieldDecl
+	Name       string
+	Fields     []FieldDecl
 	ShouldWrap bool
 }
 
@@ -54,10 +54,15 @@ func parseStruct(structType *ast.StructType, fset *token.FileSet) (decls []Field
 			shouldWrap = true
 		}
 
+		tag := ""
+		if field.Tag != nil {
+			tag = field.Tag.Value
+		}
+
 		decls = append(decls, FieldDecl{
 			Name:       field.Names[0].Name,
 			Type:       buf.String(),
-			Tag:        field.Tag.Value,
+			Tag:        tag,
 			ShouldWrap: shouldWrap,
 		})
 	}
@@ -149,7 +154,7 @@ func main() {
 			} else if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok.String() == "import" {
 				for _, spec := range gd.Specs {
 					typeSpec := spec.(*ast.ImportSpec)
-					imports = append(imports, typeSpec.Name.Name + " " + typeSpec.Path.Value)
+					imports = append(imports, typeSpec.Name.Name+" "+typeSpec.Path.Value)
 				}
 			}
 		}
@@ -161,8 +166,8 @@ func main() {
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,
 	}).Parse(registryTemplate))
-	
-	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0]+"_generated.go")
+
+	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0] + "_generated.go")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -172,7 +177,7 @@ func main() {
 		InterfaceName string
 		InterfaceImpl string
 		Decls         StructDecls
-		Imports []string
+		Imports       []string
 	}{
 		interfaceName,
 		interfaceImplementor,

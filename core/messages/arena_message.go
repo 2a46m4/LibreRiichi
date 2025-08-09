@@ -48,22 +48,6 @@ type ArenaBoardEventData struct {
 	BoardEvent `json:"board_event"` // For handling generic games, this should be replaced
 }
 
-// ==================== ACTIONS ====================
-
-type ArenaActionHandler[Input any] interface {
-	HandleStartGameAction(StartGameActionData, Input) error
-	HandlePlayerAction(PlayerActionData, Input) error
-	HandlePlayerQuitAction(PlayerQuitActionData, Input) error
-}
-
-type StartGameActionData struct{}
-
-type PlayerQuitActionData struct{}
-
-type PlayerActionData struct {
-	ActionData // For handling generic games, this should be replaced
-}
-
 // ==================== DECODING AND DISPATCH ====================
 
 func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {
@@ -159,38 +143,3 @@ func ArenaActionDispatch[E any](handler ArenaActionHandler[E], msg ArenaMessage,
 		return fmt.Errorf("unexpected core.ArenaMessageType: %#v", msg.MessageType)
 	}
 }
-
-// ==================== METHODS ====================
-
-// func PlayerActionEvent(data Action, fromPlayer uint8) ArenaBoardEventData {
-// 	return ArenaBoardEventData{
-// 		BoardEvent: PlayerActionEventData{
-// 			ActionData: data,
-// 			FromPlayer: fromPlayer,
-// 		}.BoardEventWrapper(),
-// 	}
-// }
-
-// func PotentialActionEvent(data ActionData) ArenaBoardEventData {
-// 	return ArenaBoardEventData{
-// 		BoardEvent: PotentialActionEventData{
-// 			ActionData: data,
-// 		}.BoardEventWrapper(),
-// 	}
-// }
-
-// func GameSetupEvent(data []Setup) ArenaBoardEventData {
-// 	return ArenaBoardEventData{
-// 		BoardEvent: GameSetupEventData{
-// 			Setup: data,
-// 		}.BoardEventWrapper(),
-// 	}
-// }
-
-// func GameEndEvent(data GameResult) ArenaBoardEventData {
-// 	return ArenaBoardEventData{
-// 		BoardEvent: GameEndEventData{
-// 			GameResult: data,
-// 		}.BoardEventWrapper(),
-// 	}
-// }
