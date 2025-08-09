@@ -33,21 +33,6 @@ type ArenaMessage struct {
 
 // ==================== EVENTS ====================
 
-type PlayerJoinedEventData struct {
-	Name string    `json:"name"`
-	ID   uuid.UUID `json:"id"`
-}
-
-type PlayerQuitEventData struct {
-	Name string `json:"name"`
-}
-
-type GameStartedEventData struct{}
-
-type ArenaBoardEventData struct {
-	BoardEvent `json:"board_event"` // For handling generic games, this should be replaced
-}
-
 // ==================== DECODING AND DISPATCH ====================
 
 func (msg *ArenaMessage) UnmarshalJSON(rawData []byte) error {

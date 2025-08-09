@@ -39,6 +39,7 @@ type StructDecls []StructDecl
 func parseStruct(structType *ast.StructType, fset *token.FileSet) (decls []FieldDecl) {
 	for _, field := range structType.Fields.List {
 		if len(field.Names) != 1 {
+			fmt.Println(field)
 			fmt.Println(field.Names)
 			panic("Unexpected")
 		}
@@ -154,7 +155,11 @@ func main() {
 			} else if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok.String() == "import" {
 				for _, spec := range gd.Specs {
 					typeSpec := spec.(*ast.ImportSpec)
-					imports = append(imports, typeSpec.Name.Name+" "+typeSpec.Path.Value)
+					if typeSpec.Name == nil {
+						imports = append(imports, typeSpec.Path.Value)
+					} else {
+						imports = append(imports, typeSpec.Name.Name+" "+typeSpec.Path.Value)
+					}
 				}
 			}
 		}
