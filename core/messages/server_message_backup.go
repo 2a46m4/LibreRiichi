@@ -28,10 +28,6 @@ const (
 	ArenaInfoActionType
 )
 
-type MessageInfo struct {
-	MessageIndex uint8 `json:"message_index"`
-}
-
 type Message struct {
 	MessageType  MessageType `json:"message_type"`
 	MessageIndex uint        `json:"message_index"`

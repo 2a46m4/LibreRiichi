@@ -9,19 +9,19 @@ type BoardEvent interface {
 	BoardEventWrapper()
 }
 
-type PlayerActionEventData struct {
-	Action Action     `json:"action_data"` // wrap
+type PlayerActionEvent struct {
+	Action Action    `json:"action_data"` // wrap
 	FromPlayer uint8 `json:"from_player"`
 }
 
-type PotentialActionEventData struct {
+type PotentialActionEvent struct {
 	Action Action `json:"action_data"` // wrap
 }
 
-type GameSetupEventData struct {
+type GameSetupEvent struct {
 	Setup []Setup `json:"setup"`
 }
 
-type GameEndEventData struct {
+type GameEndEvent struct {
 	GameResult GameResult `json:"result"`
 }
