@@ -17,6 +17,12 @@ type Client struct {
 	Connection ConnChan
 	Recv       chan Message
 	Arena      *Arena
+	// We will respond with this index
+	ResponseIndex uint
+	// We expect their next message to have this index
+	RequestIndex uint
+	// We will respond with this index
+	EventIndex uint
 }
 
 type DispatchResult struct {
@@ -104,13 +110,13 @@ func (client Client) Loop() {
 				return
 			}
 
-			msg := Message{}
-			err := json.Unmarshal(recv.([]byte), &msg)
+			msg, err := Receive(recv.([]byte),
+				client.RequestIndex,
+			)
 			if err != nil {
-				fmt.Println("Error unmarshalling:", err)
 				continue
 			}
-			dispatchResult, err := ServerActionDispatch(&client, msg)
+			dispatchResult, err := ServerMessageDecode(&client, msg, nil)
 			if err != nil {
 				fmt.Println("Problem with message during dispatch:", err)
 			}

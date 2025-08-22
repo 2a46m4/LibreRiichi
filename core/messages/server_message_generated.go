@@ -2,178 +2,178 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
-    "time"
+	"encoding/json"
+	"fmt"
+	"time"
 )
 
 type ServerMessageType uint8
 
 type ServerMessageUnpacker struct {
-    ServerMessage
+	ServerMessage
 }
 
 const (
-	SERVERARENAEVENT ServerMessageType = iota
-	GENERICRESPONSE ServerMessageType = iota
-	LISTARENASRESPONSE ServerMessageType = iota
-	ARENAINFORESPONSE ServerMessageType = iota
+	SERVERARENAEVENT     ServerMessageType = iota
+	GENERICRESPONSE      ServerMessageType = iota
+	LISTARENASRESPONSE   ServerMessageType = iota
+	ARENAINFORESPONSE    ServerMessageType = iota
 	INITIALMESSAGEACTION ServerMessageType = iota
-	JOINARENAACTION ServerMessageType = iota
-	SERVERARENAACTION ServerMessageType = iota
-	LISTARENASACTION ServerMessageType = iota
-	CREATEARENAACTION ServerMessageType = iota
-	ARENAINFOACTION ServerMessageType = iota
+	JOINARENAACTION      ServerMessageType = iota
+	SERVERARENAACTION    ServerMessageType = iota
+	LISTARENASACTION     ServerMessageType = iota
+	CREATEARENAACTION    ServerMessageType = iota
+	ARENAINFOACTION      ServerMessageType = iota
 )
+
 func (ServerArenaEvent) serverMessageImpl() {}
 func (obj ServerArenaEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        ArenaMessage ArenaEvent `json:"arena_message"`
+		ArenaMessage      ArenaEvent        `json:"arena_message"`
 	}
 
-    raw.ServerMessageType = SERVERARENAEVENT
-    raw.ArenaMessage = obj.ArenaMessage
+	raw.ServerMessageType = SERVERARENAEVENT
+	raw.ArenaMessage = obj.ArenaMessage
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj ServerArenaEvent) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ServerMessageType ServerMessageType `json:"servermessage_type"`
-        ArenaMessage ArenaEventUnpacker `json:"arena_message"`
+	var raw struct {
+		ServerMessageType ServerMessageType  `json:"servermessage_type"`
+		ArenaMessage      ArenaEventUnpacker `json:"arena_message"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
 
-    return err
+	return err
 }
 
 func (GenericResponse) serverMessageImpl() {}
 func (obj GenericResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        Success bool `json:"success"`
-        FailReason string `json:"fail_reason"`
+		Success           bool              `json:"success"`
+		FailReason        string            `json:"fail_reason"`
 	}
 
-    raw.ServerMessageType = GENERICRESPONSE
-    raw.Success = obj.Success
-    raw.FailReason = obj.FailReason
+	raw.ServerMessageType = GENERICRESPONSE
+	raw.Success = obj.Success
+	raw.FailReason = obj.FailReason
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ListArenasResponse) serverMessageImpl() {}
 func (obj ListArenasResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        Success bool `json:"success"`
-        ArenaList []string `json:"arena_list"`
+		Success           bool              `json:"success"`
+		ArenaList         []string          `json:"arena_list"`
 	}
 
-    raw.ServerMessageType = LISTARENASRESPONSE
-    raw.Success = obj.Success
-    raw.ArenaList = obj.ArenaList
+	raw.ServerMessageType = LISTARENASRESPONSE
+	raw.Success = obj.Success
+	raw.ArenaList = obj.ArenaList
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ArenaInfoResponse) serverMessageImpl() {}
 func (obj ArenaInfoResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        Success bool `json:"success"`
-        Name string `json:"name"`
-        Agents []AgentInfo `json:"agents"`
-        GameStarted bool `json:"game_started"`
-        DateCreated time.Time `json:"date_created"`
+		Success           bool              `json:"success"`
+		Name              string            `json:"name"`
+		Agents            []AgentInfo       `json:"agents"`
+		GameStarted       bool              `json:"game_started"`
+		DateCreated       time.Time         `json:"date_created"`
 	}
 
-    raw.ServerMessageType = ARENAINFORESPONSE
-    raw.Success = obj.Success
-    raw.Name = obj.Name
-    raw.Agents = obj.Agents
-    raw.GameStarted = obj.GameStarted
-    raw.DateCreated = obj.DateCreated
+	raw.ServerMessageType = ARENAINFORESPONSE
+	raw.Success = obj.Success
+	raw.Name = obj.Name
+	raw.Agents = obj.Agents
+	raw.GameStarted = obj.GameStarted
+	raw.DateCreated = obj.DateCreated
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (InitialMessageAction) serverMessageImpl() {}
 func (obj InitialMessageAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        Name string `json:"name"`
+		Name              string            `json:"name"`
 	}
 
-    raw.ServerMessageType = INITIALMESSAGEACTION
-    raw.Name = obj.Name
+	raw.ServerMessageType = INITIALMESSAGEACTION
+	raw.Name = obj.Name
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (JoinArenaAction) serverMessageImpl() {}
 func (obj JoinArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        ArenaName string `json:"arena_name"`
+		ArenaName         string            `json:"arena_name"`
 	}
 
-    raw.ServerMessageType = JOINARENAACTION
-    raw.ArenaName = obj.ArenaName
+	raw.ServerMessageType = JOINARENAACTION
+	raw.ArenaName = obj.ArenaName
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ServerArenaAction) serverMessageImpl() {}
 func (obj ServerArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        ArenaAction ArenaAction `json:"arena_action"`
+		ArenaAction       ArenaAction       `json:"arena_action"`
 	}
 
-    raw.ServerMessageType = SERVERARENAACTION
-    raw.ArenaAction = obj.ArenaAction
+	raw.ServerMessageType = SERVERARENAACTION
+	raw.ArenaAction = obj.ArenaAction
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ListArenasAction) serverMessageImpl() {}
 func (obj ListArenasAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
 	}
 
-    raw.ServerMessageType = LISTARENASACTION
+	raw.ServerMessageType = LISTARENASACTION
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (CreateArenaAction) serverMessageImpl() {}
 func (obj CreateArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
-        ArenaName string `json:"arena_name"`
+		ArenaName         string            `json:"arena_name"`
 	}
 
-    raw.ServerMessageType = CREATEARENAACTION
-    raw.ArenaName = obj.ArenaName
+	raw.ServerMessageType = CREATEARENAACTION
+	raw.ArenaName = obj.ArenaName
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ArenaInfoAction) serverMessageImpl() {}
 func (obj ArenaInfoAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerMessageType ServerMessageType `json:"servermessage_type"`
 	}
 
-    raw.ServerMessageType = ARENAINFOACTION
+	raw.ServerMessageType = ARENAINFOACTION
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
-
 
 func (msg *ServerMessageUnpacker) Uncover() ServerMessage {
 	return msg.ServerMessage
@@ -266,40 +266,40 @@ func (msg *ServerMessageUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type ServerMessageHandler[T any, E any] interface {
-    HandleServerArenaEvent(ServerArenaEvent, E) (T, error)
-    HandleGenericResponse(GenericResponse, E) (T, error)
-    HandleListArenasResponse(ListArenasResponse, E) (T, error)
-    HandleArenaInfoResponse(ArenaInfoResponse, E) (T, error)
-    HandleInitialMessageAction(InitialMessageAction, E) (T, error)
-    HandleJoinArenaAction(JoinArenaAction, E) (T, error)
-    HandleServerArenaAction(ServerArenaAction, E) (T, error)
-    HandleListArenasAction(ListArenasAction, E) (T, error)
-    HandleCreateArenaAction(CreateArenaAction, E) (T, error)
-    HandleArenaInfoAction(ArenaInfoAction, E) (T, error)
+	HandleServerArenaEvent(ServerArenaEvent, E) (T, error)
+	HandleGenericResponse(GenericResponse, E) (T, error)
+	HandleListArenasResponse(ListArenasResponse, E) (T, error)
+	HandleArenaInfoResponse(ArenaInfoResponse, E) (T, error)
+	HandleInitialMessageAction(InitialMessageAction, E) (T, error)
+	HandleJoinArenaAction(JoinArenaAction, E) (T, error)
+	HandleServerArenaAction(ServerArenaAction, E) (T, error)
+	HandleListArenasAction(ListArenasAction, E) (T, error)
+	HandleCreateArenaAction(CreateArenaAction, E) (T, error)
+	HandleArenaInfoAction(ArenaInfoAction, E) (T, error)
 }
 
 func ServerMessageDecode[T any, E any](handler ServerMessageHandler[T, E], data ServerMessage, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case ServerArenaEvent:
-        return handler.HandleServerArenaEvent(v, extraData)
-    case GenericResponse:
-        return handler.HandleGenericResponse(v, extraData)
-    case ListArenasResponse:
-        return handler.HandleListArenasResponse(v, extraData)
-    case ArenaInfoResponse:
-        return handler.HandleArenaInfoResponse(v, extraData)
-    case InitialMessageAction:
-        return handler.HandleInitialMessageAction(v, extraData)
-    case JoinArenaAction:
-        return handler.HandleJoinArenaAction(v, extraData)
-    case ServerArenaAction:
-        return handler.HandleServerArenaAction(v, extraData)
-    case ListArenasAction:
-        return handler.HandleListArenasAction(v, extraData)
-    case CreateArenaAction:
-        return handler.HandleCreateArenaAction(v, extraData)
-    case ArenaInfoAction:
-        return handler.HandleArenaInfoAction(v, extraData)
+	case ServerArenaEvent:
+		return handler.HandleServerArenaEvent(v, extraData)
+	case GenericResponse:
+		return handler.HandleGenericResponse(v, extraData)
+	case ListArenasResponse:
+		return handler.HandleListArenasResponse(v, extraData)
+	case ArenaInfoResponse:
+		return handler.HandleArenaInfoResponse(v, extraData)
+	case InitialMessageAction:
+		return handler.HandleInitialMessageAction(v, extraData)
+	case JoinArenaAction:
+		return handler.HandleJoinArenaAction(v, extraData)
+	case ServerArenaAction:
+		return handler.HandleServerArenaAction(v, extraData)
+	case ListArenasAction:
+		return handler.HandleListArenasAction(v, extraData)
+	case CreateArenaAction:
+		return handler.HandleCreateArenaAction(v, extraData)
+	case ArenaInfoAction:
+		return handler.HandleArenaInfoAction(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

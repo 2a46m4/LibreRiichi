@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// The server message has three different types
 type ServerMessage interface {
 	serverMessageImpl()
 }
