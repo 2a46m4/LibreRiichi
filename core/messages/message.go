@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -14,9 +15,9 @@ const (
 )
 
 type Message struct {
-	MessageType  MessageType           `json:"message_type"`
-	MessageIndex uint                  `json:"message_index"`
-	Data         ServerMessageUnpacker `json:"data"`
+	MessageType  MessageType `json:"message_type"`
+	MessageIndex uint        `json:"message_index"`
+	Data         any         `json:"data"`
 }
 
 type WrongIndexError struct {
@@ -28,20 +29,44 @@ func (e WrongIndexError) Error() string {
 	return fmt.Sprintf("Wrong index: wanted %v but got %v", e.Wanted, e.Got)
 }
 
-func IsResponse(msgType MessageType) bool {
-	return msgType >= MessageType(GENERICRESPONSE) && msgType <= MessageType(ARENAINFORESPONSE)
+type WrongTypeError struct{}
+
+func (e WrongTypeError) Error() string {
+	return fmt.Sprintf("Wrong type")
 }
 
-func IsEvent(msgType MessageType) bool {
-	return msgType == MessageType(SERVERARENAEVENT)
+func (m *Message) UnmarshalJSON(data []byte) error {
+	tempData := struct {
+		MessageType  MessageType     `json:"message_type"`
+		MessageIndex uint            `json:"message_index"`
+		Data         json.RawMessage `json:"data"`
+	}{}
+
+	err := json.Unmarshal(data, &tempData)
+	if err != nil {
+		return err
+	}
+
+	switch tempData.MessageType {
+	case EVENT:
+		data := ServerEventUnpacker{}
+		json.Unmarshal(tempData.Data, &data)
+		m.Data = data
+	case REQUEST:
+		data := ServerActionUnpacker{}
+		json.Unmarshal(tempData.Data, &data)
+		m.Data = data
+	case RESPONSE:
+		data := ServerResponseUnpacker{}
+		json.Unmarshal(tempData.Data, &data)
+		m.Data = data
+	default:
+		return errors.New("Bad message")
+	}
+	return nil
 }
 
-func IsAction(msgType MessageType) bool {
-	return msgType >= MessageType(INITIALMESSAGEACTION) && msgType <= MessageType(ARENAINFOACTION)
-}
-
-// Gets a message and validates it
-func Receive(bytes []byte, index uint) (ServerMessage, error) {
+func ReceiveRequest(bytes []byte, index uint) (ServerAction, error) {
 	msg := Message{}
 	err := json.Unmarshal(bytes, &msg)
 	if err != nil {
@@ -49,16 +74,18 @@ func Receive(bytes []byte, index uint) (ServerMessage, error) {
 		return nil, err
 	}
 	if index != msg.MessageIndex {
-		fmt.Println("Wrong index")
 		return nil, WrongIndexError{
 			Wanted: index,
 			Got:    msg.MessageIndex,
 		}
 	}
 
-	return msg.Data, nil
+	if msg.MessageType != REQUEST {
+		return nil, WrongTypeError{}
+	}
+	return msg.Data.(ServerAction), nil
 }
 
-func Send() {
+func SendEvent(event ServerEvent, index uint) {
 	// Pass in some kind of index
 }

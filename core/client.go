@@ -25,54 +25,6 @@ type Client struct {
 	EventIndex uint
 }
 
-type DispatchResult struct {
-	Message Message
-	DoSend  bool
-}
-
-func NoSend() DispatchResult {
-	return DispatchResult{
-		Message: Message{},
-		DoSend:  false,
-	}
-}
-
-func FormatMessage(msgType MessageType, data any) DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: msgType,
-			Data:        data,
-		},
-		DoSend: true,
-	}
-}
-
-func SuccessMsg() DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: GenericResponseType,
-			Data: GenericResponseData{
-				Success:    true,
-				FailReason: "",
-			},
-		},
-		DoSend: true,
-	}
-}
-
-func FailureMsg(err string) DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: GenericResponseType,
-			Data: GenericResponseData{
-				Success:    false,
-				FailReason: err,
-			},
-		},
-		DoSend: true,
-	}
-}
-
 func MakeClient(connection ConnChan) (Client, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
@@ -110,13 +62,14 @@ func (client Client) Loop() {
 				return
 			}
 
-			msg, err := Receive(recv.([]byte),
+			msg, err := ReceiveRequest(recv.([]byte),
 				client.RequestIndex,
 			)
 			if err != nil {
+				fmt.Println(err)
 				continue
 			}
-			dispatchResult, err := ServerMessageDecode(&client, msg, nil)
+			dispatchResult, err := ServerActionDecode(&client, msg, nil)
 			if err != nil {
 				fmt.Println("Problem with message during dispatch:", err)
 			}
@@ -129,6 +82,9 @@ func (client Client) Loop() {
 	}
 }
 
+func (client *Client) HandleInitialMessageAction(InitialMessageAction, any) (Server, error) {
+	return Message{}
+}
 func (client *Client) HandleListArenas(data ListArenasActionData) (DispatchResult, error) {
 	list := ListArenas()
 	return DispatchResult{
