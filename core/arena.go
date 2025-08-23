@@ -93,7 +93,7 @@ func (info *MessageSendInfo) Add(data ...ArenaBoardEventData) *MessageSendInfo {
 	return info
 }
 
-func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
+func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -102,7 +102,7 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 		agents = append(agents, AgentInfo{Name: agent.Name})
 	}
 
-	return ArenaInfoResponseData{
+	return ArenaInfoResponse{
 		Success:     true,
 		Name:        arena.Name,
 		Agents:      agents,
