@@ -25,8 +25,8 @@ export class MessageState {
         return promise
     }
 
-    match_message(data: IncomingMessage) {
-        if (this.outgoing_messages.has(data.message_index)) {
+    match_message(data: Message) {
+        if (data.message_type === MessageType.RESPONSE && this.outgoing_messages.has(data.message_index)) {
             console.log("Matched outgoing message")
             this.outgoing_messages.get(data.message_index)?.resolve(data)
             this.outgoing_messages.delete(data.message_index)

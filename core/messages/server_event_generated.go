@@ -2,43 +2,43 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
+	"encoding/json"
+	"fmt"
 )
 
 type ServerEventType uint8
 
 type ServerEventUnpacker struct {
-    ServerEvent
+	ServerEvent
 }
 
 const (
 	SERVERARENAEVENT ServerEventType = iota
 )
+
 func (ServerArenaEvent) serverEventImpl() {}
 func (obj ServerArenaEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerEventType ServerEventType `json:"serverevent_type"`
-        ArenaMessage ArenaEvent `json:"arena_message"`
+		ArenaMessage    ArenaEvent      `json:"arena_message"`
 	}
 
-    raw.ServerEventType = SERVERARENAEVENT
-    raw.ArenaMessage = obj.ArenaMessage
+	raw.ServerEventType = SERVERARENAEVENT
+	raw.ArenaMessage = obj.ArenaMessage
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj ServerArenaEvent) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ServerEventType ServerEventType `json:"serverevent_type"`
-        ArenaMessage ArenaEventUnpacker `json:"arena_message"`
+	var raw struct {
+		ServerEventType ServerEventType    `json:"serverevent_type"`
+		ArenaMessage    ArenaEventUnpacker `json:"arena_message"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
 
-    return err
+	return err
 }
-
 
 func (msg *ServerEventUnpacker) Uncover() ServerEvent {
 	return msg.ServerEvent
@@ -68,13 +68,13 @@ func (msg *ServerEventUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type ServerEventHandler[T any, E any] interface {
-    HandleServerArenaEvent(ServerArenaEvent, E) (T, error)
+	HandleServerArenaEvent(ServerArenaEvent, E) (T, error)
 }
 
 func ServerEventDecode[T any, E any](handler ServerEventHandler[T, E], data ServerEvent, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case ServerArenaEvent:
-        return handler.HandleServerArenaEvent(v, extraData)
+	case ServerArenaEvent:
+		return handler.HandleServerArenaEvent(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}
