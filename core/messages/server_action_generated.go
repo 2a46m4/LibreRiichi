@@ -59,6 +59,17 @@ func (obj ServerArenaAction) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
+func (obj ServerArenaAction) UnmarshalJSON(rawData []byte) error {
+    var raw struct {
+        ServerActionType ServerActionType `json:"serveraction_type"`
+        ArenaAction ArenaActionUnpacker `json:"arena_action"`
+	}
+
+	err := json.Unmarshal(rawData, &raw)
+
+    return err
+}
+
 func (ListArenasAction) serverActionImpl() {}
 func (obj ListArenasAction) MarshalJSON() ([]byte, error) {
     var raw struct {

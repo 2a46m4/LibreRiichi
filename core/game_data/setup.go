@@ -48,6 +48,6 @@ func (msg *Setup) UnmarshalJSON(rawData []byte) error {
 	return nil
 }
 
-func SetupDecode[T any, E any](handler ActionHandler[T, E], data ActionData) error {
+func SetupDecode[T any, E any](handler ActionHandler[T, E], data Action) error {
 	panic("NYI")
 }

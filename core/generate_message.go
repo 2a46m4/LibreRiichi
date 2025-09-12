@@ -167,6 +167,10 @@ func main() {
 
 	}
 
+	// v--- nvm, this is what wrap does
+	// we also need to unmarshal the structs themselves, in case
+	// they have interfaces within them
+
 	tmpl := template.Must(template.New("action").Funcs(template.FuncMap{
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,

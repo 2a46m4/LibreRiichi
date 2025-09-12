@@ -15,7 +15,7 @@ type JoinArenaAction struct {
 }
 
 type ServerArenaAction struct {
-	ArenaAction ArenaAction `json:"arena_action"`
+	ArenaAction ArenaAction `json:"arena_action"` // wrap
 }
 
 type ListArenasAction struct{}

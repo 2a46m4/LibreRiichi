@@ -15,5 +15,5 @@ type StartGameActionData struct{}
 type PlayerQuitActionData struct{}
 
 type PlayerActionData struct {
-	action Action // wrap
+	Action Action // wrap
 }

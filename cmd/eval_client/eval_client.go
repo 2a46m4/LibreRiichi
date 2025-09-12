@@ -43,17 +43,22 @@ func main() {
 		defer conns[i].Close()
 	}
 
+	var idx [4]uint = [4]uint{0, 0, 0, 0}
+
 	// Initial hello
 	{
-		MakeMessage := func(name string) []byte {
+		MakeMessage := func(name string, i int) []byte {
 			msg := Message{
-				MessageType:  InitialMessageActionType,
-				MessageIndex: 0,
-				Data: InitialMessageActionData{
+				MessageType:  REQUEST,
+				MessageIndex: idx[i],
+				Data: InitialMessageAction{
 					Name: name,
 				},
 			}
+			idx[i]++
+
 			bytes, err := json.Marshal(msg)
+			fmt.Println(string(bytes))
 			if err != nil {
 				panic(err)
 			}
@@ -62,10 +67,13 @@ func main() {
 
 		for i := range 4 {
 			log.Println("Writing message")
-			err = conns[i].WriteMessage(websocket.TextMessage, MakeMessage("Hello"+strconv.Itoa(i)))
-			log.Println("Write error:", err)
+			err = conns[i].WriteMessage(websocket.TextMessage, MakeMessage("Hello"+strconv.Itoa(i), i))
+			if err != nil {
+				log.Println("Write error:", err)
+			}
 		}
 
+		// TODO: Assert index
 		for i := range 4 {
 			_, msg, err := conns[i].ReadMessage()
 			if err != nil {
@@ -78,14 +86,16 @@ func main() {
 
 	// Create a room
 	{
-		MakeMessage := func() []byte {
+		MakeMessage := func(i int) []byte {
 			msg := Message{
-				MessageType:  CreateArenaActionType,
-				MessageIndex: 0,
-				Data: CreateArenaActionData{
+				MessageType:  REQUEST,
+				MessageIndex: idx[i],
+				Data: CreateArenaAction{
 					ArenaName: "arena",
 				},
 			}
+			idx[i]++
+
 			bytes, err := json.Marshal(msg)
 			if err != nil {
 				panic(err)
@@ -94,7 +104,7 @@ func main() {
 		}
 
 		log.Println("Sending create arena request")
-		err = conns[0].WriteMessage(websocket.TextMessage, MakeMessage())
+		err = conns[0].WriteMessage(websocket.TextMessage, MakeMessage(0))
 		_, msg, err := conns[0].ReadMessage()
 		if err != nil {
 			log.Println("Read error:", err)
@@ -107,14 +117,16 @@ func main() {
 	{
 		for i := range 4 {
 
-			MakeMessage := func() []byte {
+			MakeMessage := func(i int) []byte {
 				msg := Message{
-					MessageType:  JoinArenaActionType,
-					MessageIndex: 0,
-					Data: JoinArenaActionData{
+					MessageType:  REQUEST,
+					MessageIndex: idx[i],
+					Data: JoinArenaAction{
 						ArenaName: "arena",
 					},
 				}
+				idx[i]++
+
 				bytes, err := json.Marshal(msg)
 				if err != nil {
 					panic(err)
@@ -123,7 +135,7 @@ func main() {
 			}
 
 			log.Println("Sending join arena request: ", i)
-			err = conns[i].WriteMessage(websocket.TextMessage, MakeMessage())
+			err = conns[i].WriteMessage(websocket.TextMessage, MakeMessage(i))
 			_, msg, err := conns[i].ReadMessage()
 			if err != nil {
 				log.Println("Read error:", err)
@@ -136,17 +148,16 @@ func main() {
 	// Start game
 	{
 
-		MakeMessage := func() []byte {
+		MakeMessage := func(i int) []byte {
 			msg := Message{
-				MessageType:  ServerArenaActionType,
-				MessageIndex: 0,
-				Data: ServerArenaActionData{
-					ArenaMessage: ArenaMessage{
-						MessageType: StartGameActionType,
-						Data:        StartGameActionData{},
-					},
+				MessageType:  REQUEST,
+				MessageIndex: idx[i],
+				Data: ServerArenaAction{
+					ArenaAction: StartGameActionData{},
 				},
 			}
+			idx[i]++
+
 			bytes, err := json.Marshal(msg)
 			if err != nil {
 				panic(err)
@@ -155,7 +166,7 @@ func main() {
 		}
 
 		log.Println("Sending start game request")
-		err = conns[0].WriteMessage(websocket.TextMessage, MakeMessage())
+		err = conns[0].WriteMessage(websocket.TextMessage, MakeMessage(0))
 		_, msg, err := conns[0].ReadMessage()
 		if err != nil {
 			log.Println("Read error:", err)

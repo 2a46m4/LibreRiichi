@@ -30,7 +30,7 @@ type Arena struct {
 
 // Information needed to send a messsage
 type MessageSendInfo struct {
-	Events     []ArenaBoardEventData
+	Events     []ArenaBoardEvent
 	Visibility Visibility
 	SendTo     uint8
 }
@@ -42,21 +42,21 @@ func (list *InfoList) Add(data ...MessageSendInfo) *InfoList {
 	return list
 }
 
-func (list *InfoList) AddGlobalMessage(data ...ArenaBoardEventData) *InfoList {
+func (list *InfoList) AddGlobalMessage(data ...ArenaBoardEvent) *InfoList {
 	global := GlobalMessage()
 	global.Add(data...)
 	*list = append(*list, global)
 	return list
 }
 
-func (list *InfoList) AddPrivateMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
+func (list *InfoList) AddPrivateMessage(sendTo uint8, data ...ArenaBoardEvent) *InfoList {
 	private := PrivateMessage(sendTo)
 	private.Add(data...)
 	*list = append(*list, private)
 	return list
 }
 
-func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEventData) *InfoList {
+func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEvent) *InfoList {
 	partial := PartialMessage(sendTo)
 	partial.Add(data...)
 	*list = append(*list, partial)
@@ -65,7 +65,7 @@ func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEventDat
 
 func GlobalMessage() MessageSendInfo {
 	return MessageSendInfo{
-		Events:     []ArenaBoardEventData{},
+		Events:     []ArenaBoardEvent{},
 		Visibility: GLOBAL,
 		SendTo:     0,
 	}
@@ -73,7 +73,7 @@ func GlobalMessage() MessageSendInfo {
 
 func PrivateMessage(sendTo uint8) MessageSendInfo {
 	return MessageSendInfo{
-		Events:     []ArenaBoardEventData{},
+		Events:     []ArenaBoardEvent{},
 		Visibility: PLAYER,
 		SendTo:     sendTo,
 	}
@@ -81,14 +81,14 @@ func PrivateMessage(sendTo uint8) MessageSendInfo {
 
 func PartialMessage(sendTo uint8) MessageSendInfo {
 	return MessageSendInfo{
-		Events:     []ArenaBoardEventData{},
+		Events:     []ArenaBoardEvent{},
 		Visibility: PARTIAL,
 		SendTo:     sendTo,
 	}
 }
 
 // Add an event to the send info
-func (info *MessageSendInfo) Add(data ...ArenaBoardEventData) *MessageSendInfo {
+func (info *MessageSendInfo) Add(data ...ArenaBoardEvent) *MessageSendInfo {
 	info.Events = append(info.Events, data...)
 	return info
 }
@@ -111,22 +111,19 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	}
 }
 
-func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
+// TODO: This should be explicit
+func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) error {
 	switch visibility {
 	case GLOBAL:
 		for i, player := range arena.agents {
 			fmt.Println("Sending index: ", i)
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: data},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: data,
 			}
 		}
 
 	case PARTIAL:
-		arena.agents[sendTo].Recv <- Message{
-			MessageType: ServerArenaEventType,
-			Data:        ServerArenaMessageEventData{ArenaMessage: data},
-		}
+		arena.agents[sendTo].Recv <- ServerArenaEvent{ArenaMessage: data}
 
 		altMessage, err := GetAltMessage(data)
 		if err != nil {
@@ -138,16 +135,14 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 			if idx == int(sendTo) {
 				continue
 			}
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: altMessage},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: altMessage,
 			}
 		}
 
 	case PLAYER:
-		arena.agents[sendTo].Recv <- Message{
-			MessageType: ServerArenaEventType,
-			Data:        ServerArenaMessageEventData{ArenaMessage: data},
+		arena.agents[sendTo].Recv <- ServerArenaEvent{
+			ArenaMessage: data,
 		}
 	case EXCLUDE:
 		for i, player := range arena.agents {
@@ -157,9 +152,8 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 				continue
 			}
 			fmt.Println("Exclude: Continuing with: ", i)
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: data},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: data,
 			}
 		}
 	default:
@@ -192,16 +186,13 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 
 	arena.agents = append(arena.agents, agent)
 
-	data := PlayerJoinedEventData{
+	data := PlayerJoinedEvent{
 		Name: agent.Name,
 		ID:   agent.ID,
 	}
 
 	err := arena.Send(
-		ArenaMessage{
-			MessageType: PlayerJoinedEventType,
-			Data:        data,
-		}, EXCLUDE, uint8(len(arena.agents)-1))
+		data, EXCLUDE, uint8(len(arena.agents)-1))
 
 	if err != nil {
 		panic(err)
@@ -230,11 +221,8 @@ func (arena *Arena) driveGame() error {
 
 	// Send the event to the players
 	for _, sendInfo := range sendInfos {
-		for event := range sendInfo.Events {
-			arena.Send(ArenaMessage{
-				MessageType: ArenaBoardEventType,
-				Data:        event,
-			}, sendInfo.Visibility, sendInfo.SendTo)
+		for _, event := range sendInfo.Events {
+			arena.Send(event, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 
@@ -255,34 +243,30 @@ func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
 
 // TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer uint8) error {
+func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
 	if arena.gameStarted {
-		return errors.New("Game already started")
+		return Unit, errors.New("Game already started")
 	}
 
 	if len(arena.agents) != 4 {
-		return errors.New("Not enough agents")
+		return Unit, errors.New("Not enough agents")
 	}
 
 	setups, err := arena.game.StartNewGame()
 	if err != nil {
-		return err
+		return Unit, err
 	}
 
 	// Send over the setups for each player
 	for idx, setup := range setups {
 
-		err = arena.Send(ArenaMessage{
-			MessageType: ArenaBoardEventType,
-			Data: ArenaBoardEventData{
-				BoardEvent: GameSetupEventData{
-					Setup: setup,
-				},
-			},
-		}, PLAYER, uint8(idx))
+		err = arena.Send(ArenaBoardEvent{
+			BoardEvent: GameSetupEvent{
+				Setup: setup,
+			}}, PLAYER, uint8(idx))
 
 		if err != nil {
 			panic(err)
@@ -290,24 +274,21 @@ func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer u
 	}
 
 	arena.gameStarted = true
-	return arena.driveGame()
+	return Unit, arena.driveGame()
 }
 
-func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) error {
+func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
-	sendInfos, err := ActionDecode(&arena.game, data.ActionData, fromPlayer)
+	sendInfos, err := ActionDecode(&arena.game, data.Action, fromPlayer)
 	if err != nil {
-		return err
+		return Unit, err
 	}
 
 	for _, sendInfo := range sendInfos {
 		for _, event := range sendInfo.Events {
-			arena.Send(ArenaMessage{
-				MessageType: ArenaBoardEventType,
-				Data:        event,
-			}, sendInfo.Visibility, sendInfo.SendTo)
+			arena.Send(event, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 
@@ -316,10 +297,10 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 		panic("TODO: Error handling")
 	}
 
-	return nil
+	return Unit, err
 }
 
-func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
+func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 	if arena.gameStarted {
@@ -331,14 +312,11 @@ func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer
 	} else {
 		agent := arena.agents[fromPlayer]
 		Remove(&arena.agents, uint(fromPlayer))
-		arena.Send(ArenaMessage{
-			MessageType: PlayerQuitEventType,
-			Data: PlayerQuitEventData{
-				Name: agent.Name,
-			},
+		arena.Send(PlayerQuitEvent{
+			Name: agent.Name,
 		}, GLOBAL, 0)
 	}
-	return nil
+	return Unit, nil
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players

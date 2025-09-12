@@ -14,12 +14,10 @@ type Client struct {
 	Name       string
 	ID         uuid.UUID
 	Connection ConnChan
-	Recv       chan Message
+	Recv       chan any
 	Arena      *Arena
 	// We will respond with this index
 	ResponseIndex uint
-	// We expect their next message to have this index
-	RequestIndex uint
 	// We will respond with this index
 	EventIndex uint
 }
@@ -31,11 +29,13 @@ func MakeClient(connection ConnChan) (Client, error) {
 	}
 
 	client := Client{
-		Name:       "Unnamed User",
-		ID:         uuid,
-		Connection: connection,
-		Recv:       make(chan Message, 32),
-		Arena:      nil,
+		Name:          "Unnamed User",
+		ID:            uuid,
+		Connection:    connection,
+		Recv:          make(chan any, 32),
+		Arena:         nil,
+		ResponseIndex: 0,
+		EventIndex:    0,
 	}
 	fmt.Println("Making new client", client)
 	return client, nil
@@ -46,6 +46,23 @@ func (client Client) Loop() {
 	for {
 		select {
 		case send := <-client.Recv:
+			var msg Message
+
+			switch send.(type) {
+			case ServerAction:
+				panic("Wrong type")
+			case ServerResponse:
+				msg.MessageType = RESPONSE
+				msg.MessageIndex = client.ResponseIndex
+				msg.Data = send
+				client.ResponseIndex += 1
+			case ServerEvent:
+				msg.MessageType = EVENT
+				msg.MessageIndex = client.EventIndex
+				msg.Data = send
+				client.EventIndex += 1
+			}
+
 			bytes, err := json.Marshal(send)
 			if err != nil {
 				panic(err)
@@ -62,8 +79,9 @@ func (client Client) Loop() {
 			}
 
 			msg, err := ReceiveRequest(recv.([]byte),
-				client.RequestIndex,
+				client.ResponseIndex,
 			)
+
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -74,26 +92,7 @@ func (client Client) Loop() {
 				continue
 			}
 
-			var msgType MessageType
-			var msgIndex *uint
-			switch dispatchResult.(type) {
-			case ServerAction:
-				msgType = REQUEST
-				msgIndex = &client.RequestIndex
-			case ServerEvent:
-				msgType = EVENT
-				msgIndex = &client.EventIndex
-			case ServerResponse:
-				msgType = RESPONSE
-				msgIndex = &client.ResponseIndex
-			}
-
-			client.GetSendChannel() <- Message{
-				MessageType:  msgType,
-				MessageIndex: *msgIndex,
-				Data:         dispatchResult,
-			}
-			*msgIndex += 1
+			client.GetSendChannel() <- dispatchResult
 		}
 	}
 }
@@ -140,7 +139,7 @@ func (client *Client) HandleJoinArenaAction(data JoinArenaAction, other any) (an
 
 	client.Arena = arena
 	return GenericResponse{
-		Success: true,
+		Success:    true,
 		FailReason: "",
 	}, nil
 }
@@ -161,7 +160,7 @@ func (client *Client) HandleServerArenaAction(action ServerArenaAction, other an
 		}, nil
 	}
 
-	err = ArenaActionDecode(client.Arena, action.ArenaAction, idx)
+	_, err = ArenaActionDecode(client.Arena, action.ArenaAction, idx)
 	if err != nil {
 		return GenericResponse{
 			Success:    false,
@@ -170,7 +169,7 @@ func (client *Client) HandleServerArenaAction(action ServerArenaAction, other an
 	}
 
 	return GenericResponse{
-		Success: true,
+		Success:    true,
 		FailReason: "",
 	}, nil
 }
@@ -207,13 +206,13 @@ func (client *Client) HandleClientDestruction() {
 			return
 		}
 
-		err = client.Arena.HandlePlayerQuitAction(PlayerQuitActionData{}, idx)
+		_, err = client.Arena.HandlePlayerQuitActionData(PlayerQuitActionData{}, idx)
 		if err != nil {
 			return
 		}
 	}
 }
 
-func (client Client) GetSendChannel() chan<- Message {
+func (client Client) GetSendChannel() chan<- any {
 	return client.Recv
 }

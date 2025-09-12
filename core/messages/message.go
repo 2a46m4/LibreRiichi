@@ -29,10 +29,13 @@ func (e WrongIndexError) Error() string {
 	return fmt.Sprintf("Wrong index: wanted %v but got %v", e.Wanted, e.Got)
 }
 
-type WrongTypeError struct{}
+type WrongTypeError struct {
+	expected MessageType
+	was      MessageType
+}
 
 func (e WrongTypeError) Error() string {
-	return fmt.Sprintf("Wrong type")
+	return fmt.Sprintf("Wrong type: expected %v, got %v", e.expected, e.was)
 }
 
 func (m *Message) UnmarshalJSON(data []byte) error {
@@ -47,19 +50,30 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	m.MessageType = tempData.MessageType
+	m.MessageIndex = tempData.MessageIndex
 	switch tempData.MessageType {
 	case EVENT:
 		data := ServerEventUnpacker{}
-		json.Unmarshal(tempData.Data, &data)
-		m.Data = data
+		err := json.Unmarshal(tempData.Data, &data)
+		if err != nil {
+			return err
+		}
+		m.Data = data.ServerEvent
 	case REQUEST:
 		data := ServerActionUnpacker{}
-		json.Unmarshal(tempData.Data, &data)
-		m.Data = data
+		err := json.Unmarshal(tempData.Data, &data)
+		if err != nil {
+			return err
+		}
+		m.Data = data.ServerAction
 	case RESPONSE:
 		data := ServerResponseUnpacker{}
-		json.Unmarshal(tempData.Data, &data)
-		m.Data = data
+		err := json.Unmarshal(tempData.Data, &data)
+		if err != nil {
+			return err
+		}
+		m.Data = data.ServerResponse
 	default:
 		return errors.New("Bad message")
 	}
@@ -74,6 +88,7 @@ func ReceiveRequest(bytes []byte, index uint) (ServerAction, error) {
 		return nil, err
 	}
 	if index != msg.MessageIndex {
+		fmt.Println("Wrong index: ", msg)
 		return nil, WrongIndexError{
 			Wanted: index,
 			Got:    msg.MessageIndex,
@@ -81,7 +96,11 @@ func ReceiveRequest(bytes []byte, index uint) (ServerAction, error) {
 	}
 
 	if msg.MessageType != REQUEST {
-		return nil, WrongTypeError{}
+		fmt.Println("Wrong message type: ", msg)
+		return nil, WrongTypeError{
+			expected: REQUEST,
+			was:      msg.MessageType,
+		}
 	}
 	return msg.Data.(ServerAction), nil
 }

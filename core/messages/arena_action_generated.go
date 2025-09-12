@@ -44,11 +44,11 @@ func (PlayerActionData) ArenaActionImpl() {}
 func (obj PlayerActionData) MarshalJSON() ([]byte, error) {
     var raw struct {
 		ArenaActionType ArenaActionType `json:"arenaaction_type"`
-        action Action 
+        Action Action 
 	}
 
     raw.ArenaActionType = PLAYERACTIONDATA
-    raw.action = obj.action
+    raw.Action = obj.Action
 
     return json.Marshal(raw)
 }
@@ -56,7 +56,7 @@ func (obj PlayerActionData) MarshalJSON() ([]byte, error) {
 func (obj PlayerActionData) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         ArenaActionType ArenaActionType `json:"arenaaction_type"`
-        action ActionUnpacker 
+        Action ActionUnpacker 
 	}
 
 	err := json.Unmarshal(rawData, &raw)
