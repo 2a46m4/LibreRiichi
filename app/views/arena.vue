@@ -6,7 +6,6 @@ import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
 import GameBoard from "../components/game_board.vue";
-import ArenaHandler from "../messaging/arena_handler";
 
 const store = useGlobalStore()
 const app = store.application

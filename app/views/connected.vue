@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, FlexBox, H1Styling, InputStyling, ULStyling} from "../styling";
 import {Ref, ref} from "vue";
 import ListItem from "../components/list_item.vue";
+import {MessageType} from "../messaging/message";
+import {use_websocket_state} from "../index";
+import {ServerActionType} from "../messaging/server_action_generated";
+import {ServerResponseType} from "../messaging/server_response_generated";
 
-const globalStore = useGlobalStore();
-const app = globalStore.application
-const action = app.action
+const websocket_state = use_websocket_state()
 
 const room_name = ref('')
 const create_room_name = ref('')
@@ -14,7 +15,24 @@ const show_error = ref(false)
 const avail_rooms: Ref<string[]> = ref([])
 
 async function check_avail_rooms() {
-  avail_rooms.value = await app.action.list_rooms()
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ListArenasAction,
+    }
+  })
+
+  let msg = await websocket_state.msg_router.register_message(msg_idx)
+
+  if (msg.serverresponse_type !== ServerResponseType.ListArenasResponse) {
+    throw new Error("Wrong type")
+  }
+
+  if (msg.success === false) {
+    throw new Error("Failed to list rooms")
+  }
+
+  avail_rooms.value = msg.arena_list.sort()
 }
 
 async function find_room() {

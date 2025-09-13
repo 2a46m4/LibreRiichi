@@ -1,26 +1,40 @@
+<script src="../index.ts"></script>
 <script setup lang="ts">
 import {ref} from 'vue'
-import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
-import TileComponent from "../components/tile_component.vue";
-import {test, test2} from "../assets/tiles";
 import ErrorDisplay from "../components/error_display.vue";
+import {use_player_state, use_websocket_state} from "../index";
+import {MessageType} from "../messaging/message";
+import {ServerResponseType} from "../messaging/server_response_generated";
+import {useRouter} from "vue-router";
+import {ServerActionType} from "../messaging/server_action_generated";
 
-const globalStore = useGlobalStore();
-const app = globalStore.application
-
-const user_name = ref('')
-const status = ref("")
+const player_state = use_player_state()
+const websocket_state = use_websocket_state()
+const status = ref('')
 
 async function connect() {
-  app.set_username(user_name.value)
-  try {
-    await app.action.connect()
-  } catch (error) {
-    if (error instanceof Error) {
-      status.value = error.message
+  await websocket_state.conn.wait_until_ready()
+  let return_index = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.InitialMessageAction,
+      name: player_state.username
     }
+  })
+
+  let message_return = await websocket_state.msg_router.register_message(return_index)
+  if (message_return.serverresponse_type !== ServerResponseType.GenericResponse) {
+    status.value = "Unexpected message type"
+    return
   }
+
+  if (!message_return.success) {
+    status.value = message_return.fail_reason
+    return
+  }
+
+  await useRouter().push({name: 'connected_page'})
 }
 </script>
 
@@ -30,11 +44,12 @@ async function connect() {
     <p>Username</p>
     <input
         :class="InputStyling"
-        v-model="user_name">
+        v-model="player_state.username">
     <button
-      :class="ButtonStyling"
-      @click="connect"
-      @keyup.enter="connect">Connect</button>
+        :class="ButtonStyling"
+        @click="connect"
+        @keyup.enter="connect">Connect
+    </button>
     <ErrorDisplay :error="status" v-if="status.length !== 0"></ErrorDisplay>
   </div>
 

@@ -10,7 +10,7 @@ export class Connection {
 	handler: (e: MessageEvent) => any
 
 	constructor(websocket: WebSocket, handler: (e: MessageEvent) => any) {
-		this.socket = websocket;
+		this.socket = websocket
 		this.handler = handler
 		this.ready = false
 		this.index = 0

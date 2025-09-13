@@ -1,8 +1,7 @@
 import {ArenaMessage} from "./arena_message";
-import { ServerAction, ServerActionType } from "./server_action_generated";
-import { ServerResponse, ServerResponseType } from "./server_response_generated";
-import { ServerEvent, ServerEventType } from "./server_event_generated";
-import {hasOwnProperty} from "@tailwindcss/postcss";
+import {ServerAction, ServerActionMessage, ServerActionType} from "./server_action_generated";
+import {ServerResponse, ServerResponseMessage, ServerResponseType} from "./server_response_generated";
+import {ServerEvent, ServerEventMessage, ServerEventType} from "./server_event_generated";
 
 export enum MessageType {
     RESPONSE = 0,
@@ -12,11 +11,10 @@ export enum MessageType {
 
 export interface Message {
     message_type: MessageType;
-    message_index: number;
-    data: any;
+    data: ServerActionMessage | ServerResponseMessage | ServerEventMessage;
 }
 
-export type IncomingMessage = Message;
+export type IncomingMessage = Message & {message_index: number};
 
 // Basic type guards
 function is_string(value: any): value is string {
@@ -45,11 +43,11 @@ function is_initial_message_action(data: any): data is import('./server_action_g
 }
 
 function is_join_arena_action(data: any): data is import('./server_action_generated').JoinArenaAction {
-    return is_object(data) && is_string(data.arena_name);
+    return is_object(data) && "arena_name" in data && is_string(data.arena_name);
 }
 
 function is_server_arena_action(data: any): data is import('./server_action_generated').ServerArenaAction {
-    return is_object(data) && data.arena_action !== undefined;
+    return is_object(data) && "arena_action" in data && data.arena_action !== undefined;
 }
 
 function is_list_arenas_action(data: any): data is import('./server_action_generated').ListArenasAction {
@@ -57,7 +55,7 @@ function is_list_arenas_action(data: any): data is import('./server_action_gener
 }
 
 function is_create_arena_action(data: any): data is import('./server_action_generated').CreateArenaAction {
-    return is_object(data) && is_string(data.arena_name);
+    return is_object(data) && "arena_name" in data && is_string(data.arena_name);
 }
 
 function is_arena_info_action(data: any): data is import('./server_action_generated').ArenaInfoAction {
@@ -67,29 +65,29 @@ function is_arena_info_action(data: any): data is import('./server_action_genera
 // ServerResponse validators
 function is_generic_response(data: any): data is import('./server_response_generated').GenericResponse {
     return is_object(data) && 
-           is_boolean(data.success) && 
-           is_string(data.fail_reason);
+           "success" in data && is_boolean(data.success) && 
+           "fail_reason" in data && is_string(data.fail_reason);
 }
 
 function is_list_arenas_response(data: any): data is import('./server_response_generated').ListArenasResponse {
     return is_object(data) && 
-           is_boolean(data.success) && 
-           is_array(data.arena_list) && 
+           "success" in data && is_boolean(data.success) && 
+           "arena_list" in data && is_array(data.arena_list) && 
            data.arena_list.every((item: any) => is_string(item));
 }
 
 function is_arena_info_response(data: any): data is import('./server_response_generated').ArenaInfoResponse {
     return is_object(data) && 
-           is_boolean(data.success) && 
-           is_string(data.name) && 
-           is_array(data.agents) && 
-           is_boolean(data.game_started) && 
-           is_string(data.date_created);
+           "success" in data && is_boolean(data.success) && 
+           "name" in data && is_string(data.name) && 
+           "agents" in data && is_array(data.agents) && 
+           "game_started" in data && is_boolean(data.game_started) && 
+           "date_created" in data && is_string(data.date_created);
 }
 
 // ServerEvent validators
 function is_server_arena_event(data: any): data is import('./server_event_generated').ServerArenaEvent {
-    return is_object(data) && data.arena_message !== undefined;
+    return is_object(data) && "arena_message" in data && data.arena_message !== undefined;
 }
 
 // Type validation result
@@ -165,7 +163,7 @@ function validate_request_data(data: any, errors: string[]): ValidationResult {
         };
     }
     
-    const actionType = data.serveraction_type;
+    const actionType = "serveraction_type" in data ? data.serveraction_type : undefined;
     if (!is_number(actionType)) {
         return {
             isValid: false,
@@ -231,7 +229,7 @@ function validate_response_data(data: any, errors: string[]): ValidationResult {
         };
     }
     
-    const responseType = data.serverresponse_type;
+    const responseType = "serverresponse_type" in data ? data.serverresponse_type : undefined;
     if (!is_number(responseType)) {
         return {
             isValid: false,
@@ -285,7 +283,7 @@ function validate_event_data(data: any, errors: string[]): ValidationResult {
         };
     }
     
-    const eventType = data.serverevent_type;
+    const eventType = "serverevent_type" in data ? data.serverevent_type : undefined;
     if (!is_number(eventType)) {
         return {
             isValid: false,
@@ -321,79 +319,3 @@ function validate_event_data(data: any, errors: string[]): ValidationResult {
         errors
     };
 }
-
-// Example usage and tests
-export function test_validator() {
-    // Example 1: Valid InitialMessageAction
-    const validRequest = {
-        message_type: MessageType.REQUEST,
-        message_index: 1,
-        data: {
-            serveraction_type: ServerActionType.InitialMessageAction,
-            name: "John"
-        }
-    };
-    
-    console.log("Valid InitialMessageAction:", validate_message(validRequest));
-    
-    // Example 2: Valid GenericResponse
-    const validResponse = {
-        message_type: MessageType.RESPONSE,
-        message_index: 2,
-        data: {
-            serverresponse_type: ServerResponseType.GenericResponse,
-            success: true,
-            fail_reason: ""
-        }
-    };
-    
-    console.log("Valid GenericResponse:", validate_message(validResponse));
-    
-    // Example 3: Invalid message - missing required field
-    const invalidMessage1 = {
-        message_type: MessageType.REQUEST,
-        message_index: 3,
-        data: {
-            serveraction_type: ServerActionType.InitialMessageAction
-            // missing 'name' field
-        }
-    };
-    
-    console.log("Invalid InitialMessageAction (missing name):", validate_message(invalidMessage1));
-    
-    // Example 4: Invalid message - wrong structure
-    const invalidMessage2 = {
-        message_type: "invalid", // should be number
-        message_index: 4,
-        data: {}
-    };
-    
-    console.log("Invalid message structure:", validate_message(invalidMessage2));
-    
-    // Example 5: Valid ListArenasResponse
-    const validListResponse = {
-        message_type: MessageType.RESPONSE,
-        message_index: 5,
-        data: {
-            serverresponse_type: ServerResponseType.ListArenasResponse,
-            success: true,
-            arena_list: ["arena1", "arena2", "arena3"]
-        }
-    };
-    
-    console.log("Valid ListArenasResponse:", validate_message(validListResponse));
-    
-    // Example 6: Invalid array in response
-    const invalidArrayResponse = {
-        message_type: MessageType.RESPONSE,
-        message_index: 6,
-        data: {
-            serverresponse_type: ServerResponseType.ListArenasResponse,
-            success: true,
-            arena_list: ["arena1", 123, "arena3"] // contains number instead of string
-        }
-    };
-    
-    console.log("Invalid ListArenasResponse (mixed array):", validate_message(invalidArrayResponse));
-}
-

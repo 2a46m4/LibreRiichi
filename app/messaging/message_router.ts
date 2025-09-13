@@ -1,9 +1,9 @@
-import {IncomingMessage, Message, MessageType} from "./message";
-import {EventHandler} from "./event_handler";
+import {IncomingMessage, MessageType} from "./message";
+import {ServerResponseMessage} from "./server_response_generated";
 
-type MessageResolver = (v: Message) => void
+type MessageResolver = (v: any) => void
 
-export class MessageState {
+export class MessageRouter {
     outgoing_messages: Map<number, {
         resolve: MessageResolver,
         reject: MessageResolver,
@@ -14,8 +14,8 @@ export class MessageState {
     }
 
     // TODO: Timeout option
-    register_message(msg_idx: number): Promise<Message> {
-        let {promise, resolve, reject} = Promise.withResolvers<Message>();
+    register_message(msg_idx: number): Promise<ServerResponseMessage> {
+        let {promise, resolve, reject} = Promise.withResolvers<ServerResponseMessage>();
 
         this.outgoing_messages.set(msg_idx, {
             resolve: resolve,
@@ -25,10 +25,10 @@ export class MessageState {
         return promise
     }
 
-    match_message(data: Message) {
+    match_message(data: IncomingMessage) {
         if (data.message_type === MessageType.RESPONSE && this.outgoing_messages.has(data.message_index)) {
-            console.log("Matched outgoing message")
-            this.outgoing_messages.get(data.message_index)?.resolve(data)
+            console.log("Matched outgoing message, resolving")
+            this.outgoing_messages.get(data.message_index)?.resolve(data.data)
             this.outgoing_messages.delete(data.message_index)
         }
     }

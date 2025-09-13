@@ -1,7 +1,6 @@
 import {ApplicationState} from "./application_state";
 import {MessageType} from "../messaging/message";
 import {JoinedRoomState} from "./joined_room_state";
-import {Application} from "../application";
 
 export class ConnectedState extends ApplicationState {
     constructor(app: Application) {
