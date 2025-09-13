@@ -1,11 +1,25 @@
 import {createApp, ref, Ref} from "vue";
 import App from "./views/app.vue";
-import router from './router'
 import {createPinia, defineStore} from "pinia";
 import './index.css'
 import {Connection, websocket_address} from "./messaging/connection";
 import {ServerMessageBus} from "./messaging/event_handler";
-import {MessageRouter} from "./messaging/message_router";
+import { createMemoryHistory, createRouter } from 'vue-router'
+
+import login from './views/login.vue'
+import connected from './views/connected.vue'
+import arena from './views/arena.vue'
+
+const routes = [
+    { name: "login_page", path: '/', component: login },
+    { name: "connected_page", path: '/connected', component: connected },
+    { name: "arena_page", path: '/arena', component: arena },
+]
+
+export const router = createRouter({
+    history: createMemoryHistory(),
+    routes,
+})
 
 const pinia = createPinia();
 const app = createApp(App);
@@ -13,16 +27,13 @@ app.use(router).use(pinia).mount("#app");
 
 export const use_websocket_state = defineStore('websocket_state', (): {
     conn: Connection;
-    msg_router: MessageRouter;
     ready: Ref<boolean>;
 } => {
     let conn = new Connection(new WebSocket(websocket_address), ServerMessageBus.handle.bind(ServerMessageBus))
     let ready = ref(false)
     conn.wait_until_ready().then(() => {ready.value = true})
 
-    let msg_router = new MessageRouter()
-    ServerMessageBus.register(msg_router.match_message.bind(msg_router))
-    return {conn, msg_router, ready}
+    return {conn, ready}
 })
 
 export const use_player_state = defineStore('player_state', (): {
@@ -31,3 +42,10 @@ export const use_player_state = defineStore('player_state', (): {
     let username = ref("")
     return {username}
 })
+
+export const use_room_state = defineStore('room_state', ()=>{
+    let room_name = ref('')
+    let room_set = ref(false)
+    return {room_name, room_set}
+})
+

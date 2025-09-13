@@ -1,4 +1,4 @@
-import {Message, MessageType} from "./message";
+import {Message} from "./message";
 
 export const websocket_address = "ws://localhost:3000/game";
 

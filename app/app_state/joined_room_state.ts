@@ -36,23 +36,7 @@ export class JoinedRoomState extends ApplicationState {
     }
 
     async get_arena_info(): Promise<Arena> {
-        let msg_idx = this.app.conn.send(
-            {
-                message_type: MessageType.ArenaInfoAction,
-                data: {}
-            }
-        )
 
-        let ret = await this.app.msg_state.register_message(msg_idx)
-        if (ret.message_type !== MessageType.ArenaInfoResponse) {
-            throw new Error("Connection error: wrong type")
-        }
-
-        if (!ret.data.success) {
-            throw new Error("Could not get arena data")
-        }
-
-        return ret.data
     }
 
     get_state_name(): string {

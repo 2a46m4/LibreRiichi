@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/google/uuid"
@@ -18,6 +19,8 @@ type ArenaList struct {
 
 var GlobalArenaList ArenaList = ArenaList{}
 
+type EmptyNameError struct{}
+
 type ArenaNotFoundError struct {
 	arena_name string
 }
@@ -27,8 +30,13 @@ type SameNameError struct {
 }
 
 func InitializeMap() {
+	log.Println("Initializing map")
 	GlobalArenaList.arena = make(map[uuid.UUID]*Arena)
 	GlobalArenaList.name = make(map[string]uuid.UUID)
+}
+
+func (e EmptyNameError) Error() string {
+	return "Arena name cannot be empty"
 }
 
 func (e ArenaNotFoundError) Error() string {
@@ -47,10 +55,13 @@ func ListArenas() []string {
 	for name := range GlobalArenaList.name {
 		result = append(result, name)
 	}
+	log.Println("Listing arenas: ", GlobalArenaList.name, result)
+
 	return result
 }
 
 func GetArenaFromName(name string) (*Arena, error) {
+	log.Println("Getting arena from name")
 	GlobalArenaList.RLock()
 	defer GlobalArenaList.RUnlock()
 
@@ -115,6 +126,10 @@ func GetArenaUUID(name string) (uuid.UUID, error) {
 func CreateAndAddArena(name string) error {
 	GlobalArenaList.Lock()
 	defer GlobalArenaList.Unlock()
+
+	if len(name) == 0 {
+		return EmptyNameError{}
+	}
 
 	_, exists := GlobalArenaList.name[name]
 	if exists {

@@ -1,24 +1,47 @@
 <script setup lang="ts">
 
 import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from "../styling";
-import {useGlobalStore} from "../global_store";
 import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
 import GameBoard from "../components/game_board.vue";
-
-const store = useGlobalStore()
-const app = store.application
-const action = app.action
-const handler = app.handler
+import {use_room_state, use_websocket_state} from "../index";
+import {MessageType} from "../messaging/message";
+import {ServerActionType} from "../messaging/server_action_generated";
 
 const players: Ref<string[]> = ref([])
-const room_name = ref('')
+
+const room_state = use_room_state()
+if (!room_state.room_set) {
+  throw new Error("Room not set")
+}
+
+const room_name = room_state.room_name
+
+const websocket_state = use_websocket_state()
 
 let in_game = false
 
 async function get_arena_info() {
-  let arena = await action.get_arena_info()
+  let msg_idx = websocket_state.conn.send(
+      {
+        message_type: MessageType.REQUEST,
+        data: {
+          serveraction_type: ServerActionType.ArenaInfoAction,
+        }
+      }
+  )
+
+  let ret = await websocket_state.msg_router.register_message(msg_idx)
+  if (ret.message_type !== MessageType.ArenaInfoResponse) {
+    throw new Error("Connection error: wrong type")
+  }
+
+  if (!ret.data.success) {
+    throw new Error("Could not get arena data")
+  }
+
+  return ret.data
   players.value = arena.agents.map(x => x.name)
   room_name.value = arena.name
 }
@@ -35,7 +58,7 @@ let callback = (data: ArenaMessage) => {
       break;
     case ArenaMessageType.GameStartedEvent:
       in_game = true
-        
+
       break;
     case ArenaMessageType.ArenaBoardEvent:
       if (!in_game) {

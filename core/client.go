@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
@@ -44,6 +45,7 @@ func MakeClient(connection ConnChan) (Client, error) {
 func (client Client) Loop() {
 	fmt.Println(client.Name, client.ID, client.Connection)
 	for {
+		fmt.Println("Loop")
 		select {
 		case send := <-client.Recv:
 			var msg Message
@@ -52,10 +54,7 @@ func (client Client) Loop() {
 			case ServerAction:
 				panic("Wrong type")
 			case ServerResponse:
-				msg.MessageType = RESPONSE
-				msg.MessageIndex = client.ResponseIndex
-				msg.Data = send
-				client.ResponseIndex += 1
+				panic("Wrong type")
 			case ServerEvent:
 				msg.MessageType = EVENT
 				msg.MessageIndex = client.EventIndex
@@ -63,7 +62,7 @@ func (client Client) Loop() {
 				client.EventIndex += 1
 			}
 
-			bytes, err := json.Marshal(send)
+			bytes, err := json.Marshal(msg)
 			if err != nil {
 				panic(err)
 			}
@@ -82,22 +81,35 @@ func (client Client) Loop() {
 				client.ResponseIndex,
 			)
 
+			log.Println("Message received: ", msg)
+
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				continue
 			}
 			dispatchResult, err := ServerActionDecode(&client, msg, nil)
 			if err != nil {
-				fmt.Println("Problem with message during dispatch:", err)
+				log.Println("Problem with message during dispatch:", err)
 				continue
 			}
 
-			client.GetSendChannel() <- dispatchResult
+			var ret_msg Message
+			ret_msg.MessageType = RESPONSE
+			ret_msg.MessageIndex = client.ResponseIndex
+			ret_msg.Data = dispatchResult
+			client.ResponseIndex += 1
+			bytes, err := json.Marshal(ret_msg)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Sending", string(bytes))
+			client.Connection.Send(bytes)
 		}
 	}
 }
 
 func (client *Client) HandleInitialMessageAction(msg InitialMessageAction, other any) (any, error) {
+	log.Println("Handling initial message action")
 	client.Name = msg.Name
 	return GenericResponse{
 		Success:    true,
@@ -106,6 +118,8 @@ func (client *Client) HandleInitialMessageAction(msg InitialMessageAction, other
 }
 
 func (client *Client) HandleListArenasAction(data ListArenasAction, other any) (any, error) {
+	log.Println("Handling list arenas action")
+
 	list := ListArenas()
 	return ListArenasResponse{
 		Success:   true,

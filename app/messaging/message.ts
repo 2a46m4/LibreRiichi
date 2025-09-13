@@ -1,7 +1,6 @@
-import {ArenaMessage} from "./arena_message";
-import {ServerAction, ServerActionMessage, ServerActionType} from "./server_action_generated";
-import {ServerResponse, ServerResponseMessage, ServerResponseType} from "./server_response_generated";
-import {ServerEvent, ServerEventMessage, ServerEventType} from "./server_event_generated";
+import {ServerActionMessage, ServerActionType} from "./server_action_generated";
+import {ServerResponseMessage, ServerResponseType} from "./server_response_generated";
+import {ServerEventMessage, ServerEventType} from "./server_event_generated";
 
 export enum MessageType {
     RESPONSE = 0,
@@ -9,9 +8,21 @@ export enum MessageType {
     EVENT = 2
 }
 
-export interface Message {
-    message_type: MessageType;
-    data: ServerActionMessage | ServerResponseMessage | ServerEventMessage;
+export type Message = ServerAction | ServerResponse | ServerEvent
+
+export type ServerAction = {
+    message_type: MessageType.REQUEST,
+    data: ServerActionMessage
+}
+
+export type ServerResponse = {
+    message_type: MessageType.RESPONSE,
+    data: ServerResponseMessage
+}
+
+export type ServerEvent = {
+    message_type: MessageType.EVENT,
+    data: ServerEventMessage
 }
 
 export type IncomingMessage = Message & {message_index: number};
