@@ -3,11 +3,14 @@
 import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from "../styling";
 import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
-import {ArenaMessage, ArenaMessageType} from "../messaging/arena_message";
+import {ArenaMessageType} from "../messaging/arena_message";
 import GameBoard from "../components/game_board.vue";
 import {use_room_state, use_websocket_state} from "../index";
-import {MessageType} from "../messaging/message";
+import {IncomingMessage, MessageType} from "../messaging/message";
 import {ServerActionType} from "../messaging/server_action_generated";
+import {ArenaMessageBus, register_request} from "../messaging/event_handler";
+import {ServerResponseType} from "../messaging/server_response_generated";
+import {ServerEventMessage, ServerEventType} from "../messaging/server_event_generated";
 
 const players: Ref<string[]> = ref([])
 
@@ -16,9 +19,8 @@ if (!room_state.room_set) {
   throw new Error("Room not set")
 }
 
-const room_name = room_state.room_name
-
 const websocket_state = use_websocket_state()
+const error_status = ref('')
 
 let in_game = false
 
@@ -32,25 +34,29 @@ async function get_arena_info() {
       }
   )
 
-  let ret = await websocket_state.msg_router.register_message(msg_idx)
-  if (ret.message_type !== MessageType.ArenaInfoResponse) {
-    throw new Error("Connection error: wrong type")
+
+  let ret = await register_request(msg_idx)
+  if (ret.serverresponse_type !== ServerResponseType.ArenaInfoResponse) {
+    error_status.value = "Connection error: wrong type"
+    return
   }
 
-  if (!ret.data.success) {
-    throw new Error("Could not get arena data")
+  if (!ret.success) {
+    error_status.value = "Could not get arena data"
+    return
   }
 
-  return ret.data
-  players.value = arena.agents.map(x => x.name)
-  room_name.value = arena.name
+  players.value = ret.agents.map(x => x.name)
+  room_state.room_name = ret.name
 }
 
 await get_arena_info()
-let callback = (data: ArenaMessage) => {
+
+let callback = (data: IncomingMessage) => {
   console.log("Arena listener called")
-  switch (data.message_type) {
-    case ArenaMessageType.PlayerJoinedEvent:
+  let arena_data = data.data as ServerEventMessage
+  switch (arena_data.serverevent_type) {
+    case ServerEventType.ServerArenaEvent:
       players.value.push(data.data.name);
       break;
     case ArenaMessageType.PlayerQuitEvent:
@@ -58,21 +64,18 @@ let callback = (data: ArenaMessage) => {
       break;
     case ArenaMessageType.GameStartedEvent:
       in_game = true
-
       break;
     case ArenaMessageType.ArenaBoardEvent:
       if (!in_game) {
         throw new Error("Game not started")
       }
-
-
       break;
     default:
       throw new Error("Unexpected message")
   }
+  return true
 }
-let arena_handler = new ArenaHandler(handler)
-let callback_idx = arena_handler.register_arena_listener(callback)
+let callback_idx = ArenaMessageBus.register(callback)
 
 async function start_game() {
   await action.start_game()

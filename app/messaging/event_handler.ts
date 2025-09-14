@@ -1,6 +1,7 @@
 import {IncomingMessage, MessageType, validate_message} from "./message";
-import {ServerResponseMessage} from "./server_response_generated";
+import {ServerResponseMessage, ServerResponseType} from "./server_response_generated";
 import {data} from "autoprefixer";
+import {ServerEventMessage} from "./server_event_generated";
 
 export class EventHandler<TIncoming, TTransformed> {
     private listeners: Array<(data: TTransformed) => boolean> = []
@@ -45,16 +46,30 @@ export const ServerMessageBus = create_event_handler(
 )
 
 export const ArenaMessageBus = create_event_handler(
-    (data: IncomingMessage) => data,
-    (msg: IncomingMessage)=> msg.message_type === MessageType.EVENT
+    (data: IncomingMessage) => {
+        if (data.message_type !== MessageType.EVENT) {
+            return undefined
+        }
+        return data.data as ServerEventMessage
+    },
+    (msg: ServerEventMessage | undefined)=> msg !== undefined
 )
+
+ServerMessageBus.register(keep_registered(ArenaMessageBus.handle.bind(ArenaMessageBus)))
+
+export function keep_registered<TIncoming>(fn: (_: TIncoming) => void): (_: TIncoming) => true {
+    return (data: TIncoming) => {
+        fn(data)
+        return true
+    }
+}
 
 export function register_request(msg_idx: number) : Promise<ServerResponseMessage> {
     let {promise, resolve} = Promise.withResolvers<ServerResponseMessage>();
 
     ServerMessageBus.register((msg)=> {
         if (msg.message_type === MessageType.RESPONSE && msg.message_index === msg_idx) {
-            console.log("Matched outgoing message ", msg_idx, ", resolving")
+            console.log("Matched outgoing message", msg_idx, ", resolving")
             resolve(msg.data)
             return false
         } else {

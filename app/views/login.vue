@@ -2,12 +2,11 @@
 import {ref} from 'vue'
 import {BoxStyling, ButtonStyling, H1Styling, InputStyling} from "../styling";
 import ErrorDisplay from "../components/error_display.vue";
-import {use_player_state, use_websocket_state} from "../index";
+import {router, use_player_state, use_websocket_state} from "../index";
 import {MessageType} from "../messaging/message";
 import {ServerResponseType} from "../messaging/server_response_generated";
 import {ServerActionType} from "../messaging/server_action_generated";
 import {register_request} from "../messaging/event_handler";
-import router from "../router";
 
 const player_state = use_player_state()
 const websocket_state = use_websocket_state()

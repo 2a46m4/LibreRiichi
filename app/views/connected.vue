@@ -3,11 +3,10 @@ import {BoxStyling, ButtonStyling, FlexBox, H1Styling, InputStyling, ULStyling} 
 import {Ref, ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import {MessageType} from "../messaging/message";
-import {use_room_state, use_websocket_state} from "../index";
+import {router, use_room_state, use_websocket_state} from "../index";
 import {ServerActionType} from "../messaging/server_action_generated";
 import {ServerResponseType} from "../messaging/server_response_generated";
 import {register_request} from "../messaging/event_handler";
-import router from "../router";
 
 const websocket_state = use_websocket_state()
 const room_state = use_room_state()
