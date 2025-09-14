@@ -9,6 +9,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import login from './views/login.vue'
 import connected from './views/connected.vue'
 import arena from './views/arena.vue'
+import {IncomingMessage, validate_message} from "./messaging/message";
 
 const routes = [
     { name: "login_page", path: '/', component: login },
@@ -29,7 +30,12 @@ export const use_websocket_state = defineStore('websocket_state', (): {
     conn: Connection;
     ready: Ref<boolean>;
 } => {
-    let conn = new Connection(new WebSocket(websocket_address), ServerMessageBus.handle.bind(ServerMessageBus))
+    let conn = new Connection(new WebSocket(websocket_address), (data: MessageEvent) => {
+        let msg = JSON.parse(data.data) as IncomingMessage
+        if (validate_message(msg).isValid) {
+            ServerMessageBus.handle(msg)
+        }
+    })
     let ready = ref(false)
     conn.wait_until_ready().then(() => {ready.value = true})
 

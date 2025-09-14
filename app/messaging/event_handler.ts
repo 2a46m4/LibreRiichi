@@ -1,29 +1,17 @@
 import {IncomingMessage, MessageType, validate_message} from "./message";
 import {ServerResponseMessage, ServerResponseType} from "./server_response_generated";
-import {data} from "autoprefixer";
 import {ServerEventMessage} from "./server_event_generated";
 
-export class EventHandler<TIncoming, TTransformed> {
-    private listeners: Array<(data: TTransformed) => boolean> = []
-    private readonly transform: (data: TIncoming) => TTransformed
-    private readonly conditional: (data: TTransformed) => boolean
+class EventHandler<TIncoming> {
+    private listeners: Array<(data: TIncoming) => boolean> = []
 
-    constructor(
-        transform: (data: TIncoming) => TTransformed,
-        conditional: (data: TTransformed) => boolean
-    ) {
-        this.transform = transform
-        this.conditional = conditional
-    }
+    constructor() {}
 
     handle(data: TIncoming): void {
-        const transformed_data = this.transform(data)
-        if (this.conditional(transformed_data)) {
-            this.listeners.filter(listener => listener(transformed_data))
-        }
+        this.listeners.filter(listener => listener(data))
     }
 
-    register(listener: (data: TTransformed) => boolean): number {
+    register(listener: (data: TIncoming) => boolean): number {
         this.listeners.push(listener)
         return this.listeners.length - 1
     }
@@ -33,30 +21,6 @@ export class EventHandler<TIncoming, TTransformed> {
     }
 }
 
-export function create_event_handler<TIncoming, TTransformed>(
-    transform: (data: TIncoming) => TTransformed,
-    conditional: (data: TTransformed) => boolean = () => true
-) {
-    return new EventHandler(transform, conditional)
-}
-
-export const ServerMessageBus = create_event_handler(
-    (data: MessageEvent) => JSON.parse(data.data) as IncomingMessage,
-    (msg: IncomingMessage) => validate_message(msg).isValid
-)
-
-export const ArenaMessageBus = create_event_handler(
-    (data: IncomingMessage) => {
-        if (data.message_type !== MessageType.EVENT) {
-            return undefined
-        }
-        return data.data as ServerEventMessage
-    },
-    (msg: ServerEventMessage | undefined)=> msg !== undefined
-)
-
-ServerMessageBus.register(keep_registered(ArenaMessageBus.handle.bind(ArenaMessageBus)))
-
 export function keep_registered<TIncoming>(fn: (_: TIncoming) => void): (_: TIncoming) => true {
     return (data: TIncoming) => {
         fn(data)
@@ -64,10 +28,17 @@ export function keep_registered<TIncoming>(fn: (_: TIncoming) => void): (_: TInc
     }
 }
 
-export function register_request(msg_idx: number) : Promise<ServerResponseMessage> {
-    let {promise, resolve} = Promise.withResolvers<ServerResponseMessage>();
+export const ServerMessageBus = new EventHandler<IncomingMessage>()
+export const ArenaMessageBus = new EventHandler<ServerEventMessage>()
+ServerMessageBus.register(keep_registered((data: IncomingMessage) => {
+    if (data.message_type === MessageType.EVENT) {
+        ArenaMessageBus.handle(data.data as ServerEventMessage)
+    }
+}))
 
-    ServerMessageBus.register((msg)=> {
+export function register_request(msg_idx: number): Promise<ServerResponseMessage> {
+    let {promise, resolve} = Promise.withResolvers<ServerResponseMessage>();
+    ServerMessageBus.register((msg) => {
         if (msg.message_type === MessageType.RESPONSE && msg.message_index === msg_idx) {
             console.log("Matched outgoing message", msg_idx, ", resolving")
             resolve(msg.data)
@@ -76,6 +47,5 @@ export function register_request(msg_idx: number) : Promise<ServerResponseMessag
             return true
         }
     })
-
     return promise
 }

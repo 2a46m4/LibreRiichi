@@ -2,7 +2,7 @@
 
 // ServerAction Union Type and Enum
 
-import {ArenaAction} from "./arena_action_generated";
+import {ArenaActionMessage} from "./arena_action_generated";
 
 export type ServerActionMessage = InitialMessageAction | JoinArenaAction | ServerArenaAction | ListArenasAction | CreateArenaAction | ArenaInfoAction;
 
@@ -29,7 +29,7 @@ export interface JoinArenaAction {
 
 export interface ServerArenaAction {
     serveraction_type: ServerActionType.ServerArenaAction
-    arena_action: ArenaAction;
+    arena_action: ArenaActionMessage;
 }
 
 export interface ListArenasAction {

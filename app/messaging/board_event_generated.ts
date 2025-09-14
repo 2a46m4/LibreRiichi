@@ -3,10 +3,6 @@
 // BoardEvent Union Type and Enum
 import {Action} from "../game/action";
 
-export type BoardEventMessage =  BoardEvent & {
-    boardevent_type: BoardEventType;
-}
-
 export type BoardEvent = PlayerActionEvent | PotentialActionEvent | GameSetupEvent | GameEndEvent;
 
 export enum BoardEventType {
@@ -19,11 +15,13 @@ export enum BoardEventType {
 // Individual struct interfaces
 
 export interface PlayerActionEvent {
+    boardevent_type: BoardEventType.PlayerActionEvent;
     action_data: Action;
     from_player: number;
 }
 
 export interface PotentialActionEvent {
+    boardevent_type: BoardEventType.PotentialActionEvent;
     action_data: Action;
 }
 
@@ -31,12 +29,15 @@ class Setup {
 }
 
 export interface GameSetupEvent {
+    boardevent_type: BoardEventType.GameSetupEvent;
     setup: Setup[];
 }
 
 class GameResult {
+
 }
 
 export interface GameEndEvent {
+    boardevent_type: BoardEventType.GameEndEvent;
     result: GameResult;
 }

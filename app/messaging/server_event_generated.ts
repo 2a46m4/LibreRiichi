@@ -3,11 +3,7 @@
 // ServerEvent Union Type and Enum
 import {ArenaEvent} from "./arena_event_generated";
 
-export type ServerEventMessage =  ServerEvent & {
-    serverevent_type: ServerEventType;
-}
-
-export type ServerEvent = ServerArenaEvent;
+export type ServerEventMessage = ServerArenaEvent;
 
 export enum ServerEventType {
     ServerArenaEvent = 0,
@@ -16,5 +12,6 @@ export enum ServerEventType {
 // Individual struct interfaces
 
 export interface ServerArenaEvent {
+    serverevent_type: ServerEventType.ServerArenaEvent;
     arena_message: ArenaEvent;
 }
