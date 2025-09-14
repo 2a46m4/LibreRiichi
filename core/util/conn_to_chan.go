@@ -132,7 +132,6 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 					fmt.Println("Couldn't write message")
 					return
 				}
-			default:
 			}
 		}
 	}()
