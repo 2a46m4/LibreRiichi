@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 )
 
 type MessageType uint8
@@ -102,6 +103,8 @@ func ReceiveRequest(bytes []byte, index uint) (ServerAction, error) {
 			was:      msg.MessageType,
 		}
 	}
+	log.Println(msg)
+
 	return msg.Data.(ServerAction), nil
 }
 

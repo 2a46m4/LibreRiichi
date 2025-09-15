@@ -2,115 +2,124 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
+	"encoding/json"
+	"fmt"
+	"log"
 )
 
 type ServerActionType uint8
 
 type ServerActionUnpacker struct {
-    ServerAction
+	ServerAction
 }
 
 const (
 	INITIALMESSAGEACTION ServerActionType = iota
-	JOINARENAACTION ServerActionType = iota
-	SERVERARENAACTION ServerActionType = iota
-	LISTARENASACTION ServerActionType = iota
-	CREATEARENAACTION ServerActionType = iota
-	ARENAINFOACTION ServerActionType = iota
+	JOINARENAACTION      ServerActionType = iota
+	SERVERARENAACTION    ServerActionType = iota
+	LISTARENASACTION     ServerActionType = iota
+	CREATEARENAACTION    ServerActionType = iota
+	ARENAINFOACTION      ServerActionType = iota
 )
+
 func (InitialMessageAction) serverActionImpl() {}
 func (obj InitialMessageAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
-        Name string `json:"name"`
+		Name             string           `json:"name"`
 	}
 
-    raw.ServerActionType = INITIALMESSAGEACTION
-    raw.Name = obj.Name
+	raw.ServerActionType = INITIALMESSAGEACTION
+	raw.Name = obj.Name
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (JoinArenaAction) serverActionImpl() {}
 func (obj JoinArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
-        ArenaName string `json:"arena_name"`
+		ArenaName        string           `json:"arena_name"`
 	}
 
-    raw.ServerActionType = JOINARENAACTION
-    raw.ArenaName = obj.ArenaName
+	raw.ServerActionType = JOINARENAACTION
+	raw.ArenaName = obj.ArenaName
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ServerArenaAction) serverActionImpl() {}
 func (obj ServerArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
-        ArenaAction ArenaAction `json:"arena_action"`
+		ArenaAction      ArenaAction      `json:"arena_action"`
 	}
 
-    raw.ServerActionType = SERVERARENAACTION
-    raw.ArenaAction = obj.ArenaAction
+	raw.ServerActionType = SERVERARENAACTION
+	raw.ArenaAction = obj.ArenaAction
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj ServerArenaAction) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ServerActionType ServerActionType `json:"serveraction_type"`
-        ArenaAction ArenaActionUnpacker `json:"arena_action"`
+	log.Println("SAA UNMARSHAL", string(rawData))
+
+	var raw struct {
+		ServerActionType ServerActionType    `json:"serveraction_type"`
+		ArenaAction      ArenaActionUnpacker `json:"arena_action"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
+	log.Println("SAA UNMARSHAL", raw)
+	if err != nil {
+		log.Println("SHIT")
+	}
 
-    return err
+	return err
 }
 
 func (ListArenasAction) serverActionImpl() {}
 func (obj ListArenasAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
 	}
 
-    raw.ServerActionType = LISTARENASACTION
+	raw.ServerActionType = LISTARENASACTION
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (CreateArenaAction) serverActionImpl() {}
 func (obj CreateArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
-        ArenaName string `json:"arena_name"`
+		ArenaName        string           `json:"arena_name"`
 	}
 
-    raw.ServerActionType = CREATEARENAACTION
-    raw.ArenaName = obj.ArenaName
+	raw.ServerActionType = CREATEARENAACTION
+	raw.ArenaName = obj.ArenaName
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ArenaInfoAction) serverActionImpl() {}
 func (obj ArenaInfoAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
 	}
 
-    raw.ServerActionType = ARENAINFOACTION
+	raw.ServerActionType = ARENAINFOACTION
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
-
 
 func (msg *ServerActionUnpacker) Uncover() ServerAction {
 	return msg.ServerAction
 }
 
 func (msg *ServerActionUnpacker) UnmarshalJSON(rawData []byte) error {
+	log.Println("rawData: ", string(rawData))
+
 	var raw struct {
 		ServerActionType ServerActionType `json:"serveraction_type"`
 	}
@@ -163,34 +172,35 @@ func (msg *ServerActionUnpacker) UnmarshalJSON(rawData []byte) error {
 		}
 		msg.ServerAction = message
 	default:
+		log.Printf("Unexpected: %#v", raw.ServerActionType)
 		return fmt.Errorf("unexpected type: %#v", raw.ServerActionType)
 	}
 	return nil
 }
 
 type ServerActionHandler[T any, E any] interface {
-    HandleInitialMessageAction(InitialMessageAction, E) (T, error)
-    HandleJoinArenaAction(JoinArenaAction, E) (T, error)
-    HandleServerArenaAction(ServerArenaAction, E) (T, error)
-    HandleListArenasAction(ListArenasAction, E) (T, error)
-    HandleCreateArenaAction(CreateArenaAction, E) (T, error)
-    HandleArenaInfoAction(ArenaInfoAction, E) (T, error)
+	HandleInitialMessageAction(InitialMessageAction, E) (T, error)
+	HandleJoinArenaAction(JoinArenaAction, E) (T, error)
+	HandleServerArenaAction(ServerArenaAction, E) (T, error)
+	HandleListArenasAction(ListArenasAction, E) (T, error)
+	HandleCreateArenaAction(CreateArenaAction, E) (T, error)
+	HandleArenaInfoAction(ArenaInfoAction, E) (T, error)
 }
 
 func ServerActionDecode[T any, E any](handler ServerActionHandler[T, E], data ServerAction, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case InitialMessageAction:
-        return handler.HandleInitialMessageAction(v, extraData)
-    case JoinArenaAction:
-        return handler.HandleJoinArenaAction(v, extraData)
-    case ServerArenaAction:
-        return handler.HandleServerArenaAction(v, extraData)
-    case ListArenasAction:
-        return handler.HandleListArenasAction(v, extraData)
-    case CreateArenaAction:
-        return handler.HandleCreateArenaAction(v, extraData)
-    case ArenaInfoAction:
-        return handler.HandleArenaInfoAction(v, extraData)
+	case InitialMessageAction:
+		return handler.HandleInitialMessageAction(v, extraData)
+	case JoinArenaAction:
+		return handler.HandleJoinArenaAction(v, extraData)
+	case ServerArenaAction:
+		return handler.HandleServerArenaAction(v, extraData)
+	case ListArenasAction:
+		return handler.HandleListArenasAction(v, extraData)
+	case CreateArenaAction:
+		return handler.HandleCreateArenaAction(v, extraData)
+	case ArenaInfoAction:
+		return handler.HandleArenaInfoAction(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

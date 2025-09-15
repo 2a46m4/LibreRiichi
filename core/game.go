@@ -49,6 +49,14 @@ type MahjongGame struct {
 	// The list of potential actions that need to be either taken or skipped
 	// Need to attach a timer to them
 	PendingActions []PendingAction
+
+	// List of actions performed
+	RecordedActions []ActionPerformed
+}
+
+type ActionPerformed struct {
+	Action
+	fromPlayer uint8
 }
 
 type PendingAction struct {
@@ -110,6 +118,7 @@ func (game *MahjongGame) setupGame() {
 
 	game.Results = nil
 	game.PendingActions = nil
+    game.RecordedActions = nil
 }
 
 func (game *MahjongGame) drawNewTile() (Tile, error) {

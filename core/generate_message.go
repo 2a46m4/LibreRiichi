@@ -341,6 +341,14 @@ func (obj {{ .Name}}) UnmarshalJSON(rawData []byte) error {
 
 	err := json.Unmarshal(rawData, &raw)
 
+    {{- range .Fields}}
+    {{- if .ShouldWrap}}
+    obj.{{.Name}} = raw.{{.Type}}Unpacker.{{.Name}}
+    {{- else}}
+    obj.{{.Name}} = raw.{{.Type}}
+    {{- end}}
+    {{- end}}
+
     return err
 }
 {{end}}

@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -89,10 +90,11 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				}
 				return
 			default:
-				fmt.Println("Waiting for message")
+				log.Println("Waiting for message")
 				msgType, buffer, err := conn.ReadMessage()
-				fmt.Println("Recved message: ", string(buffer))
+				log.Println("Recved message: ", string(buffer))
 				if err != nil {
+					log.Println("Error with message recv: ", err)
 					ret.DataChannel <- err
 					continue
 				}

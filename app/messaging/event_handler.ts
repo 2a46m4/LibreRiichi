@@ -2,10 +2,11 @@ import {IncomingMessage, MessageType, validate_message} from "./message";
 import {ServerResponseMessage, ServerResponseType} from "./server_response_generated";
 import {ServerEventMessage} from "./server_event_generated";
 
-class EventHandler<TIncoming> {
+export class EventHandler<TIncoming> {
     private listeners: Array<(data: TIncoming) => boolean> = []
 
-    constructor() {}
+    constructor() {
+    }
 
     handle(data: TIncoming): void {
         this.listeners.filter(listener => listener(data))
@@ -36,9 +37,9 @@ ServerMessageBus.register(keep_registered((data: IncomingMessage) => {
     }
 }))
 
-export function register_request(msg_idx: number): Promise<ServerResponseMessage> {
+export function register_request(msg_idx: number, bus = ServerMessageBus): Promise<ServerResponseMessage> {
     let {promise, resolve} = Promise.withResolvers<ServerResponseMessage>();
-    ServerMessageBus.register((msg) => {
+    bus.register((msg) => {
         if (msg.message_type === MessageType.RESPONSE && msg.message_index === msg_idx) {
             console.log("Matched outgoing message", msg_idx, ", resolving")
             resolve(msg.data)

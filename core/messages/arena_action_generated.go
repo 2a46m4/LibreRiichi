@@ -2,68 +2,70 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
-    . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"encoding/json"
+	"fmt"
+	"log"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
 type ArenaActionType uint8
 
 type ArenaActionUnpacker struct {
-    ArenaAction
+	ArenaAction
 }
 
 const (
-	STARTGAMEACTIONDATA ArenaActionType = iota
+	STARTGAMEACTIONDATA  ArenaActionType = iota
 	PLAYERQUITACTIONDATA ArenaActionType = iota
-	PLAYERACTIONDATA ArenaActionType = iota
+	PLAYERACTIONDATA     ArenaActionType = iota
 )
+
 func (StartGameActionData) ArenaActionImpl() {}
 func (obj StartGameActionData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaActionType ArenaActionType `json:"arenaaction_type"`
 	}
 
-    raw.ArenaActionType = STARTGAMEACTIONDATA
+	raw.ArenaActionType = STARTGAMEACTIONDATA
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (PlayerQuitActionData) ArenaActionImpl() {}
 func (obj PlayerQuitActionData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaActionType ArenaActionType `json:"arenaaction_type"`
 	}
 
-    raw.ArenaActionType = PLAYERQUITACTIONDATA
+	raw.ArenaActionType = PLAYERQUITACTIONDATA
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (PlayerActionData) ArenaActionImpl() {}
 func (obj PlayerActionData) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaActionType ArenaActionType `json:"arenaaction_type"`
-        Action Action 
+		Action          Action
 	}
 
-    raw.ArenaActionType = PLAYERACTIONDATA
-    raw.Action = obj.Action
+	raw.ArenaActionType = PLAYERACTIONDATA
+	raw.Action = obj.Action
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj PlayerActionData) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ArenaActionType ArenaActionType `json:"arenaaction_type"`
-        Action ActionUnpacker 
+	var raw struct {
+		ArenaActionType ArenaActionType `json:"arenaaction_type"`
+		Action          ActionUnpacker
 	}
 
 	err := json.Unmarshal(rawData, &raw)
 
-    return err
+	return err
 }
-
 
 func (msg *ArenaActionUnpacker) Uncover() ArenaAction {
 	return msg.ArenaAction
@@ -83,7 +85,10 @@ func (msg *ArenaActionUnpacker) UnmarshalJSON(rawData []byte) error {
 		message := StartGameActionData{}
 		err := json.Unmarshal(rawData, &message)
 		if err != nil {
+			log.Println("ERROR!!!!")
 			return err
+		} else {
+			log.Println("OK!!!")
 		}
 		msg.ArenaAction = message
 	case PLAYERQUITACTIONDATA:
@@ -101,25 +106,26 @@ func (msg *ArenaActionUnpacker) UnmarshalJSON(rawData []byte) error {
 		}
 		msg.ArenaAction = message
 	default:
+		log.Println("WRONG TYPE!!!", raw.ArenaActionType)
 		return fmt.Errorf("unexpected type: %#v", raw.ArenaActionType)
 	}
 	return nil
 }
 
 type ArenaActionHandler[T any, E any] interface {
-    HandleStartGameActionData(StartGameActionData, E) (T, error)
-    HandlePlayerQuitActionData(PlayerQuitActionData, E) (T, error)
-    HandlePlayerActionData(PlayerActionData, E) (T, error)
+	HandleStartGameActionData(StartGameActionData, E) (T, error)
+	HandlePlayerQuitActionData(PlayerQuitActionData, E) (T, error)
+	HandlePlayerActionData(PlayerActionData, E) (T, error)
 }
 
 func ArenaActionDecode[T any, E any](handler ArenaActionHandler[T, E], data ArenaAction, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case StartGameActionData:
-        return handler.HandleStartGameActionData(v, extraData)
-    case PlayerQuitActionData:
-        return handler.HandlePlayerQuitActionData(v, extraData)
-    case PlayerActionData:
-        return handler.HandlePlayerActionData(v, extraData)
+	case StartGameActionData:
+		return handler.HandleStartGameActionData(v, extraData)
+	case PlayerQuitActionData:
+		return handler.HandlePlayerQuitActionData(v, extraData)
+	case PlayerActionData:
+		return handler.HandlePlayerActionData(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

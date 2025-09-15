@@ -71,7 +71,7 @@ func (client Client) Loop() {
 
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
-				fmt.Println("Error: ", err)
+				log.Println("Error: ", err)
 				client.Connection.CloseConnChan()
 				client.HandleClientDestruction()
 				return

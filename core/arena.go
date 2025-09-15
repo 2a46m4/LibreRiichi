@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -241,11 +242,12 @@ func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
 	return 0, errors.New("not found")
 }
 
-// TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
 func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
+
+	log.Println("Handle start game called")
 
 	if arena.gameStarted {
 		return Unit, errors.New("Game already started")

@@ -33,6 +33,7 @@ export class Connection {
 		if (!this.ready) {
 			throw new Error("Not ready")
 		}
+	  console.log("Sending ", JSON.stringify({...msg, message_index: this.index}))
 		this.socket.send(JSON.stringify({...msg, message_index: this.index}))
 		this.index += 1
 		return this.index - 1

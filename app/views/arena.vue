@@ -1,4 +1,3 @@
-<script src="../app_state/joined_room_state.ts"></script>
 <script setup lang="ts">
 
 import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from "../styling";
@@ -51,7 +50,7 @@ async function get_arena_info() {
   room_state.room_name = ret.name
 }
 
-await get_arena_info()
+get_arena_info()
 
 let callback = (data: ServerEventMessage) => {
   console.log("Arena listener called")
@@ -62,7 +61,7 @@ let callback = (data: ServerEventMessage) => {
         case ArenaEventType.GameStartedEvent:
           in_game = true
           ArenaMessageBus.unregister(callback_idx)
-          start_game()
+		  // TODO
           break;
         case ArenaEventType.PlayerJoinedEvent:
           players.value.push(message.name);
@@ -115,7 +114,7 @@ async function start_game() {
   <Suspense>
     <div>
       <div :class="BoxStyling">
-        <h1 :class="H1Styling">{{ room_name }}</h1>
+        <h1 :class="H1Styling">{{ room_state.room_name }}</h1>
       </div>
       <div :class="BoxStyling">
         <div :class="FlexBox">
