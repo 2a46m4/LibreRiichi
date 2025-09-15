@@ -71,13 +71,14 @@ func (obj ArenaBoardEvent) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
-func (obj ArenaBoardEvent) UnmarshalJSON(rawData []byte) error {
+func (obj *ArenaBoardEvent) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         ArenaEventType ArenaEventType `json:"arenaevent_type"`
         BoardEvent BoardEventUnpacker `json:"board_event"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
+    obj.BoardEvent = raw.BoardEvent.BoardEvent
 
     return err
 }

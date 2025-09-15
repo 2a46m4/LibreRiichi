@@ -328,7 +328,7 @@ func (obj {{ .Name}}) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 {{if .ShouldWrap }}
-func (obj {{ .Name}}) UnmarshalJSON(rawData []byte) error {
+func (obj *{{ .Name}}) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         {{$.InterfaceName}}Type {{$.InterfaceName}}Type ` + "`" + `json:"{{lower $.InterfaceName}}_type"` + "`" + `
 		{{- range .Fields}}
@@ -343,9 +343,9 @@ func (obj {{ .Name}}) UnmarshalJSON(rawData []byte) error {
 
     {{- range .Fields}}
     {{- if .ShouldWrap}}
-    obj.{{.Name}} = raw.{{.Type}}Unpacker.{{.Name}}
+    obj.{{.Name}} = raw.{{.Name}}.{{.Type}}
     {{- else}}
-    obj.{{.Name}} = raw.{{.Type}}
+    obj.{{.Name}} = raw.{{.Name}}
     {{- end}}
     {{- end}}
 

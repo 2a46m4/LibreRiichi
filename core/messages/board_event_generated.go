@@ -34,7 +34,7 @@ func (obj PlayerActionEvent) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
-func (obj PlayerActionEvent) UnmarshalJSON(rawData []byte) error {
+func (obj *PlayerActionEvent) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         BoardEventType BoardEventType `json:"boardevent_type"`
         Action ActionUnpacker `json:"action_data"`
@@ -42,6 +42,8 @@ func (obj PlayerActionEvent) UnmarshalJSON(rawData []byte) error {
 	}
 
 	err := json.Unmarshal(rawData, &raw)
+    obj.Action = raw.Action.Action
+    obj.FromPlayer = raw.FromPlayer
 
     return err
 }
@@ -59,13 +61,14 @@ func (obj PotentialActionEvent) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
-func (obj PotentialActionEvent) UnmarshalJSON(rawData []byte) error {
+func (obj *PotentialActionEvent) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         BoardEventType BoardEventType `json:"boardevent_type"`
         Action ActionUnpacker `json:"action_data"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
+    obj.Action = raw.Action.Action
 
     return err
 }

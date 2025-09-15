@@ -90,13 +90,14 @@ func (obj Skip) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
-func (obj Skip) UnmarshalJSON(rawData []byte) error {
+func (obj *Skip) UnmarshalJSON(rawData []byte) error {
     var raw struct {
         ActionType ActionType `json:"action_type"`
         ActionToSkip ActionUnpacker `json:"action_to_skip"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
+    obj.ActionToSkip = raw.ActionToSkip.Action
 
     return err
 }
