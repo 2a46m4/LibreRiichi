@@ -90,3 +90,11 @@ go generate ./messages/
 ## Key Dependencies
 - **Go**: WebSocket (`gorilla/websocket`), UUID generation (`google/uuid`)
 - **Frontend**: Vue 3, TypeScript, Tailwind CSS, Pinia, Parcel bundler
+
+## IMPORTANT: Sound Notification
+
+After finishing responding to my request or running a command, run this command to notify me by sound:
+
+```bash
+afplay /System/Library/Sounds/Funk.aiff
+```

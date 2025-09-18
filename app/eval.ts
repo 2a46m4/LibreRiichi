@@ -9,6 +9,7 @@ import {ArenaActionType} from "./messaging/arena_action_generated";
 import {BoardEvent, BoardEventType} from "./messaging/board_event_generated";
 import { SetupType } from "./types/setup";
 import { decode, Tile } from "./game/tile";
+import { ActionType } from "./game/action";
 
 let busses: EventHandler<IncomingMessage>[] = Array(4).fill(0).map(() => new EventHandler())
 
@@ -167,33 +168,44 @@ let round_number = 0
 function handle_game(i: number, event: BoardEvent) {
 	game_started = true
 
-    if (event.boardevent_type !== BoardEventType.GameSetupEvent) {
-        throw new Error("Wrong event type")
-    }
-
-    for (let setup of event.setup) {
-        switch (setup.setup_type) {
-			case SetupType.INITIAL_TILES:
-				initial_hand[i] = Tile.from(setup.data)
-				break
-			case SetupType.DORA:
-				dora = new Tile(setup.data)
-				break
-			case SetupType.STARTING_POINTS:
-				points[i] = setup.data[i]
-				break
-			case SetupType.PLAYER_NUMBER:
-				player_n = setup.data
-				break
-			case SetupType.PLAYER_ORDER:
-				player_order = decode(setup.data)
-				break
-			case SetupType.ROUND_WIND:
-				round_wind = setup.data
-				break
-			case SetupType.ROUND_NUMBER:
-				round_number = setup.data
-				break
-        }
-    }
+    if (event.boardevent_type === BoardEventType.GameSetupEvent) {
+		for (let setup of event.setup) {
+			switch (setup.setup_type) {
+				case SetupType.INITIAL_TILES:
+					initial_hand[i] = Tile.from(setup.data)
+					break
+				case SetupType.DORA:
+					dora = new Tile(setup.data)
+					break
+				case SetupType.STARTING_POINTS:
+					points[i] = setup.data[i]
+					break
+				case SetupType.PLAYER_NUMBER:
+					player_n = setup.data
+					break
+				case SetupType.PLAYER_ORDER:
+					player_order = decode(setup.data)
+					break
+				case SetupType.ROUND_WIND:
+					round_wind = setup.data
+					break
+				case SetupType.ROUND_NUMBER:
+					round_number = setup.data
+					break
+			}
+		}		
+    } else if (event.boardevent_type === BoardEventType.PotentialActionEvent) {
+		console.log("potential action: ", event.action_data)
+		console.log("initial hand: ", initial_hand)
+		switch (event.action_data.action_type) {
+			case ActionType.TOSS:
+				console.log("toss")
+		}
+	} else if (event.boardevent_type === BoardEventType.PlayerActionEvent) {
+		console.log("action occurred:", event.action_data, "from player", event.from_player)
+		console.log("initial hand: ", initial_hand)
+		
+	} else {
+		throw new Error("Bad state")
+	}
 }

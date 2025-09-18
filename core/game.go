@@ -1,6 +1,8 @@
 package core
 
 import (
+	"log"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
@@ -235,9 +237,13 @@ func (game *MahjongGame) StartNewGame() ([][]Setup, error) {
 
 // Returns the next events in the game, and if the game should end.
 func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
+	log.Println("Getting next event")
+
 	switch game.GameState {
 
 	case CURRENT_TURN: // The current player can make a toss move
+		log.Println("Current turn")
+
 		// We should only reach this state when someone makes a post-turn action like pon.
 		// Then the player only has the choice to discard or kan
 
@@ -253,6 +259,8 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		shouldEnd = false
 
 	case CURRENT_TURN_PLAYED: // Get post-toss actions
+		log.Println("Current turn played")
+
 		// We should wait for all post toss actions to finish before moving to the next turn
 		pendingActions, err := game.getPostTossActions()
 		if err != nil {
@@ -276,12 +284,18 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		shouldEnd = false
 
 	case POST_TURN_PLAYED: // The post-toss has been played, we should progress to the next turn
+		log.Println("Post turn played")
+
+		tile, err := game.drawNewTile()
+
 		game.GameState = CURRENT_TURN
 		game.incrementTurn()
-		tile, err := game.drawNewTile()
+
 		if errors.Is(err, GameEndError{}) {
 			game.GameState = GAME_ENDED
 			return nil, true
+		} else if err != nil {
+			panic(err)
 		}
 
 		// Inform of draw and potential toss action
@@ -306,6 +320,8 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		shouldEnd = false
 
 	case GAME_ENDED:
+		log.Println("Game ended")
+
 		actions = nil
 		shouldEnd = true
 	default:

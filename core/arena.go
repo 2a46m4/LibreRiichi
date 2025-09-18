@@ -223,9 +223,12 @@ func (arena *Arena) DriveGame() error {
 // Drives the game forward
 func (arena *Arena) driveGame() error {
 
-	sendInfos, gameContinue := arena.game.GetNextEvent()
+	log.Println("Driving game")
 
-	if !gameContinue {
+	sendInfos, shouldEnd := arena.game.GetNextEvent()
+
+	if shouldEnd {
+		log.Println("Finishing")
 		arena.FinishRoundArena()
 		return nil
 	}
@@ -339,4 +342,47 @@ func (arena *Arena) FinishRoundArena() {
 // EndArena is called when the arena is finished and all players should be disconnected
 func (arena *Arena) EndArena() error {
 	return nil
+}
+
+func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
+	switch msg := msg.(type) {
+	case ArenaBoardEvent:
+		return BoardEventDecode(AltMessageHandler{}, msg.BoardEvent, Unit)
+	default:
+		return altMsg, errors.New("Not correct type")
+	}
+}
+
+type AltMessageHandler struct{}
+
+func (h AltMessageHandler) HandlePlayerActionEvent(event PlayerActionEvent, extraData UnitType) (ArenaEvent, error) {
+
+	var action Action
+	switch event_action := event.Action.(type) {
+	case Draw:
+		action = Draw{
+			DrawnTile: Hidden,
+		}
+	default:
+		panic(fmt.Sprintf("unexpected core.Action: %#v", event_action))
+	}
+
+	return ArenaBoardEvent{
+		BoardEvent: PlayerActionEvent{
+			Action:     action,
+			FromPlayer: event.FromPlayer,
+		},
+	}, nil
+}
+
+func (h AltMessageHandler) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
+}
+
+func (h AltMessageHandler) HandleGameSetupEvent(event GameSetupEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
+}
+
+func (h AltMessageHandler) HandleGameEndEvent(event GameEndEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
 }
