@@ -53,7 +53,7 @@ export interface Kan {
 
 export interface Chii {
     tile_to_chii: Tile;
-    tiles_in_hand: [2]Tile;
+    tiles_in_hand: Tile[];
 }
 
 export interface Draw {

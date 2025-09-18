@@ -20,143 +20,97 @@ export enum TileValue {
     Invalid  = 255,
 }
 
-export function is_red(i: number): boolean {
-    return (i & TileValue.RedTile) !== 0
+const TileMask = 0b11 << 4;
+const ManzuBit = 0;
+const PinzuBit = 1;
+const SouzuBit = 2;
+const HonourBit = 3;
+const NumberMask = 0b1111;
+const SpecialMask = 0b11 << 6;
+
+function decode(array: string): Uint8Array {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    const lookup = new Map<string, number>();
+    for (let i = 0; i < chars.length; i++) {
+        lookup.set(chars[i], i);
+    }
+
+    // Remove padding
+    const cleanInput = array.replace(/=/g, '');
+    const bytes: number[] = [];
+
+    for (let i = 0; i < cleanInput.length; i += 4) {
+        const a = lookup.get(cleanInput[i]) || 0;
+        const b = lookup.get(cleanInput[i + 1]) || 0;
+        const c = lookup.get(cleanInput[i + 2]) || 0;
+        const d = lookup.get(cleanInput[i + 3]) || 0;
+
+        const bitmap = (a << 18) | (b << 12) | (c << 6) | d;
+
+        bytes.push((bitmap >> 16) & 255);
+        if (i + 2 < cleanInput.length) bytes.push((bitmap >> 8) & 255);
+        if (i + 3 < cleanInput.length) bytes.push(bitmap & 255);
+    }
+
+    return new Uint8Array(bytes);
 }
 
-export function is_dora(i: number): boolean {
-    return (i & TileValue.DoraTile) !== 0
-}
+export class Tile {
+    private value: number
 
-// Not good
-export function decode_tile (i: number): Tile {
-    try {
-        return NumberTile.from_number(i)
-    }
-    catch (error) {}
-    try {
-        return WindTile.from_number(i)
-    }
-    catch (error) {}
-    return DragonTile.from_number(i)
-}
-
-export abstract class Tile {
-    abstract red: boolean
-    abstract dora: boolean
-    abstract get_text_representation(): string
-
-    dora_mask(): number {
-        if (this.dora) {
-            return TileValue.DoraTile
-        } else {
-            return 0
-        }
+    constructor(value: number) {
+        this.value = value
     }
 
-    red_mask() {
-        if (this.red) {
-            return TileValue.RedTile
-        } else {
-            return 0
-        }
-    }
-}
-
-export class NumberTile extends Tile {
-    base: TileValue.Manzu | TileValue.Pinzu | TileValue.Souzu
-    number: number
-    red: boolean
-    dora: boolean
-
-    constructor(base: TileValue.Manzu | TileValue.Pinzu | TileValue.Souzu,
-                number: number,
-                red: boolean,
-                dora: boolean) {
-        super();
-        this.base = base
-        this.number = number
-        this.red = red
-        this.dora = dora
+    get getValue(): number {
+        return this.value;
     }
 
-    static from_number(i: number): NumberTile {
-        if (i >= TileValue.Manzu && i < TileValue.Manzu + 9) {
-            return new NumberTile(TileValue.Manzu, i - TileValue.Manzu, is_red(i), is_dora(i))
-        }
-        if (i >= TileValue.Pinzu && i < TileValue.Pinzu + 9) {
-            return new NumberTile(TileValue.Pinzu, i - TileValue.Pinzu, is_red(i), is_dora(i))
-        }
-        if (i >= TileValue.Souzu && i < TileValue.Souzu + 9) {
-            return new NumberTile(TileValue.Souzu, i - TileValue.Souzu, is_red(i), is_dora(i))
-        }
-        throw new Error("Invalid tile")
+    clearRedOrDora(): Tile {
+        return new Tile(this.value & ~(TileValue.DoraTile | TileValue.RedTile));
     }
 
-    get_text_representation(): string {
-        switch (this.base) {
-            case TileValue.Manzu: return this.number + "M"
-            case TileValue.Pinzu: return this.number + "P"
-            case TileValue.Souzu: return this.number + "S"
-        }
+    isInvalid(): boolean {
+        return this.value === TileValue.Invalid;
     }
 
-    get tile_value(): TileValue {
-        return (this.base + this.number) | this.dora_mask() | this.red_mask()
+    isHidden(): boolean {
+        return this.value === TileValue.Hidden;
     }
 
-    set tile_value(value: number) {
-       Object.assign(this, NumberTile.from_number(value as number))
-    }
-}
-
-export class WindTile extends Tile {
-    tile_value: TileValue.EastTile | TileValue.SouthTile | TileValue.WestTile | TileValue.NorthTile
-    dora: boolean;
-    red: boolean;
-
-    constructor(tile_value: TileValue.EastTile | TileValue.SouthTile | TileValue.WestTile | TileValue.NorthTile,
-                red: boolean,
-                dora: boolean) {
-
-        super();
-        this.tile_value = tile_value
-        this.dora = dora
-        this.red = red
+    isHonour(): boolean {
+        return (this.value & TileMask) === HonourBit;
     }
 
-    static from_number(i: number): WindTile {
-        if (i >= TileValue.EastTile && i < TileValue.EastTile + 4) {
-            return new WindTile(i, is_red(i), is_dora(i))
-        }
-        throw new Error("Invalid tile")
+    isWind(): boolean {
+        return this.value >= 48 && this.value <= 51;
     }
 
-    get_text_representation(): string {
-        return (this.tile_value - TileValue.EastTile) + "Z";
-    }
-}
-
-export class DragonTile extends Tile {
-    tile_value: TileValue.Sangenpai
-    dora: boolean;
-    red: boolean;
-    constructor(tile_value: TileValue.Sangenpai, red: boolean, dora: boolean) {
-        super();
-        this.tile_value = tile_value
-        this.dora = dora
-        this.red = red
+    isDragon(): boolean {
+        return this.value >= 52 && this.value <= 54;
     }
 
-    static from_number(i: number): DragonTile {
-        if (i >= TileValue.Sangenpai && i < TileValue.Sangenpai + 4) {
-            return new DragonTile(i, is_red(i), is_dora(i))
-        }
-        throw new Error("Invalid tile")
+    isManzu(): boolean {
+        return (this.value & TileMask) === ManzuBit;
     }
 
-    get_text_representation(): string {
-        return (this.tile_value - TileValue.Sangenpai) + "Z";
+    isPinzu(): boolean {
+        return (this.value & TileMask) === PinzuBit;
     }
 
+    getTileNumber(): number {
+        return this.value & NumberMask;
+    }
+
+    setRedTile(): Tile {
+        return new Tile(this.value | TileValue.RedTile);
+    }
+
+    setDoraTile(): Tile {
+        return new Tile(this.value | TileValue.DoraTile);
+    }
+
+    setTileNumber(num: number): Tile {
+        return new Tile((this.value & (TileMask | SpecialMask)) | num);
+    }
 }

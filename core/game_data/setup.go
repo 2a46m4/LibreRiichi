@@ -22,6 +22,7 @@ type Setup struct {
 	Data any       `json:"data"`
 }
 
+// TODO: Finish
 func (msg *Setup) UnmarshalJSON(rawData []byte) error {
 	var raw struct {
 		SetupType SetupType       `json:"setup_type"`

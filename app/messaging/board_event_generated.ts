@@ -2,6 +2,7 @@
 
 // BoardEvent Union Type and Enum
 import {Action} from "../game/action";
+import {Setup} from "../types/setup";
 
 export type BoardEvent = PlayerActionEvent | PotentialActionEvent | GameSetupEvent | GameEndEvent;
 
@@ -23,9 +24,6 @@ export interface PlayerActionEvent {
 export interface PotentialActionEvent {
     boardevent_type: BoardEventType.PotentialActionEvent;
     action_data: Action;
-}
-
-class Setup {
 }
 
 export interface GameSetupEvent {
