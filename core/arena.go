@@ -38,6 +38,12 @@ type MessageSendInfo struct {
 
 type InfoList []MessageSendInfo
 
+type RoomFullError struct{}
+
+func (RoomFullError) Error() string {
+	return "Room is full"
+}
+
 func (list *InfoList) Add(data ...MessageSendInfo) *InfoList {
 	*list = append(*list, data...)
 	return list
@@ -184,6 +190,10 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 
 	arena.Lock()
 	defer arena.Unlock()
+
+	if len(arena.agents) >= 4 {
+		return RoomFullError{}
+	}
 
 	arena.agents = append(arena.agents, agent)
 

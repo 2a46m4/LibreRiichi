@@ -118,7 +118,7 @@ func (game *MahjongGame) setupGame() {
 
 	game.Results = nil
 	game.PendingActions = nil
-    game.RecordedActions = nil
+	game.RecordedActions = nil
 }
 
 func (game *MahjongGame) drawNewTile() (Tile, error) {
@@ -651,22 +651,4 @@ func (MahjongGame) GetGameResults() (GameResult, error) {
 // Returns the maximum amount of players
 func (MahjongGame) GetMaxPlayers() int {
 	return 4
-}
-
-func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
-	// TODO
-	// But we should just explicitly send the actual messages instead
-	// i.e. for each player, send its own message
-	// Instead of relying on this to distinguish it
-
-	return altMsg, err
-
-	// switch msg.(type) {
-	// case ArenaBoardEvent:
-	// 	eventData := msg.Data.(ArenaBoardEventData)
-	// 	BoardEventDispatch(AltMessageHandler{}, eventData.BoardEvent)
-	// 	return ArenaBoardEvent{}, nil
-	// default:
-	// 	return altMsg, errors.New("Not correct type")
-	// }
 }

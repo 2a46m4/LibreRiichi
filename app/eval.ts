@@ -8,7 +8,7 @@ import {ArenaEventType} from "./messaging/arena_event_generated";
 import {ArenaActionType} from "./messaging/arena_action_generated";
 import {BoardEvent, BoardEventType} from "./messaging/board_event_generated";
 import { SetupType } from "./types/setup";
-import { Tile } from "./game/tile";
+import { decode, Tile } from "./game/tile";
 
 let busses: EventHandler<IncomingMessage>[] = Array(4).fill(0).map(() => new EventHandler())
 
@@ -131,7 +131,7 @@ Promise.all(conns.map(async (conn, idx) => {
 
     console.log("Joined room: ", idx)
   }))
-}).then(async ()=> {
+}).then(async () => {
   let msg_idx = conns[0].send(
       {
         message_type: MessageType.REQUEST,
@@ -157,34 +157,43 @@ Promise.all(conns.map(async (conn, idx) => {
 
 let game_started = false
 let initial_hand = [new Array(), new Array(), new Array(), new Array()]
+let dora = new Tile(0)
+let points = Array(4).fill(0)
+let player_n = new Uint8Array()
+let player_order = Array(4).fill(0)
+let round_wind = 0
+let round_number = 0
 
 function handle_game(i: number, event: BoardEvent) {
-    if (game_started) {
+	game_started = true
 
-    } else {
-        if (event.boardevent_type !== BoardEventType.GameSetupEvent) {
-            throw new Error("Wrong event type")
-        }
-
-        game_started = true
-
-        for (let setup of event.setup) {
-            switch (setup.setup_type) {
-				case SetupType.INITIAL_TILES:
-					initial_hand[i] = Tile.from(setup.data)
-					console.log("Initial: ", initial_hand[i])
-					console.log("Tiles in hand: ", Tile.get_string_representation(initial_hand[i]))
-				case SetupType.DORA:
-				case SetupType.STARTING_POINTS:
-				case SetupType.PLAYER_NUMBER:
-				case SetupType.PLAYER_ORDER:
-				case SetupType.ROUND_WIND:
-				case SetupType.ROUND_NUMBER:
-            }
-        }
-
+    if (event.boardevent_type !== BoardEventType.GameSetupEvent) {
+        throw new Error("Wrong event type")
     }
 
-
-  console.log(i, event)
+    for (let setup of event.setup) {
+        switch (setup.setup_type) {
+			case SetupType.INITIAL_TILES:
+				initial_hand[i] = Tile.from(setup.data)
+				break
+			case SetupType.DORA:
+				dora = new Tile(setup.data)
+				break
+			case SetupType.STARTING_POINTS:
+				points[i] = setup.data[i]
+				break
+			case SetupType.PLAYER_NUMBER:
+				player_n = setup.data
+				break
+			case SetupType.PLAYER_ORDER:
+				player_order = decode(setup.data)
+				break
+			case SetupType.ROUND_WIND:
+				round_wind = setup.data
+				break
+			case SetupType.ROUND_NUMBER:
+				round_number = setup.data
+				break
+        }
+    }
 }

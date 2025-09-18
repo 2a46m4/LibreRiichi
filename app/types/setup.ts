@@ -24,7 +24,7 @@ export type Dora = {
 
 export type StartingPoints = {
     setup_type: SetupType.STARTING_POINTS,
-    data: number
+    data: number[]
 }
 
 export type PlayerNumber = {

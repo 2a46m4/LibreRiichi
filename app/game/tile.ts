@@ -29,7 +29,7 @@ const HonourBit = 3;
 const NumberMask = 0b1111;
 const SpecialMask = 0b11 << 6;
 
-function decode(array: string): Uint8Array {
+export function decode(array: string): Uint8Array {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
     const lookup = new Map<string, number>();
     for (let i = 0; i < chars.length; i++) {
@@ -54,10 +54,6 @@ function decode(array: string): Uint8Array {
     }
 
     return new Uint8Array(bytes);
-}
-
-export function get_string_representation() {
-
 }
 
 export class Tile {
