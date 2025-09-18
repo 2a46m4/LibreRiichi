@@ -1,12 +1,14 @@
-import { Connection, websocket_address } from "./messaging/connection";
-import { IncomingMessage, MessageType, validate_message } from "./messaging/message";
-import { EventHandler, keep_registered, register_request } from "./messaging/event_handler";
-import { ServerActionType } from "./messaging/server_action_generated";
-import { ServerResponseType } from "./messaging/server_response_generated";
-import { ServerEventMessage, ServerEventType } from "./messaging/server_event_generated";
-import { ArenaEventType } from "./messaging/arena_event_generated";
-import { ArenaActionType } from "./messaging/arena_action_generated";
-import { BoardEvent } from "./messaging/board_event_generated";
+import {Connection, websocket_address} from "./messaging/connection";
+import {IncomingMessage, MessageType, validate_message} from "./messaging/message";
+import {EventHandler, keep_registered, register_request} from "./messaging/event_handler";
+import {ServerActionType} from "./messaging/server_action_generated";
+import {ServerResponseType} from "./messaging/server_response_generated";
+import {ServerEventMessage, ServerEventType} from "./messaging/server_event_generated";
+import {ArenaEventType} from "./messaging/arena_event_generated";
+import {ArenaActionType} from "./messaging/arena_action_generated";
+import {BoardEvent, BoardEventType} from "./messaging/board_event_generated";
+import { SetupType } from "./types/setup";
+import { Tile } from "./game/tile";
 
 let busses: EventHandler<IncomingMessage>[] = Array(4).fill(0).map(() => new EventHandler())
 
@@ -103,7 +105,7 @@ Promise.all(conns.map(async (conn, idx) => {
   }
 
   if (!msg.success) {
-	throw new Error("Could not create room: " + msg.fail_reason)
+	  console.error("Could not create room: " + msg.fail_reason)
   }
 }).then(()=>{
   return Promise.all(conns.map(async (conn, idx)=>{
@@ -153,6 +155,36 @@ Promise.all(conns.map(async (conn, idx) => {
 
 })
 
+let game_started = false
+let initial_hand = [new Array(), new Array(), new Array(), new Array()]
+
 function handle_game(i: number, event: BoardEvent) {
+    if (game_started) {
+
+    } else {
+        if (event.boardevent_type !== BoardEventType.GameSetupEvent) {
+            throw new Error("Wrong event type")
+        }
+
+        game_started = true
+
+        for (let setup of event.setup) {
+            switch (setup.setup_type) {
+				case SetupType.INITIAL_TILES:
+					initial_hand[i] = Tile.from(setup.data)
+					console.log("Initial: ", initial_hand[i])
+					console.log("Tiles in hand: ", Tile.get_string_representation(initial_hand[i]))
+				case SetupType.DORA:
+				case SetupType.STARTING_POINTS:
+				case SetupType.PLAYER_NUMBER:
+				case SetupType.PLAYER_ORDER:
+				case SetupType.ROUND_WIND:
+				case SetupType.ROUND_NUMBER:
+            }
+        }
+
+    }
+
+
   console.log(i, event)
 }

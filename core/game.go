@@ -183,59 +183,6 @@ func (game MahjongGame) findAction(action Action, fromPlayer uint8) (int, error)
 	return 0, errors.New("Can't find action")
 }
 
-// func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEvent {
-// 	return ArenaBoardEvent{eventType}
-// }
-
-// func encodePlayerAction(data ActionData, fromPlayer uint8) ArenaBoardEventData {
-// 	return encodeBoardEvent(
-// 		PlayerActionEventType,
-// 		PlayerActionEventData{ActionData: data, FromPlayer: fromPlayer},
-// 	)
-// }
-
-// func makeMessage(visibility Visibility, sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
-// 	return MessageSendInfo{
-// 		Events:     data,
-// 		Visibility: visibility,
-// 		SendTo:     sendTo,
-// 	}
-// }
-
-// func makeGlobalMessage(data ...ArenaBoardEventData) MessageSendInfo {
-// 	return MessageSendInfo{
-// 		Events:     data,
-// 		Visibility: GLOBAL,
-// 		SendTo:     0,
-// 	}
-// }
-
-// func globalPlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
-// 	return MessageSendInfo{
-// 		Events: []ArenaBoardEventData{
-// 			encodePlayerAction(data, fromPlayer),
-// 		},
-// 		Visibility: GLOBAL,
-// 		SendTo:     0,
-// 	}
-// }
-
-// func privatePlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
-// 	return MessageSendInfo{
-// 		Events: []ArenaBoardEventData{
-// 			encodePlayerAction(data, fromPlayer),
-// 		},
-// 		Visibility: PLAYER,
-// 		SendTo:     fromPlayer,
-// 	}
-// }
-
-// func gameEndMessage(data GameResult) ArenaBoardEventData {
-// 	return ArenaBoardEventData{
-// 		BoardEvent: GameEndEventData{data},
-// 	}
-// }
-
 // ==================== PUBLIC FUNCTIONS ====================
 
 // Returns data to send to clients when a new game can be started, otherwise an error

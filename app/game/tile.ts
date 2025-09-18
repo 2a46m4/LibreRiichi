@@ -21,6 +21,7 @@ export enum TileValue {
 }
 
 const TileMask = 0b11 << 4;
+const TileShift = 4;
 const ManzuBit = 0;
 const PinzuBit = 1;
 const SouzuBit = 2;
@@ -55,6 +56,10 @@ function decode(array: string): Uint8Array {
     return new Uint8Array(bytes);
 }
 
+export function get_string_representation() {
+
+}
+
 export class Tile {
     private value: number
 
@@ -62,55 +67,108 @@ export class Tile {
         this.value = value
     }
 
-    get getValue(): number {
-        return this.value;
+	static from(base64_string: string): Tile[] {
+		let result: Tile[] = []
+		decode(base64_string).forEach((n)=>result.push(new Tile(n)))
+		return result
+	}
+
+    static get_string_representation(tile_array: Tile[]) {
+		let sorted = tile_array
+			.map((a)=>a.clear_red_or_dora())
+			.sort((a, b)=> (a.value > b.value)? 1 : -1)
+
+		let str = ""
+
+		for (let i = 0; i < sorted.length; ) {
+			let current_meld = sorted[i].value & TileMask
+			let meld_list = [sorted[i]]
+			let j = i + 1
+
+			while(j < sorted.length && (sorted[j].value & TileMask) == current_meld) {
+				meld_list.push(sorted[j])
+				j++
+			}
+
+			i = j
+
+			switch(current_meld >> TileShift) {
+				case ManzuBit:
+					console.log(meld_list
+							.map((tile) => (tile.value & NumberMask) + 1)
+							.join(""))
+					str += meld_list
+							.map((tile) => (tile.value & NumberMask) + 1)
+							.join("") + "M"
+					break
+				case SouzuBit:
+					str += meld_list
+							.map((tile) => (tile.value & NumberMask) + 1)
+							.join("") + "S"
+					break
+				case PinzuBit:
+					str += meld_list
+							.map((tile) => (tile.value & NumberMask) + 1)
+							.join("") + "P"
+					break
+				case HonourBit:
+					str += meld_list
+							.map((tile) => tile.value - 47)
+							.join("") + "Z"
+					break
+				default:
+					throw new Error("Wrong state")
+			}
+		}
+
+		return str
     }
 
-    clearRedOrDora(): Tile {
+    clear_red_or_dora(): Tile {
         return new Tile(this.value & ~(TileValue.DoraTile | TileValue.RedTile));
     }
 
-    isInvalid(): boolean {
+    is_invalid(): boolean {
         return this.value === TileValue.Invalid;
     }
 
-    isHidden(): boolean {
+    is_hidden(): boolean {
         return this.value === TileValue.Hidden;
     }
 
-    isHonour(): boolean {
+    is_honour(): boolean {
         return (this.value & TileMask) === HonourBit;
     }
 
-    isWind(): boolean {
+    is_wind(): boolean {
         return this.value >= 48 && this.value <= 51;
     }
 
-    isDragon(): boolean {
+    is_dragon(): boolean {
         return this.value >= 52 && this.value <= 54;
     }
 
-    isManzu(): boolean {
+	is_manzu(): boolean {
         return (this.value & TileMask) === ManzuBit;
     }
 
-    isPinzu(): boolean {
+    is_pinzu(): boolean {
         return (this.value & TileMask) === PinzuBit;
     }
 
-    getTileNumber(): number {
+    get_tile_number(): number {
         return this.value & NumberMask;
     }
 
-    setRedTile(): Tile {
+    set_red_tile(): Tile {
         return new Tile(this.value | TileValue.RedTile);
     }
 
-    setDoraTile(): Tile {
+    set_dora_tile(): Tile {
         return new Tile(this.value | TileValue.DoraTile);
     }
 
-    setTileNumber(num: number): Tile {
+    set_tile_number(num: number): Tile {
         return new Tile((this.value & (TileMask | SpecialMask)) | num);
     }
 }

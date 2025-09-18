@@ -1,5 +1,3 @@
-import {decode_tile} from "../game/tile";
-
 export enum SetupType {
   INITIAL_TILES = 0,
   DORA = 1,
