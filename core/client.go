@@ -2,8 +2,8 @@ package core
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
@@ -15,56 +15,12 @@ type Client struct {
 	Name       string
 	ID         uuid.UUID
 	Connection ConnChan
-	Recv       chan Message
+	Recv       chan any
 	Arena      *Arena
-}
-
-type DispatchResult struct {
-	Message Message
-	DoSend  bool
-}
-
-func NoSend() DispatchResult {
-	return DispatchResult{
-		Message: Message{},
-		DoSend:  false,
-	}
-}
-
-func FormatMessage(msgType MessageType, data any) DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: msgType,
-			Data:        data,
-		},
-		DoSend: true,
-	}
-}
-
-func SuccessMsg() DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: GenericResponseType,
-			Data: GenericResponseData{
-				Success:    true,
-				FailReason: "",
-			},
-		},
-		DoSend: true,
-	}
-}
-
-func FailureMsg(err string) DispatchResult {
-	return DispatchResult{
-		Message: Message{
-			MessageType: GenericResponseType,
-			Data: GenericResponseData{
-				Success:    false,
-				FailReason: err,
-			},
-		},
-		DoSend: true,
-	}
+	// We will respond with this index
+	ResponseIndex uint
+	// We will respond with this index
+	EventIndex uint
 }
 
 func MakeClient(connection ConnChan) (Client, error) {
@@ -74,11 +30,13 @@ func MakeClient(connection ConnChan) (Client, error) {
 	}
 
 	client := Client{
-		Name:       "Unnamed User",
-		ID:         uuid,
-		Connection: connection,
-		Recv:       make(chan Message, 32),
-		Arena:      nil,
+		Name:          "Unnamed User",
+		ID:            uuid,
+		Connection:    connection,
+		Recv:          make(chan any, 32),
+		Arena:         nil,
+		ResponseIndex: 0,
+		EventIndex:    0,
 	}
 	fmt.Println("Making new client", client)
 	return client, nil
@@ -87,119 +45,172 @@ func MakeClient(connection ConnChan) (Client, error) {
 func (client Client) Loop() {
 	fmt.Println(client.Name, client.ID, client.Connection)
 	for {
+		fmt.Println("Loop")
 		select {
 		case send := <-client.Recv:
-			bytes, err := json.Marshal(send)
+			var msg Message
+
+			switch send.(type) {
+			case ServerAction:
+				panic("Wrong type")
+			case ServerResponse:
+				panic("Wrong type")
+			case ServerEvent:
+				msg.MessageType = EVENT
+				msg.MessageIndex = client.EventIndex
+				msg.Data = send
+				client.EventIndex += 1
+			}
+
+			bytes, err := json.Marshal(msg)
 			if err != nil {
 				panic(err)
 			}
 			fmt.Println("Sending", string(bytes))
 			client.Connection.Send(bytes)
+
 		case recv := <-client.Connection.RecvChan():
 			if err, ok := recv.(error); ok {
-				fmt.Println("Error: ", err)
+				log.Println("Error: ", err)
 				client.Connection.CloseConnChan()
 				client.HandleClientDestruction()
 				return
 			}
 
-			msg := Message{}
-			err := json.Unmarshal(recv.([]byte), &msg)
+			msg, err := ReceiveRequest(recv.([]byte),
+				client.ResponseIndex,
+			)
+
+			log.Println("Message received: ", msg)
+
 			if err != nil {
-				fmt.Println("Error unmarshalling:", err)
+				log.Println(err)
 				continue
 			}
-			dispatchResult, err := ServerActionDispatch(&client, msg)
+			dispatchResult, err := ServerActionDecode(&client, msg, nil)
 			if err != nil {
-				fmt.Println("Problem with message during dispatch:", err)
+				log.Println("Problem with message during dispatch:", err)
+				continue
 			}
 
-			if dispatchResult.DoSend {
-				dispatchResult.Message.MessageIndex = msg.MessageIndex
-				client.GetSendChannel() <- dispatchResult.Message
+			var ret_msg Message
+			ret_msg.MessageType = RESPONSE
+			ret_msg.MessageIndex = client.ResponseIndex
+			ret_msg.Data = dispatchResult
+			client.ResponseIndex += 1
+			bytes, err := json.Marshal(ret_msg)
+			if err != nil {
+				panic(err)
 			}
+			fmt.Println("Sending", string(bytes))
+			client.Connection.Send(bytes)
 		}
 	}
 }
 
-func (client *Client) HandleListArenas(data ListArenasActionData) (DispatchResult, error) {
-	list := ListArenas()
-	return DispatchResult{
-		Message: Message{
-			MessageType: ListArenasResponseType,
-			Data: ListArenasResponseData{
-				Success:   true,
-				ArenaList: list,
-			},
-		},
-		DoSend: true,
+func (client *Client) HandleInitialMessageAction(msg InitialMessageAction, other any) (any, error) {
+	log.Println("Handling initial message action")
+	client.Name = msg.Name
+	return GenericResponse{
+		Success:    true,
+		FailReason: "",
 	}, nil
 }
 
-// HandleJoinArenaAction implements ServerHandler.
-func (client *Client) HandleJoinArena(data JoinArenaActionData) (DispatchResult, error) {
+func (client *Client) HandleListArenasAction(data ListArenasAction, other any) (any, error) {
+	log.Println("Handling list arenas action")
+
+	list := ListArenas()
+	return ListArenasResponse{
+		Success:   true,
+		ArenaList: list,
+	}, nil
+}
+
+func (client *Client) HandleJoinArenaAction(data JoinArenaAction, other any) (any, error) {
 	if client.Arena != nil {
-		err := errors.New("Already in an arena")
-		return FailureMsg(err.Error()), err
+		return GenericResponse{
+			Success:    false,
+			FailReason: "Already in an arena",
+		}, nil
 	}
 
 	arena, err := GetArenaFromName(data.ArenaName)
 	if err != nil {
-		return FailureMsg(err.Error()), err
+		return GenericResponse{
+			Success:    false,
+			FailReason: err.Error(),
+		}, nil
 	}
 
 	err = arena.JoinArena(client, true)
 	if err != nil {
-		return FailureMsg(err.Error()), err
+		return GenericResponse{
+			Success:    false,
+			FailReason: err.Error(),
+		}, nil
 	}
 
 	client.Arena = arena
-	return SuccessMsg(), nil
+	return GenericResponse{
+		Success:    true,
+		FailReason: "",
+	}, nil
 }
 
-func (client *Client) HandleInitialMessage(data InitialMessageActionData) (DispatchResult, error) {
-	if len(data.Name) != 0 {
-		fmt.Println("Renamed user to", data.Name)
-		client.Name = data.Name
+func (client *Client) HandleServerArenaAction(action ServerArenaAction, other any) (any, error) {
+	if client.Arena == nil {
+		return GenericResponse{
+			Success:    false,
+			FailReason: "No arena found",
+		}, nil
 	}
-	return SuccessMsg(), nil
-}
 
-func (client *Client) HandleServerArena(action ServerArenaActionData) (DispatchResult, error) {
-	if client.Arena != nil {
-		idx, err := client.Arena.getPlayerIdx(client)
-		if err != nil {
-			return DispatchResult{}, err
-		}
-
-		// TODO: Do something with this result
-		ArenaActionDispatch(client.Arena, action.ArenaMessage, idx)
-		return DispatchResult{}, nil
+	idx, err := client.Arena.getPlayerIdx(client)
+	if err != nil {
+		return GenericResponse{
+			Success:    false,
+			FailReason: err.Error(),
+		}, nil
 	}
-	err := errors.New("No arena found")
-	return FailureMsg(err.Error()), err
+
+	_, err = ArenaActionDecode(client.Arena, action.ArenaAction, idx)
+	if err != nil {
+		return GenericResponse{
+			Success:    false,
+			FailReason: err.Error(),
+		}, nil
+	}
+
+	return GenericResponse{
+		Success:    true,
+		FailReason: "",
+	}, nil
 }
 
-func (client *Client) HandleCreateArena(data CreateArenaActionData) (DispatchResult, error) {
+func (client *Client) HandleCreateArenaAction(data CreateArenaAction, other any) (any, error) {
 	err := CreateAndAddArena(data.ArenaName)
 	if err != nil {
-		return FailureMsg(err.Error()), err
+		return GenericResponse{
+			Success:    false,
+			FailReason: err.Error(),
+		}, nil
 	}
-	return SuccessMsg(), nil
+	return GenericResponse{
+		Success:    true,
+		FailReason: "",
+	}, nil
 }
 
-func (client *Client) HandleGetArenaInfo(data ArenaInfoActionData) (DispatchResult, error) {
+func (client *Client) HandleArenaInfoAction(data ArenaInfoAction, other any) (any, error) {
 	if client.Arena == nil {
-		return FailureMsg("Not in arena"), nil
+		return GenericResponse{
+			Success:    false,
+			FailReason: "Not in an arena",
+		}, nil
 	}
 
-	return DispatchResult{
-		Message: Message{
-			MessageType: ArenaInfoResponseType,
-			Data:        client.Arena.GetArenaInfo(),
-		},
-		DoSend: true,
-	}, nil
+	return client.Arena.GetArenaInfo(), nil
 }
 
 func (client *Client) HandleClientDestruction() {
@@ -209,13 +220,13 @@ func (client *Client) HandleClientDestruction() {
 			return
 		}
 
-		err = client.Arena.HandlePlayerQuitAction(PlayerQuitActionData{}, idx)
+		_, err = client.Arena.HandlePlayerQuitActionData(PlayerQuitActionData{}, idx)
 		if err != nil {
 			return
 		}
 	}
 }
 
-func (client Client) GetSendChannel() chan<- Message {
+func (client Client) GetSendChannel() chan<- any {
 	return client.Recv
 }

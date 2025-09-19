@@ -1,6 +1,8 @@
 package core
 
 import (
+	"log"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
@@ -49,10 +51,18 @@ type MahjongGame struct {
 	// The list of potential actions that need to be either taken or skipped
 	// Need to attach a timer to them
 	PendingActions []PendingAction
+
+	// List of actions performed
+	RecordedActions []ActionPerformed
+}
+
+type ActionPerformed struct {
+	Action
+	fromPlayer uint8
 }
 
 type PendingAction struct {
-	ActionData
+	Action
 	fromPlayer uint8
 }
 
@@ -74,7 +84,7 @@ func (game *MahjongGame) setupGame() {
 	for i := range game.PlayerToOrder {
 		game.PlayerToOrder[i] = uint8(i)
 	}
-	game.OrderToPlayer = make([]uint8, 0)
+	game.OrderToPlayer = make([]uint8, 4)
 
 	PermuteArray(game.PlayerToOrder)
 	for idx, order := range game.PlayerToOrder {
@@ -110,6 +120,7 @@ func (game *MahjongGame) setupGame() {
 
 	game.Results = nil
 	game.PendingActions = nil
+	game.RecordedActions = nil
 }
 
 func (game *MahjongGame) drawNewTile() (Tile, error) {
@@ -163,74 +174,15 @@ func (game *MahjongGame) incrementTurn() {
 }
 
 // Returns the index of the pending action
-func (game MahjongGame) findAction(action ActionData, fromPlayer uint8) (int, error) {
+func (game MahjongGame) findAction(action Action, fromPlayer uint8) (int, error) {
 	for idx, pendingAction := range game.PendingActions {
-		if pendingAction.ActionData == action &&
+		if pendingAction.Action == action &&
 			pendingAction.fromPlayer == fromPlayer {
 			return idx, nil
 		}
 	}
 
 	return 0, errors.New("Can't find action")
-}
-
-func encodeBoardEvent(eventType BoardEventType, data any) ArenaBoardEventData {
-	return ArenaBoardEventData{
-		BoardEvent: BoardEvent{
-			EventType: eventType,
-			Data:      data,
-		},
-	}
-}
-
-func encodePotentialAction(data ActionData) ArenaBoardEventData {
-	return encodeBoardEvent(
-		PotentialActionEventType,
-		PotentialActionEventData{ActionData: data},
-	)
-}
-
-func encodePlayerAction(data ActionData, fromPlayer uint8) ArenaBoardEventData {
-	return encodeBoardEvent(
-		PlayerActionEventType,
-		PlayerActionEventData{ActionData: data, FromPlayer: fromPlayer},
-	)
-}
-
-func makeMessage(visibility Visibility, sendTo uint8, data ...ArenaBoardEventData) MessageSendInfo {
-	return MessageSendInfo{
-		Events:     data,
-		Visibility: visibility,
-		SendTo:     sendTo,
-	}
-}
-
-func makeGlobalMessage(data ...ArenaBoardEventData) MessageSendInfo {
-	return MessageSendInfo{
-		Events:     data,
-		Visibility: GLOBAL,
-		SendTo:     0,
-	}
-}
-
-func globalPlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
-	return MessageSendInfo{
-		Events: []ArenaBoardEventData{
-			encodePlayerAction(data, fromPlayer),
-		},
-		Visibility: GLOBAL,
-		SendTo:     0,
-	}
-}
-
-func privatePlayerAction(data ActionData, fromPlayer uint8) MessageSendInfo {
-	return MessageSendInfo{
-		Events: []ArenaBoardEventData{
-			encodePlayerAction(data, fromPlayer),
-		},
-		Visibility: PLAYER,
-		SendTo:     fromPlayer,
-	}
 }
 
 // ==================== PUBLIC FUNCTIONS ====================
@@ -284,28 +236,31 @@ func (game *MahjongGame) StartNewGame() ([][]Setup, error) {
 }
 
 // Returns the next events in the game, and if the game should end.
-func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bool) {
+func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
+	log.Println("Getting next event")
+
 	switch game.GameState {
 
 	case CURRENT_TURN: // The current player can make a toss move
+		log.Println("Current turn")
+
 		// We should only reach this state when someone makes a post-turn action like pon.
 		// Then the player only has the choice to discard or kan
 
 		// TODO: Check if the player can make a kan
-		actions = []MessageSendInfo{
-			makeMessage(
-				PLAYER,
-				game.currentPlayerIdx(),
-				encodePotentialAction(
-					ActionData{
-						ActionType: TOSS,
-						Data:       TossData{Invalid},
-					},
-				)),
-		}
+		private := PrivateMessage(game.currentPlayerIdx())
+		private.Add(ArenaBoardEvent{
+			BoardEvent: PotentialActionEvent{
+				Action: Toss{
+					TileToToss: Invalid,
+				}}})
+		actions.Add(private)
+
 		shouldEnd = false
 
 	case CURRENT_TURN_PLAYED: // Get post-toss actions
+		log.Println("Current turn played")
+
 		// We should wait for all post toss actions to finish before moving to the next turn
 		pendingActions, err := game.getPostTossActions()
 		if err != nil {
@@ -319,66 +274,54 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 		}
 
 		for _, pendingAction := range pendingActions {
-			actions = append(actions, makeMessage(
-				PLAYER,
-				pendingAction.fromPlayer,
-				encodePotentialAction(pendingAction.ActionData),
-			))
+			private := PrivateMessage(pendingAction.fromPlayer)
+			private.Add(ArenaBoardEvent{
+				BoardEvent: PotentialActionEvent{
+					Action: pendingAction.Action}})
+			actions.Add(private)
 		}
 
 		shouldEnd = false
 
 	case POST_TURN_PLAYED: // The post-toss has been played, we should progress to the next turn
+		log.Println("Post turn played")
+
+		tile, err := game.drawNewTile()
+
 		game.GameState = CURRENT_TURN
 		game.incrementTurn()
-		tile, err := game.drawNewTile()
+
 		if errors.Is(err, GameEndError{}) {
 			game.GameState = GAME_ENDED
 			return nil, true
+		} else if err != nil {
+			panic(err)
 		}
 
-		actions = []MessageSendInfo{
-			makeMessage(
-				PARTIAL,
-				game.currentPlayerIdx(),
-				encodeBoardEvent(
-					PlayerActionEventType,
-					PlayerActionEventData{
-						ActionData: ActionData{
-							ActionType: DRAW,
-							Data:       DrawData{tile},
-						},
-						FromPlayer: game.currentPlayerIdx(),
-					})),
-			makeMessage(
-				PLAYER,
-				game.currentPlayerIdx(),
-				encodePotentialAction(
-					ActionData{
-						ActionType: TOSS,
-						Data:       TossData{Invalid},
-					},
-				)),
-		}
+		// Inform of draw and potential toss action
+		partial := PartialMessage(game.currentPlayerIdx())
+		partial.Add(ArenaBoardEvent{BoardEvent: PlayerActionEvent{
+			Action:     Draw{DrawnTile: tile},
+			FromPlayer: game.currentPlayerIdx(),
+		}})
+		actions.Add(partial)
 
-		// For performing a Riichi
+		private := PrivateMessage(game.currentPlayerIdx())
+		private.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Toss{TileToToss: Invalid}}})
+		actions.Add(private)
+
+		// Get potential for performing a Riichi
 		for _, discard := range game.currentPlayer().GetRiichiDiscards() {
-			actions = append(actions,
-				makeMessage(
-					PLAYER,
-					game.currentPlayerIdx(),
-					encodePotentialAction(
-						ActionData{
-							ActionType: RIICHI,
-							Data:       RiichiData{discard},
-						},
-					),
-				))
+			partial := PrivateMessage(game.currentPlayerIdx())
+			partial.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Riichi{TileToRiichi: discard}}})
+			actions.Add(partial)
 		}
 
 		shouldEnd = false
 
 	case GAME_ENDED:
+		log.Println("Game ended")
+
 		actions = nil
 		shouldEnd = true
 	default:
@@ -389,10 +332,10 @@ func (game *MahjongGame) GetNextEvent() (actions []MessageSendInfo, shouldEnd bo
 // Updates the game state and returns the things to notify
 // Additionally returns whether the move was valid
 // Performs no validation of the action data structure
-// func (game *MahjongGame) RespondToAction(action PlayerActionData) ([]MessageSendInfo, bool) {
+// func (game *MahjongGame) RespondToAction(action PlayerActionData) (InfoList, bool) {
 // }
 
-func (game *MahjongGame) HandleChii(chiiData ChiiData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleChii(chiiData Chii, fromPlayer uint8) (infos InfoList, err error) {
 	onTile := chiiData.TileToChii
 	chiiSequence := chiiData.TilesInHand
 
@@ -419,12 +362,15 @@ func (game *MahjongGame) HandleChii(chiiData ChiiData, fromPlayer uint8) ([]Mess
 
 	game.CurrentTurnOrder = fromPlayer
 
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{CHII, chiiData}, fromPlayer),
-	}, nil
+	return *infos.AddGlobalMessage(
+		ArenaBoardEvent{BoardEvent: PlayerActionEvent{
+			Action: Chii{
+				TileToChii:  chiiData.TileToChii,
+				TilesInHand: chiiData.TilesInHand},
+			FromPlayer: fromPlayer}}), nil
 }
 
-func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []MessageSendInfo, err error) {
+func (game *MahjongGame) HandleKan(kanData Kan, fromPlayer uint8) (info InfoList, err error) {
 	switch game.GameState {
 	case CURRENT_TURN: // Ankan
 
@@ -437,11 +383,9 @@ func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []Me
 			break
 		}
 
-		info = []MessageSendInfo{
-			makeGlobalMessage(
-				encodePlayerAction(ActionData{KAN, kanData}, fromPlayer),
-			),
-		}
+		global := GlobalMessage()
+		global.Add(ArenaBoardEvent{BoardEvent: PlayerActionEvent{Action: Kan{TileToKan: kanData.TileToKan}, FromPlayer: fromPlayer}})
+		info.Add(global)
 
 	case CURRENT_TURN_PLAYED: // Daiminkan
 		if fromPlayer == game.currentPlayerIdx() {
@@ -459,9 +403,10 @@ func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []Me
 		}
 
 		game.CurrentTurnOrder = fromPlayer
-		info = []MessageSendInfo{
-			globalPlayerAction(ActionData{KAN, kanData}, fromPlayer),
-		}
+
+		global := GlobalMessage()
+		global.Add(ArenaBoardEvent{PlayerActionEvent{Kan{kanData.TileToKan}, fromPlayer}})
+		info.Add(global)
 
 	case POST_TURN_PLAYED: // Invalid
 		err = BadActionError{}
@@ -471,7 +416,7 @@ func (game *MahjongGame) HandleKan(kanData KanData, fromPlayer uint8) (info []Me
 	return info, err
 }
 
-func (game *MahjongGame) HandlePon(ponData PonData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandlePon(ponData Pon, fromPlayer uint8) (info InfoList, err error) {
 	last, err := game.lastTile()
 	onTile := ponData.TileToPon
 	if err != nil || onTile != last {
@@ -490,18 +435,19 @@ func (game *MahjongGame) HandlePon(ponData PonData, fromPlayer uint8) ([]Message
 	}
 	game.CurrentTurnOrder = fromPlayer
 
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{PON, ponData}, fromPlayer),
-	}, nil
+	global := GlobalMessage()
+	global.Add(ArenaBoardEvent{PlayerActionEvent{ponData, fromPlayer}})
+	info.Add(global)
 
+	return info, nil
 }
 
-func (game *MahjongGame) HandleRon(ronData RonData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleRon(ronData Ron, fromPlayer uint8) (info InfoList, err error) {
 
 	if fromPlayer == game.currentPlayerIdx() {
 		return nil, BadActionError{}
 	}
-	_, err := game.findAction(ActionData{RON, ronData}, fromPlayer)
+	_, err = game.findAction(ronData, fromPlayer)
 	if err != nil {
 		return nil, BadActionError{}
 	}
@@ -519,12 +465,14 @@ func (game *MahjongGame) HandleRon(ronData RonData, fromPlayer uint8) ([]Message
 
 	game.Results = &gameResult
 	game.GameState = GAME_ENDED
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{RON, ronData}, fromPlayer),
-	}, nil
+	global := GlobalMessage()
+	global.Add(ArenaBoardEvent{PlayerActionEvent{ronData, fromPlayer}})
+	info.Add(global)
+
+	return info, nil
 }
 
-func (game *MahjongGame) HandleRiichi(riichiData RiichiData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleRiichi(riichiData Riichi, fromPlayer uint8) (info InfoList, err error) {
 
 	tileDrawn, err := game.lastTile()
 	if err != nil || riichiData.TileToRiichi != tileDrawn {
@@ -544,12 +492,14 @@ func (game *MahjongGame) HandleRiichi(riichiData RiichiData, fromPlayer uint8) (
 
 	game.GameState = CURRENT_TURN_PLAYED
 
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{RIICHI, riichiData}, fromPlayer),
-	}, nil
+	global := GlobalMessage()
+	global.Add(ArenaBoardEvent{PlayerActionEvent{riichiData, fromPlayer}})
+	info.Add(global)
+
+	return info, nil
 }
 
-func (game *MahjongGame) HandleSkip(skipData SkipData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleSkip(skipData Skip, fromPlayer uint8) (info InfoList, err error) {
 
 	// We aren't finding the skip action itself but the action that is being skipped
 	idx, err := game.findAction(
@@ -561,12 +511,17 @@ func (game *MahjongGame) HandleSkip(skipData SkipData, fromPlayer uint8) ([]Mess
 	}
 	// TODO: Check if the action is skippable, e.g. a toss is not skippable
 	Remove(&game.PendingActions, idx)
-	return []MessageSendInfo{
-		privatePlayerAction(ActionData{SKIP, skipData}, fromPlayer),
-	}, nil
+
+	// Inform the player that it's skipped
+	private := PrivateMessage(fromPlayer)
+	private.Add(ArenaBoardEvent{PlayerActionEvent{skipData, fromPlayer}})
+	info.Add(private)
+
+	return info, nil
+
 }
 
-func (game *MahjongGame) HandleToss(tossData TossData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleToss(tossData Toss, fromPlayer uint8) (info InfoList, err error) {
 
 	onTile := tossData.TileToToss
 	if game.GameState != CURRENT_TURN {
@@ -575,18 +530,20 @@ func (game *MahjongGame) HandleToss(tossData TossData, fromPlayer uint8) ([]Mess
 	if fromPlayer != game.currentPlayerIdx() {
 		return nil, BadActionError{}
 	}
-	err := game.Players[fromPlayer].Toss(onTile)
+	err = game.Players[fromPlayer].Toss(onTile)
 	if err != nil {
 		return nil, BadActionError{}
 	}
 
 	game.GameState = CURRENT_TURN_PLAYED
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{TOSS, tossData}, fromPlayer),
-	}, nil
+	global := GlobalMessage()
+	global.Add(ArenaBoardEvent{PlayerActionEvent{tossData, fromPlayer}})
+	info.Add(global)
+
+	return info, nil
 }
 
-func (game *MahjongGame) HandleTsumo(tsumoData TsumoData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleTsumo(tsumoData Tsumo, fromPlayer uint8) (info InfoList, err error) {
 
 	if fromPlayer != game.currentPlayerIdx() {
 		return nil, BadActionError{}
@@ -609,12 +566,15 @@ func (game *MahjongGame) HandleTsumo(tsumoData TsumoData, fromPlayer uint8) ([]M
 
 	game.Results = &gameResult
 	game.GameState = GAME_ENDED
-	return []MessageSendInfo{
-		globalPlayerAction(ActionData{TSUMO, tsumoData}, fromPlayer),
-	}, nil
+
+	global := GlobalMessage()
+	global.Add(ArenaBoardEvent{PlayerActionEvent{tsumoData, fromPlayer}})
+	info.Add(global)
+
+	return info, nil
 }
 
-func (game *MahjongGame) HandleDraw(drawData DrawData, fromPlayer uint8) ([]MessageSendInfo, error) {
+func (game *MahjongGame) HandleDraw(drawData Draw, fromPlayer uint8) (InfoList, error) {
 	panic("NYI")
 }
 
@@ -638,7 +598,7 @@ func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 	moves := make([]PendingAction, 0)
 
 	// Helper that appends a potential move
-	appendMove := func(action ActionData, forPlayer uint8) {
+	appendMove := func(action Action, forPlayer uint8) {
 		moves = append(moves,
 			PendingAction{action, forPlayer})
 	}
@@ -649,10 +609,10 @@ func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 
 		// Call when the chii move is valid
 		appendChiiMove := func(chiiSequence [2]Tile) {
-			appendMove(ActionData{CHII, ChiiData{
+			appendMove(Chii{
 				TileToChii:  tileTossed,
 				TilesInHand: chiiSequence,
-			}}, nextPlayerIdx)
+			}, nextPlayerIdx)
 		}
 
 		if tileNum <= 6 { // 6, 7, 8
@@ -678,21 +638,21 @@ func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 	// Iterate through all kans, pons, and rons
 	for idx, player := range game.Players {
 		if player.TestDaiminkan(tileTossed) == nil {
-			appendMove(ActionData{KAN, KanData{
+			appendMove(Kan{
 				TileToKan: tileTossed,
-			}}, uint8(idx))
+			}, uint8(idx))
 		}
 
 		if player.TestPon(tileTossed) == nil {
-			appendMove(ActionData{PON, PonData{
+			appendMove(Pon{
 				TileToPon: tileTossed,
-			}}, uint8(idx))
+			}, uint8(idx))
 		}
 
 		if player.TestRon(tileTossed) == nil {
-			appendMove(ActionData{RON, RonData{
+			appendMove(Ron{
 				TileToRon: tileTossed,
-			}}, uint8(idx))
+			}, uint8(idx))
 		}
 	}
 
@@ -707,14 +667,4 @@ func (MahjongGame) GetGameResults() (GameResult, error) {
 // Returns the maximum amount of players
 func (MahjongGame) GetMaxPlayers() int {
 	return 4
-}
-
-func GetAltMessage(msg ArenaMessage) (altMsg ArenaMessage, err error) {
-	if msg.MessageType != ArenaBoardEventType {
-		return altMsg, errors.New("Not correct type")
-	}
-	eventData := msg.Data.(ArenaBoardEventData)
-	BoardEventDispatch(AltMessageHandler{}, eventData.BoardEvent)
-
-	return ArenaMessage{}, nil
 }

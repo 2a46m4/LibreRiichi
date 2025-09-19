@@ -1,4 +1,4 @@
-import {Message, MessageType} from "./message";
+import {Message} from "./message";
 
 export const websocket_address = "ws://localhost:3000/game";
 
@@ -10,7 +10,7 @@ export class Connection {
 	handler: (e: MessageEvent) => any
 
 	constructor(websocket: WebSocket, handler: (e: MessageEvent) => any) {
-		this.socket = websocket;
+		this.socket = websocket
 		this.handler = handler
 		this.ready = false
 		this.index = 0
@@ -33,6 +33,7 @@ export class Connection {
 		if (!this.ready) {
 			throw new Error("Not ready")
 		}
+	  console.log("Sending ", JSON.stringify({...msg, message_index: this.index}))
 		this.socket.send(JSON.stringify({...msg, message_index: this.index}))
 		this.index += 1
 		return this.index - 1

@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -23,18 +24,83 @@ type Arena struct {
 
 	DateCreated time.Time
 	Name        string
-	uuid uuid.UUID
+	uuid        uuid.UUID
 
 	sync.Mutex
 }
 
+// Information needed to send a messsage
 type MessageSendInfo struct {
-	Events     []ArenaBoardEventData
+	Events     []ArenaBoardEvent
 	Visibility Visibility
 	SendTo     uint8
 }
 
-func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
+type InfoList []MessageSendInfo
+
+type RoomFullError struct{}
+
+func (RoomFullError) Error() string {
+	return "Room is full"
+}
+
+func (list *InfoList) Add(data ...MessageSendInfo) *InfoList {
+	*list = append(*list, data...)
+	return list
+}
+
+func (list *InfoList) AddGlobalMessage(data ...ArenaBoardEvent) *InfoList {
+	global := GlobalMessage()
+	global.Add(data...)
+	*list = append(*list, global)
+	return list
+}
+
+func (list *InfoList) AddPrivateMessage(sendTo uint8, data ...ArenaBoardEvent) *InfoList {
+	private := PrivateMessage(sendTo)
+	private.Add(data...)
+	*list = append(*list, private)
+	return list
+}
+
+func (list *InfoList) AddPartialMessage(sendTo uint8, data ...ArenaBoardEvent) *InfoList {
+	partial := PartialMessage(sendTo)
+	partial.Add(data...)
+	*list = append(*list, partial)
+	return list
+}
+
+func GlobalMessage() MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEvent{},
+		Visibility: GLOBAL,
+		SendTo:     0,
+	}
+}
+
+func PrivateMessage(sendTo uint8) MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEvent{},
+		Visibility: PLAYER,
+		SendTo:     sendTo,
+	}
+}
+
+func PartialMessage(sendTo uint8) MessageSendInfo {
+	return MessageSendInfo{
+		Events:     []ArenaBoardEvent{},
+		Visibility: PARTIAL,
+		SendTo:     sendTo,
+	}
+}
+
+// Add an event to the send info
+func (info *MessageSendInfo) Add(data ...ArenaBoardEvent) *MessageSendInfo {
+	info.Events = append(info.Events, data...)
+	return info
+}
+
+func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -43,7 +109,7 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 		agents = append(agents, AgentInfo{Name: agent.Name})
 	}
 
-	return ArenaInfoResponseData{
+	return ArenaInfoResponse{
 		Success:     true,
 		Name:        arena.Name,
 		Agents:      agents,
@@ -52,22 +118,19 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponseData {
 	}
 }
 
-func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8) error {
+// TODO: This should be explicit
+func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) error {
 	switch visibility {
 	case GLOBAL:
 		for i, player := range arena.agents {
 			fmt.Println("Sending index: ", i)
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: data},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: data,
 			}
 		}
 
 	case PARTIAL:
-		arena.agents[sendTo].Recv <- Message{
-			MessageType: ServerArenaEventType,
-			Data:        ServerArenaMessageEventData{ArenaMessage: data},
-		}
+		arena.agents[sendTo].Recv <- ServerArenaEvent{ArenaMessage: data}
 
 		altMessage, err := GetAltMessage(data)
 		if err != nil {
@@ -79,16 +142,14 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 			if idx == int(sendTo) {
 				continue
 			}
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: altMessage},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: altMessage,
 			}
 		}
 
 	case PLAYER:
-		arena.agents[sendTo].Recv <- Message{
-			MessageType: ServerArenaEventType,
-			Data:        ServerArenaMessageEventData{ArenaMessage: data},
+		arena.agents[sendTo].Recv <- ServerArenaEvent{
+			ArenaMessage: data,
 		}
 	case EXCLUDE:
 		for i, player := range arena.agents {
@@ -98,9 +159,8 @@ func (arena *Arena) Send(data ArenaMessage, visibility Visibility, sendTo uint8)
 				continue
 			}
 			fmt.Println("Exclude: Continuing with: ", i)
-			player.Recv <- Message{
-				MessageType: ServerArenaEventType,
-				Data:        ServerArenaMessageEventData{ArenaMessage: data},
+			player.Recv <- ServerArenaEvent{
+				ArenaMessage: data,
 			}
 		}
 	default:
@@ -131,18 +191,19 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	arena.Lock()
 	defer arena.Unlock()
 
+	if len(arena.agents) >= 4 {
+		return RoomFullError{}
+	}
+
 	arena.agents = append(arena.agents, agent)
 
-	data := PlayerJoinedEventData{
+	data := PlayerJoinedEvent{
 		Name: agent.Name,
 		ID:   agent.ID,
 	}
 
 	err := arena.Send(
-		ArenaMessage{
-			MessageType: PlayerJoinedEventType,
-			Data:        data,
-		}, EXCLUDE, uint8(len(arena.agents)-1))
+		data, EXCLUDE, uint8(len(arena.agents)-1))
 
 	if err != nil {
 		panic(err)
@@ -162,20 +223,20 @@ func (arena *Arena) DriveGame() error {
 // Drives the game forward
 func (arena *Arena) driveGame() error {
 
-	sendInfos, gameContinue := arena.game.GetNextEvent()
+	log.Println("Driving game")
 
-	if !gameContinue {
+	sendInfos, shouldEnd := arena.game.GetNextEvent()
+
+	if shouldEnd {
+		log.Println("Finishing")
 		arena.FinishRoundArena()
 		return nil
 	}
 
 	// Send the event to the players
 	for _, sendInfo := range sendInfos {
-		for event := range sendInfo.Events {
-			arena.Send(ArenaMessage{
-				MessageType: ArenaBoardEventType,
-				Data:        event,
-			}, sendInfo.Visibility, sendInfo.SendTo)
+		for _, event := range sendInfo.Events {
+			arena.Send(event, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 
@@ -194,39 +255,33 @@ func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
 	return 0, errors.New("not found")
 }
 
-// TODO: Implement ServerArenaHandler
 // StartArena is called when a game should be started. It broadcasts a start round message to the connected players
-func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer uint8) error {
+func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
+	log.Println("Handle start game called")
+
 	if arena.gameStarted {
-		return errors.New("Game already started")
+		return Unit, errors.New("Game already started")
 	}
 
 	if len(arena.agents) != 4 {
-		return errors.New("Not enough agents")
+		return Unit, errors.New("Not enough agents")
 	}
 
 	setups, err := arena.game.StartNewGame()
 	if err != nil {
-		return err
+		return Unit, err
 	}
 
 	// Send over the setups for each player
 	for idx, setup := range setups {
 
-		err = arena.Send(ArenaMessage{
-			MessageType: ArenaBoardEventType,
-			Data: ArenaBoardEventData{
-				BoardEvent: BoardEvent{
-					EventType: GameSetupEventType,
-					Data: GameSetupEventData{
-						Setup: setup,
-					},
-				},
-			},
-		}, PLAYER, uint8(idx))
+		err = arena.Send(ArenaBoardEvent{
+			BoardEvent: GameSetupEvent{
+				Setup: setup,
+			}}, PLAYER, uint8(idx))
 
 		if err != nil {
 			panic(err)
@@ -234,24 +289,21 @@ func (arena *Arena) HandleStartGameAction(data StartGameActionData, fromPlayer u
 	}
 
 	arena.gameStarted = true
-	return arena.driveGame()
+	return Unit, arena.driveGame()
 }
 
-func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) error {
+func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
-	sendInfos, err := ActionDecode(&arena.game, data.ActionData, fromPlayer)
+	sendInfos, err := ActionDecode(&arena.game, data.Action, fromPlayer)
 	if err != nil {
-		return err
+		return Unit, err
 	}
 
 	for _, sendInfo := range sendInfos {
 		for _, event := range sendInfo.Events {
-			arena.Send(ArenaMessage{
-				MessageType: ArenaBoardEventType,
-				Data:        event,
-			}, sendInfo.Visibility, sendInfo.SendTo)
+			arena.Send(event, sendInfo.Visibility, sendInfo.SendTo)
 		}
 	}
 
@@ -260,10 +312,10 @@ func (arena *Arena) HandlePlayerAction(data PlayerActionData, fromPlayer uint8) 
 		panic("TODO: Error handling")
 	}
 
-	return nil
+	return Unit, err
 }
 
-func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer uint8) error {
+func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
 	if arena.gameStarted {
@@ -275,14 +327,11 @@ func (arena *Arena) HandlePlayerQuitAction(data PlayerQuitActionData, fromPlayer
 	} else {
 		agent := arena.agents[fromPlayer]
 		Remove(&arena.agents, uint(fromPlayer))
-		arena.Send(ArenaMessage{
-			MessageType: PlayerQuitEventType,
-			Data: PlayerQuitEventData{
-				Name: agent.Name,
-			},
+		arena.Send(PlayerQuitEvent{
+			Name: agent.Name,
 		}, GLOBAL, 0)
 	}
-	return nil
+	return Unit, nil
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
@@ -293,4 +342,47 @@ func (arena *Arena) FinishRoundArena() {
 // EndArena is called when the arena is finished and all players should be disconnected
 func (arena *Arena) EndArena() error {
 	return nil
+}
+
+func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
+	switch msg := msg.(type) {
+	case ArenaBoardEvent:
+		return BoardEventDecode(AltMessageHandler{}, msg.BoardEvent, Unit)
+	default:
+		return altMsg, errors.New("Not correct type")
+	}
+}
+
+type AltMessageHandler struct{}
+
+func (h AltMessageHandler) HandlePlayerActionEvent(event PlayerActionEvent, extraData UnitType) (ArenaEvent, error) {
+
+	var action Action
+	switch event_action := event.Action.(type) {
+	case Draw:
+		action = Draw{
+			DrawnTile: Hidden,
+		}
+	default:
+		panic(fmt.Sprintf("unexpected core.Action: %#v", event_action))
+	}
+
+	return ArenaBoardEvent{
+		BoardEvent: PlayerActionEvent{
+			Action:     action,
+			FromPlayer: event.FromPlayer,
+		},
+	}, nil
+}
+
+func (h AltMessageHandler) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
+}
+
+func (h AltMessageHandler) HandleGameSetupEvent(event GameSetupEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
+}
+
+func (h AltMessageHandler) HandleGameEndEvent(event GameEndEvent, extraData UnitType) (ArenaEvent, error) {
+	return nil, errors.New("Wrong type")
 }

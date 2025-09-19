@@ -1,35 +1,92 @@
 <script setup lang="ts">
-import {useGlobalStore} from "../global_store";
 import {BoxStyling, ButtonStyling, FlexBox, H1Styling, InputStyling, ULStyling} from "../styling";
 import {Ref, ref} from "vue";
 import ListItem from "../components/list_item.vue";
+import {MessageType} from "../messaging/message";
+import {router, use_room_state, use_websocket_state} from "../index";
+import {ServerActionType} from "../messaging/server_action_generated";
+import {ServerResponseType} from "../messaging/server_response_generated";
+import {register_request} from "../messaging/event_handler";
 
-const globalStore = useGlobalStore();
-const app = globalStore.application
-const action = app.action
+const websocket_state = use_websocket_state()
+const room_state = use_room_state()
 
-const room_name = ref('')
 const create_room_name = ref('')
-const show_error = ref(false)
+const show_error = ref('')
 const avail_rooms: Ref<string[]> = ref([])
 
 async function check_avail_rooms() {
-  avail_rooms.value = await app.action.list_rooms()
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ListArenasAction,
+    }
+  })
+
+  let msg = await register_request(msg_idx)
+
+  if (msg.serverresponse_type !== ServerResponseType.ListArenasResponse) {
+    throw new Error("Wrong type")
+  }
+
+  if (!msg.success) {
+    throw new Error("Failed to list rooms")
+  }
+
+  avail_rooms.value = msg.arena_list.sort()
 }
 
 async function find_room() {
-  try {
-    await action.connect_room(
-        room_name.value,
+    let msg_idx = websocket_state.conn.send(
+        {
+          message_type: MessageType.REQUEST,
+          data: {
+            serveraction_type: ServerActionType.JoinArenaAction,
+            arena_name: room_state.room_name,
+          }
+        }
     )
-  } catch (error) {
-    console.log(error)
-    show_error.value = true
-  }
+
+    let ret = await register_request(msg_idx)
+    if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
+      show_error.value = "Connection error: Wrong type"
+      return
+    }
+
+    if (!ret.success) {
+      show_error.value = "Could not join room: " + ret.fail_reason
+      return
+    }
+
+    console.log("Joined room")
+    room_state.room_set = true
+    await router.push({name: 'arena_page'})
 }
 
 async function create_room() {
-    await action.create_room(create_room_name.value)
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.CreateArenaAction,
+      arena_name: create_room_name.value,
+    }
+  })
+
+  let msg = await register_request(msg_idx)
+
+  if (msg === undefined) {
+    // TODO: Give a reason for why
+    show_error.value = "Connection error: Failed to create room"
+  }
+
+  if (msg.serverresponse_type !== ServerResponseType.GenericResponse) {
+    show_error.value = "Connection error: Wrong type"
+    return
+  }
+
+  if (!msg.success) {
+    show_error.value = "Could not create room: " + msg.fail_reason
+  }
 }
 
 </script>
@@ -40,7 +97,7 @@ async function create_room() {
   <p>Room Name</p>
   <input
       :class="InputStyling"
-      v-model="room_name">
+      v-model="room_state.room_name">
   <button
       :class="ButtonStyling"
       @click="find_room">Find</button>

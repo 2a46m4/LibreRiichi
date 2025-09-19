@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -89,10 +90,11 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				}
 				return
 			default:
-				fmt.Println("Waiting for message")
+				log.Println("Waiting for message")
 				msgType, buffer, err := conn.ReadMessage()
-				fmt.Println("Recved message: ", string(buffer))
+				log.Println("Recved message: ", string(buffer))
 				if err != nil {
+					log.Println("Error with message recv: ", err)
 					ret.DataChannel <- err
 					continue
 				}
@@ -100,8 +102,11 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				switch msgType {
 				case websocket.TextMessage:
 					ret.DataChannel <- buffer
-				case websocket.BinaryMessage, websocket.PingMessage, websocket.PongMessage:
+				case websocket.BinaryMessage:
 					continue
+				case websocket.PingMessage:
+					conn.WriteMessage(websocket.PongMessage, []byte{})
+				case websocket.PongMessage:
 				case websocket.CloseMessage:
 					close(ret.DataChannel)
 					conn.Close()
@@ -127,9 +132,8 @@ func MakeChannelFromWebsocket(conn *websocket.Conn) ConnChan {
 				err := conn.WriteMessage(websocket.TextMessage, toWrite)
 				if err != nil {
 					fmt.Println("Couldn't write message")
-					panic(err)
+					return
 				}
-			default:
 			}
 		}
 	}()

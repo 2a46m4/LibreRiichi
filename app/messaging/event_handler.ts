@@ -1,51 +1,52 @@
-import {Message, MessageType} from "./message";
-import {ArenaMessage} from "./arena_message";
+import {IncomingMessage, MessageType, validate_message} from "./message";
+import {ServerResponseMessage, ServerResponseType} from "./server_response_generated";
+import {ServerEventMessage} from "./server_event_generated";
 
-export type ArenaListener = (data: ArenaMessage) => void
-export type MessageListener = (data: Message) => void
-
-export class EventHandler {
-
-    arena_message_listeners: ArenaListener[]
-    server_message_listeners: MessageListener[]
+export class EventHandler<TIncoming> {
+    private listeners: Array<(data: TIncoming) => boolean> = []
 
     constructor() {
-        this.arena_message_listeners = []
-        this.server_message_listeners = []
     }
 
-    handle_server_message(data: Message): void {
-        console.log("Got event: ", data)
-        for (let i = 0; i < this.server_message_listeners.length; i++) {
-            this.server_message_listeners[i](data);
+    handle(data: TIncoming): void {
+        this.listeners.filter(listener => listener(data))
+    }
+
+    register(listener: (data: TIncoming) => boolean): number {
+        this.listeners.push(listener)
+        return this.listeners.length - 1
+    }
+
+    unregister(index: number): void {
+        this.listeners.splice(index, 1)
+    }
+}
+
+export function keep_registered<TIncoming>(fn: (_: TIncoming) => void): (_: TIncoming) => true {
+    return (data: TIncoming) => {
+        fn(data)
+        return true
+    }
+}
+
+export const ServerMessageBus = new EventHandler<IncomingMessage>()
+export const ArenaMessageBus = new EventHandler<ServerEventMessage>()
+ServerMessageBus.register(keep_registered((data: IncomingMessage) => {
+    if (data.message_type === MessageType.EVENT) {
+        ArenaMessageBus.handle(data.data as ServerEventMessage)
+    }
+}))
+
+export function register_request(msg_idx: number, bus = ServerMessageBus): Promise<ServerResponseMessage> {
+    let {promise, resolve} = Promise.withResolvers<ServerResponseMessage>();
+    bus.register((msg) => {
+        if (msg.message_type === MessageType.RESPONSE && msg.message_index === msg_idx) {
+            console.log("Matched outgoing message", msg_idx, ", resolving")
+            resolve(msg.data)
+            return false
+        } else {
+            return true
         }
-
-        if (data.message_type === MessageType.ServerArenaEvent) {
-            this.handle_arena_message(data.data.arena_message)
-        }
-    }
-
-    handle_arena_message(data: ArenaMessage): void {
-        console.log("Handling event:", data)
-        for  (let i = 0; i < this.arena_message_listeners.length; i++) {
-            this.arena_message_listeners[i](data);
-        }
-    }
-
-    register_arena_listener(listenerFn: ArenaListener): number {
-        this.arena_message_listeners.push(listenerFn);
-        return this.arena_message_listeners.length - 1
-    }
-
-    unregister_arena_listener(index: number): void {
-        this.arena_message_listeners.splice(index, 1)
-    }
-
-    register_server_listener(listenerFn: MessageListener): void {
-        this.server_message_listeners.push(listenerFn);
-    }
-
-    unregister_server_listener(index: number): void {
-        this.server_message_listeners.splice(index, 1)
-    }
+    })
+    return promise
 }

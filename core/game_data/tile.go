@@ -94,13 +94,13 @@ func GetTileList() []Tile {
 
 	}
 
-	for i := Manzu; i < Manzu+10; i++ {
+	for i := Manzu; i < Manzu+9; i++ {
 		addFour(i)
 	}
-	for i := Pinzu; i < Pinzu+10; i++ {
+	for i := Pinzu; i < Pinzu+9; i++ {
 		addFour(i)
 	}
-	for i := Souzu; i < Souzu+10; i++ {
+	for i := Souzu; i < Souzu+9; i++ {
 		addFour(i)
 	}
 	for i := Kazehai; i <= Green; i++ {
