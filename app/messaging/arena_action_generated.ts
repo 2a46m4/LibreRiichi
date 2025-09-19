@@ -1,5 +1,5 @@
 // ArenaAction Union Type and Enum
-import {Action} from "../game/action";
+import {Action} from "./action_generated";
 
 export type ArenaActionMessage = StartGameActionData | PlayerQuitActionData | PlayerActionData;
 
