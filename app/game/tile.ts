@@ -57,7 +57,7 @@ export function decode(array: string): Uint8Array {
 }
 
 export class Tile {
-    private value: number
+    public value: number
 
     constructor(value: number) {
         this.value = value
@@ -118,6 +118,10 @@ export class Tile {
 		}
 
 		return str
+    }
+
+    static get_base64_representation(tile_array: Tile[]) {
+
     }
 
     clear_red_or_dora(): Tile {

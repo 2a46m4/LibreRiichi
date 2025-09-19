@@ -23,39 +23,48 @@ class WinResult {
 }
 
 export interface Ron {
+    action_type: ActionType.Ron;
     tile_to_ron: Tile;
     win_result: WinResult;
 }
 
 export interface Tsumo {
+    action_type: ActionType.Tsumo;
     tile_to_tsumo: Tile;
 }
 
 export interface Riichi {
+    action_type: ActionType.Riichi;
     tile_to_riichi: Tile;
 }
 
 export interface Toss {
+    action_type: ActionType.Toss;
     tile_to_toss: Tile;
 }
 
 export interface Skip {
+    action_type: ActionType.Skip;
     action_to_skip: Action;
 }
 
 export interface Pon {
+    action_type: ActionType.Pon;
     tile_to_pon: Tile;
 }
 
 export interface Kan {
+    action_type: ActionType.Kan;
     tile_to_kan: Tile;
 }
 
 export interface Chii {
+    action_type: ActionType.Chii;
     tile_to_chii: Tile;
     tiles_in_hand: Tile[];
 }
 
 export interface Draw {
+    action_type: ActionType.Draw;
     drawn_tile: Tile;
 }

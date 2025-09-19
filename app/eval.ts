@@ -9,7 +9,7 @@ import {ArenaActionType} from "./messaging/arena_action_generated";
 import {BoardEvent, BoardEventType} from "./messaging/board_event_generated";
 import { SetupType } from "./types/setup";
 import { decode, Tile } from "./game/tile";
-import { ActionType } from "./game/action";
+import {ActionType} from "./messaging/action_generated";
 
 let busses: EventHandler<IncomingMessage>[] = Array(4).fill(0).map(() => new EventHandler())
 
@@ -55,7 +55,7 @@ for (let i = 0; i < 4; i++) {
   arena_busses[i].register((data)=>callback(i, data))
 }
 
-let conns = []
+let conns: Connection[] = []
 for (let i = 0; i < 4; i++) {
   conns.push(new Connection(new WebSocket(websocket_address), (data: MessageEvent) => {
 	let msg = JSON.parse(data.data) as IncomingMessage
@@ -160,8 +160,8 @@ let game_started = false
 let initial_hand = [new Array(), new Array(), new Array(), new Array()]
 let dora = new Tile(0)
 let points = Array(4).fill(0)
-let player_n = new Uint8Array()
-let player_order = Array(4).fill(0)
+let player_n: number = 0
+let player_order: Uint8Array = new Uint8Array()
 let round_wind = 0
 let round_number = 0
 
@@ -198,8 +198,23 @@ function handle_game(i: number, event: BoardEvent) {
 		console.log("potential action: ", event.action_data)
 		console.log("initial hand: ", initial_hand)
 		switch (event.action_data.action_type) {
-			case ActionType.TOSS:
+			case ActionType.Toss:
 				console.log("toss")
+				conns[i].send(
+					{
+						message_type: MessageType.REQUEST,
+						data: {
+							serveraction_type: ServerActionType.ServerArenaAction,
+							arena_action: {
+								arenaaction_type: ArenaActionType.PlayerActionData,
+								action: {
+									action_type: ActionType.Toss,
+									tile_to_toss: initial_hand[i][0].value
+								}
+							}
+						}
+					}
+				)
 		}
 	} else if (event.boardevent_type === BoardEventType.PlayerActionEvent) {
 		console.log("action occurred:", event.action_data, "from player", event.from_player)
