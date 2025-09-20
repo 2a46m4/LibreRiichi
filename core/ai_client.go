@@ -56,14 +56,14 @@ func MakeComputerClient() (ComputerClient, error) {
 	return client, nil
 }
 
-func (client ComputerClient) Loop() {
+func (client *ComputerClient) Loop() {
 	log.Println(client.Name, client.ID)
 	for send := range client.Recv {
 		log.Println("Computer Loop")
 
 		switch send := send.(type) {
 		case ServerEvent:
-			ServerEventDecode(&client, send, Unit)
+			ServerEventDecode(client, send, Unit)
 		case Die:
 			break
 		}
