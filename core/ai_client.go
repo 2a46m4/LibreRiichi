@@ -98,30 +98,15 @@ func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, e
 func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Potential actions available: %+v", client.Name, event.Actions)
 
-	// Process each potential action
+	// Immediately do a potential action
 	for _, action := range event.Actions {
-		switch potential := action.(type) {
-		case Chii:
-			log.Printf("ComputerClient %s: Can chii with %+v", client.Name, potential)
-		case Draw:
-			log.Printf("ComputerClient %s: Can draw %+v", client.Name, potential)
-		case Kan:
-			log.Printf("ComputerClient %s: Can kan with %+v", client.Name, potential)
-		case Pon:
-			log.Printf("ComputerClient %s: Can pon with %+v", client.Name, potential)
-		case Riichi:
-			log.Printf("ComputerClient %s: Can riichi with %+v", client.Name, potential)
-		case Ron:
-			log.Printf("ComputerClient %s: Can ron with %+v", client.Name, potential)
-		case Skip:
-			log.Printf("ComputerClient %s: Can skip", client.Name)
-		case Toss:
-			log.Printf("ComputerClient %s: Can toss %+v", client.Name, potential)
-		case Tsumo:
-			log.Printf("ComputerClient %s: Can tsumo with %+v", client.Name, potential)
-		default:
-			panic(fmt.Sprintf("unexpected core.Action: %#v", action))
+		idx, err := client.Arena.getPlayerIdx(client)
+		if err != nil {
+			panic(err)
 		}
+		ArenaActionDecode(client.Arena, PlayerActionData{
+			Action: action,
+		}, idx)
 	}
 
 	// TODO: Implement AI decision making for potential actions
