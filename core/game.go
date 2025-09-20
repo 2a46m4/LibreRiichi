@@ -19,6 +19,8 @@ const (
 	GAME_ENDED
 )
 
+var TossAction = Toss{TileToToss: Invalid}
+
 // TODO: With the pending game actions stored in the game, we don't
 // have to re-check a lot of the actions
 
@@ -270,7 +272,7 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 
 		if len(pendingActions) == 0 {
 			game.GameState = POST_TURN_PLAYED
-			// TODO: Get next event again here?
+			return game.GetNextEvent()
 		}
 
 		for _, pendingAction := range pendingActions {
@@ -405,7 +407,10 @@ func (game *MahjongGame) HandleKan(kanData Kan, fromPlayer uint8) (info InfoList
 		game.CurrentTurnOrder = fromPlayer
 
 		global := GlobalMessage()
-		global.Add(ArenaBoardEvent{PlayerActionEvent{Kan{kanData.TileToKan}, fromPlayer}})
+		global.Add(ArenaBoardEvent{
+			BoardEvent: PlayerActionEvent{
+				Action:     Kan{TileToKan: kanData.TileToKan},
+				FromPlayer: fromPlayer}})
 		info.Add(global)
 
 	case POST_TURN_PLAYED: // Invalid
