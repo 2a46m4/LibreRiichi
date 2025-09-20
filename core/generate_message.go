@@ -216,8 +216,10 @@ func main() {
 	// they have interfaces within them
 
 	tmpl := template.Must(template.New("action").Funcs(template.FuncMap{
-		"upper": strings.ToUpper,
-		"lower": strings.ToLower,
+		"upper":      strings.ToUpper,
+		"lower":      strings.ToLower,
+		"hasPrefix":  strings.HasPrefix,
+		"trimPrefix": strings.TrimPrefix,
 	}).Parse(registryTemplate))
 
 	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0] + "_generated.go")
@@ -333,7 +335,11 @@ func (obj *{{ .Name}}) UnmarshalJSON(rawData []byte) error {
         {{$.InterfaceName}}Type {{$.InterfaceName}}Type ` + "`" + `json:"{{lower $.InterfaceName}}_type"` + "`" + `
 		{{- range .Fields}}
         {{- if .ShouldWrap}}
+        {{- if hasPrefix .Type "[]"}}
+        {{.Name}} []{{trimPrefix .Type "[]"}}Unpacker {{.Tag}}
+        {{- else}}
         {{.Name}} {{.Type}}Unpacker {{.Tag}}
+        {{- end}}
         {{- else}}
         {{.Name}} {{.Type}} {{.Tag}} {{- end}}
 		{{- end}}
@@ -343,7 +349,14 @@ func (obj *{{ .Name}}) UnmarshalJSON(rawData []byte) error {
 
     {{- range .Fields}}
     {{- if .ShouldWrap}}
+    {{- if hasPrefix .Type "[]"}}
+    obj.{{.Name}} = make([]{{trimPrefix .Type "[]"}}, len(raw.{{.Name}}))
+    for i, item := range raw.{{.Name}} {
+        obj.{{.Name}}[i] = item.{{trimPrefix .Type "[]"}}
+    }
+    {{- else}}
     obj.{{.Name}} = raw.{{.Name}}.{{.Type}}
+    {{- end}}
     {{- else}}
     obj.{{.Name}} = raw.{{.Name}}
     {{- end}}

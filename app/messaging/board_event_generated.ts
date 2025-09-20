@@ -23,7 +23,7 @@ export interface PlayerActionEvent {
 
 export interface PotentialActionEvent {
     boardevent_type: BoardEventType.PotentialActionEvent;
-    action_data: Action;
+    action_data: Action[];
 }
 
 export interface GameSetupEvent {
