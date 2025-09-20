@@ -252,10 +252,7 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		// TODO: Check if the player can make a kan
 		private := PrivateMessage(game.currentPlayerIdx())
 		private.Add(ArenaBoardEvent{
-			BoardEvent: PotentialActionEvent{
-				Action: Toss{
-					TileToToss: Invalid,
-				}}})
+			BoardEvent: PotentialActionEvent{Action: TossAction}})
 		actions.Add(private)
 
 		shouldEnd = false
