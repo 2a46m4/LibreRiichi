@@ -58,6 +58,15 @@ func goTypeToTypeScript(goType string) string {
 		// Slice/array type
 		innerType := strings.TrimPrefix(goType, "[]")
 		return goTypeToTypeScript(innerType) + "[]"
+	case strings.Contains(goType, "]") && strings.HasPrefix(goType, "["):
+		// Fixed-size array type like [2]Tile -> Tile[] in TypeScript
+		re := regexp.MustCompile(`\[(\d+)\](.+)`)
+		matches := re.FindStringSubmatch(goType)
+		if len(matches) >= 3 {
+			innerType := matches[2]
+			return goTypeToTypeScript(innerType) + "[]"
+		}
+		return goType
 	case strings.Contains(goType, "Unpacker"):
 		// Handle unpacker types - strip the Unpacker suffix
 		return strings.Replace(goType, "Unpacker", "", 1)

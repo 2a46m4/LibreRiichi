@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
@@ -32,6 +31,10 @@ func (client *ComputerClient) SetArena(arena *Arena) {
 
 func (client *ComputerClient) GetRecv() chan<- any {
 	return client.Recv
+}
+
+func (ComputerClient) IsAI() bool {
+	return true
 }
 
 func MakeComputerClient(connection ConnChan) (ComputerClient, error) {

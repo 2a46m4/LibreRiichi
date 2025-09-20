@@ -25,3 +25,7 @@ type CreateArenaAction struct {
 }
 
 type ArenaInfoAction struct{}
+
+type AddAIArenaAction struct{}
+
+type RemoveAIArenaAction struct{}

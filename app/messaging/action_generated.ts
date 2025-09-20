@@ -2,6 +2,7 @@
 
 // Action Union Type and Enum
 import {Tile} from "../game/tile";
+import {Action} from "./action_generated";
 
 export type Action = Ron | Tsumo | Riichi | Toss | Skip | Pon | Kan | Chii | Draw;
 
@@ -20,6 +21,7 @@ export enum ActionType {
 // Individual struct interfaces
 
 class WinResult {
+
 }
 
 export interface Ron {

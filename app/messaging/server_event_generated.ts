@@ -3,7 +3,7 @@
 // ServerEvent Union Type and Enum
 import {ArenaEvent} from "./arena_event_generated";
 
-export type ServerEventMessage = ServerArenaEvent;
+export type ServerEvent = ServerArenaEvent;
 
 export enum ServerEventType {
     ServerArenaEvent = 0,

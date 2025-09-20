@@ -4,7 +4,7 @@ import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from 
 import {ref, Ref} from "vue";
 import ListItem from "../components/list_item.vue";
 import GameBoard from "../components/game_board.vue";
-import {router, use_room_state, use_websocket_state} from "../index";
+import {use_room_state, use_websocket_state} from "../index";
 import {MessageType} from "../messaging/message";
 import {ServerActionType} from "../messaging/server_action_generated";
 import {ArenaMessageBus, register_request} from "../messaging/event_handler";
@@ -14,6 +14,7 @@ import {ArenaEventType} from "../messaging/arena_event_generated";
 import {ArenaActionType} from "../messaging/arena_action_generated";
 
 const players: Ref<string[]> = ref([])
+const num_ai: Ref<number> = ref(0)
 
 const room_state = use_room_state()
 if (!room_state.room_set) {
@@ -61,7 +62,7 @@ let callback = (data: ServerEventMessage) => {
         case ArenaEventType.GameStartedEvent:
           in_game = true
           ArenaMessageBus.unregister(callback_idx)
-		  // TODO
+          // TODO
           break;
         case ArenaEventType.PlayerJoinedEvent:
           players.value.push(message.name);
@@ -108,6 +109,56 @@ async function start_game() {
   }
 }
 
+async function add_ai() {
+  let msg_idx = websocket_state.conn.send(
+      {
+        message_type: MessageType.REQUEST,
+        data: {
+          serveraction_type: ServerActionType.ServerArenaAction,
+          arena_action: {
+            arenaaction_type: ArenaActionType.AddAIActionData
+          }
+        }
+      }
+  )
+
+  let ret = await register_request(msg_idx);
+  if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
+    throw new Error("Connection error: Wrong Type")
+  }
+
+  if (!ret.success) {
+    throw new Error("Couldn't start game: " + ret.fail_reason)
+  }
+
+  num_ai.value = num_ai.value + 1
+}
+
+async function remove_ai() {
+  let msg_idx = websocket_state.conn.send(
+      {
+        message_type: MessageType.REQUEST,
+        data: {
+          serveraction_type: ServerActionType.ServerArenaAction,
+          arena_action: {
+            arenaaction_type: ArenaActionType.RemoveAIActionData
+          }
+        }
+      }
+  )
+
+  let ret = await register_request(msg_idx);
+  if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
+    throw new Error("Connection error: Wrong Type")
+  }
+
+  if (!ret.success) {
+    throw new Error("Couldn't start game: " + ret.fail_reason)
+  }
+
+  num_ai.value = num_ai.value - 1
+}
+
 </script>
 
 <template>
@@ -124,9 +175,15 @@ async function start_game() {
           <ListItem v-for="player in players">{{ player }}</ListItem>
         </ul>
       </div>
-      <button :class="ButtonStyling + Spacing"
+      <button :class="{[ButtonStyling]: true}"
               @click="start_game">Start game
       </button>
+      <button :class="{[ButtonStyling]: true}"
+              @click="add_ai">Add AI
+      </button>
+      <button :class="{[ButtonStyling]: true}"
+              v-if="num_ai > 0"
+              @click="remove_ai">Remove AI</button>
       <div v-if="in_game">
         <GameBoard></GameBoard>
       </div>

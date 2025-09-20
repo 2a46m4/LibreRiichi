@@ -18,6 +18,7 @@ type Client interface {
 	GetID() uuid.UUID
 	SetArena(*Arena)
 	GetRecv() chan<- any
+	IsAI() bool
 }
 
 // A location where players gather. Controls the flow of the game,
@@ -189,11 +190,7 @@ func CreateArena(name string, uuid uuid.UUID) Arena {
 	}
 }
 
-func (arena *Arena) JoinArena(agent Client, joinAsPlayer bool) error {
-	if !joinAsPlayer {
-		panic("NYI")
-	}
-
+func (arena *Arena) JoinArena(agent Client) error {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -348,6 +345,10 @@ func (arena *Arena) FinishRoundArena() {
 // EndArena is called when the arena is finished and all players should be disconnected
 func (arena *Arena) EndArena() error {
 	return nil
+}
+
+func (arena *Arena) RemoveAI() error {
+	panic("NYI")
 }
 
 func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {

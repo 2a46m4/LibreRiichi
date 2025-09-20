@@ -20,6 +20,7 @@ const (
 )
 
 var TossAction = Toss{TileToToss: Invalid}
+var TossPotential = PotentialActionEvent{Actions: []Action{TossAction}}
 
 // TODO: With the pending game actions stored in the game, we don't
 // have to re-check a lot of the actions
@@ -251,8 +252,7 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 
 		// TODO: Check if the player can make a kan
 		private := PrivateMessage(game.currentPlayerIdx())
-		private.Add(ArenaBoardEvent{
-			BoardEvent: PotentialActionEvent{Action: TossAction}})
+		private.Add(ArenaBoardEvent{BoardEvent: TossPotential})
 		actions.Add(private)
 
 		shouldEnd = false
@@ -272,11 +272,18 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 			return game.GetNextEvent()
 		}
 
+		// Group pending actions by player
+		playerActions := make(map[uint8][]Action)
 		for _, pendingAction := range pendingActions {
-			private := PrivateMessage(pendingAction.fromPlayer)
+			playerActions[pendingAction.fromPlayer] = append(playerActions[pendingAction.fromPlayer], pendingAction.Action)
+		}
+
+		// Send all actions for each player in a single message
+		for playerIdx, actionsForPlayer := range playerActions {
+			private := PrivateMessage(playerIdx)
 			private.Add(ArenaBoardEvent{
 				BoardEvent: PotentialActionEvent{
-					Action: pendingAction.Action}})
+					Actions: actionsForPlayer}})
 			actions.Add(private)
 		}
 
@@ -306,13 +313,13 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		actions.Add(partial)
 
 		private := PrivateMessage(game.currentPlayerIdx())
-		private.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Toss{TileToToss: Invalid}}})
+		private.Add(ArenaBoardEvent{BoardEvent: TossPotential})
 		actions.Add(private)
 
 		// Get potential for performing a Riichi
 		for _, discard := range game.currentPlayer().GetRiichiDiscards() {
 			partial := PrivateMessage(game.currentPlayerIdx())
-			partial.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Riichi{TileToRiichi: discard}}})
+			partial.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Actions: []Action{Riichi{TileToRiichi: discard}}}})
 			actions.Add(partial)
 		}
 

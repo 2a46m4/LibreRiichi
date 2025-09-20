@@ -15,6 +15,10 @@ export enum BoardEventType {
 
 // Individual struct interfaces
 
+class GameResult {
+
+}
+
 export interface PlayerActionEvent {
     boardevent_type: BoardEventType.PlayerActionEvent;
     action_data: Action;
@@ -23,16 +27,12 @@ export interface PlayerActionEvent {
 
 export interface PotentialActionEvent {
     boardevent_type: BoardEventType.PotentialActionEvent;
-    action_data: Action[];
+    actions: Action[];
 }
 
 export interface GameSetupEvent {
     boardevent_type: BoardEventType.GameSetupEvent;
     setup: Setup[];
-}
-
-class GameResult {
-
 }
 
 export interface GameEndEvent {
