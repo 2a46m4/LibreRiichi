@@ -3,7 +3,7 @@
 // ServerAction Union Type and Enum
 import {ArenaAction} from "./arena_action_generated";
 
-export type ServerAction = InitialMessageAction | JoinArenaAction | ServerArenaAction | ListArenasAction | CreateArenaAction | ArenaInfoAction | AddAIArenaAction | RemoveAIArenaAction;
+export type ServerAction = InitialMessageAction | JoinArenaAction | ServerArenaAction | ListArenasAction | CreateArenaAction | ArenaInfoAction;
 
 export enum ServerActionType {
     InitialMessageAction = 0,
@@ -12,8 +12,6 @@ export enum ServerActionType {
     ListArenasAction = 3,
     CreateArenaAction = 4,
     ArenaInfoAction = 5,
-    AddAIArenaAction = 6,
-    RemoveAIArenaAction = 7,
 }
 
 // Individual struct interfaces
@@ -44,12 +42,4 @@ export interface CreateArenaAction {
 
 export interface ArenaInfoAction {
     serveraction_type: ServerActionType.ArenaInfoAction;
-}
-
-export interface AddAIArenaAction {
-    serveraction_type: ServerActionType.AddAIArenaAction;
-}
-
-export interface RemoveAIArenaAction {
-    serveraction_type: ServerActionType.RemoveAIArenaAction;
 }

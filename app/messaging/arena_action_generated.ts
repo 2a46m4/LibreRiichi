@@ -3,12 +3,14 @@
 // ArenaAction Union Type and Enum
 import {Action} from "./action_generated";
 
-export type ArenaAction = StartGameActionData | PlayerQuitActionData | PlayerActionData;
+export type ArenaAction = StartGameActionData | PlayerQuitActionData | PlayerActionData | AddAIArenaAction | RemoveAIArenaAction;
 
 export enum ArenaActionType {
     StartGameActionData = 0,
     PlayerQuitActionData = 1,
     PlayerActionData = 2,
+    AddAIArenaAction = 3,
+    RemoveAIArenaAction = 4,
 }
 
 // Individual struct interfaces
@@ -24,4 +26,12 @@ export interface PlayerQuitActionData {
 export interface PlayerActionData {
     arenaaction_type: ArenaActionType.PlayerActionData;
     action: Action;
+}
+
+export interface AddAIArenaAction {
+    arenaaction_type: ArenaActionType.AddAIArenaAction;
+}
+
+export interface RemoveAIArenaAction {
+    arenaaction_type: ArenaActionType.RemoveAIArenaAction;
 }

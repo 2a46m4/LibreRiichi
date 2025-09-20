@@ -337,6 +337,25 @@ func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPl
 	return Unit, nil
 }
 
+func (arena *Arena) HandleAddAIArenaAction(data AddAIArenaAction, fromPlayer uint8) (UnitType, error) {
+	aiClient, err := MakeComputerClient()
+	if err != nil {
+		return Unit, err
+	}
+
+	err = arena.JoinArena(&aiClient)
+	if err != nil {
+		return Unit, err
+	}
+	go aiClient.Loop()
+	return Unit, nil
+}
+
+func (arena *Arena) HandleRemoveAIArenaAction(data RemoveAIArenaAction, fromPlayer uint8) (UnitType, error) {
+	// TODO: Send Die struct to client
+	panic("NYI")
+}
+
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
 func (arena *Arena) FinishRoundArena() {
 	arena.game.GetGameResults()
@@ -345,10 +364,6 @@ func (arena *Arena) FinishRoundArena() {
 // EndArena is called when the arena is finished and all players should be disconnected
 func (arena *Arena) EndArena() error {
 	return nil
-}
-
-func (arena *Arena) RemoveAI() error {
-	panic("NYI")
 }
 
 func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {

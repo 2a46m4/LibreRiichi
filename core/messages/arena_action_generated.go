@@ -17,6 +17,8 @@ const (
 	STARTGAMEACTIONDATA ArenaActionType = iota
 	PLAYERQUITACTIONDATA ArenaActionType = iota
 	PLAYERACTIONDATA ArenaActionType = iota
+	ADDAIARENAACTION ArenaActionType = iota
+	REMOVEAIARENAACTION ArenaActionType = iota
 )
 func (StartGameActionData) ArenaActionImpl() {}
 func (obj StartGameActionData) MarshalJSON() ([]byte, error) {
@@ -65,6 +67,28 @@ func (obj *PlayerActionData) UnmarshalJSON(rawData []byte) error {
     return err
 }
 
+func (AddAIArenaAction) ArenaActionImpl() {}
+func (obj AddAIArenaAction) MarshalJSON() ([]byte, error) {
+    var raw struct {
+		ArenaActionType ArenaActionType `json:"arenaaction_type"`
+	}
+
+    raw.ArenaActionType = ADDAIARENAACTION
+
+    return json.Marshal(raw)
+}
+
+func (RemoveAIArenaAction) ArenaActionImpl() {}
+func (obj RemoveAIArenaAction) MarshalJSON() ([]byte, error) {
+    var raw struct {
+		ArenaActionType ArenaActionType `json:"arenaaction_type"`
+	}
+
+    raw.ArenaActionType = REMOVEAIARENAACTION
+
+    return json.Marshal(raw)
+}
+
 
 func (msg *ArenaActionUnpacker) Uncover() ArenaAction {
 	return msg.ArenaAction
@@ -101,6 +125,20 @@ func (msg *ArenaActionUnpacker) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.ArenaAction = message
+	case ADDAIARENAACTION:
+		message := AddAIArenaAction{}
+		err := json.Unmarshal(rawData, &message)
+		if err != nil {
+			return err
+		}
+		msg.ArenaAction = message
+	case REMOVEAIARENAACTION:
+		message := RemoveAIArenaAction{}
+		err := json.Unmarshal(rawData, &message)
+		if err != nil {
+			return err
+		}
+		msg.ArenaAction = message
 	default:
 		return fmt.Errorf("unexpected type: %#v", raw.ArenaActionType)
 	}
@@ -111,6 +149,8 @@ type ArenaActionHandler[T any, E any] interface {
     HandleStartGameActionData(StartGameActionData, E) (T, error)
     HandlePlayerQuitActionData(PlayerQuitActionData, E) (T, error)
     HandlePlayerActionData(PlayerActionData, E) (T, error)
+    HandleAddAIArenaAction(AddAIArenaAction, E) (T, error)
+    HandleRemoveAIArenaAction(RemoveAIArenaAction, E) (T, error)
 }
 
 func ArenaActionDecode[T any, E any](handler ArenaActionHandler[T, E], data ArenaAction, extraData E) (ret T, err error) {
@@ -121,6 +161,10 @@ func ArenaActionDecode[T any, E any](handler ArenaActionHandler[T, E], data Aren
         return handler.HandlePlayerQuitActionData(v, extraData)
     case PlayerActionData:
         return handler.HandlePlayerActionData(v, extraData)
+    case AddAIArenaAction:
+        return handler.HandleAddAIArenaAction(v, extraData)
+    case RemoveAIArenaAction:
+        return handler.HandleRemoveAIArenaAction(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

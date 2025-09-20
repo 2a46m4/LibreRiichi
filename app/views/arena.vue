@@ -9,7 +9,7 @@ import {MessageType} from "../messaging/message";
 import {ServerActionType} from "../messaging/server_action_generated";
 import {ArenaMessageBus, register_request} from "../messaging/event_handler";
 import {ServerResponseType} from "../messaging/server_response_generated";
-import {ServerEventMessage, ServerEventType} from "../messaging/server_event_generated";
+import {ServerEvent, ServerEventType} from "../messaging/server_event_generated";
 import {ArenaEventType} from "../messaging/arena_event_generated";
 import {ArenaActionType} from "../messaging/arena_action_generated";
 
@@ -53,7 +53,7 @@ async function get_arena_info() {
 
 get_arena_info()
 
-let callback = (data: ServerEventMessage) => {
+let callback = (data: ServerEvent) => {
   console.log("Arena listener called")
   switch (data.serverevent_type) {
     case ServerEventType.ServerArenaEvent:
@@ -110,17 +110,15 @@ async function start_game() {
 }
 
 async function add_ai() {
-  let msg_idx = websocket_state.conn.send(
-      {
-        message_type: MessageType.REQUEST,
-        data: {
-          serveraction_type: ServerActionType.ServerArenaAction,
-          arena_action: {
-            arenaaction_type: ArenaActionType.AddAIActionData
-          }
-        }
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.AddAIArenaAction
       }
-  )
+    }
+  })
 
   let ret = await register_request(msg_idx);
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
@@ -128,7 +126,7 @@ async function add_ai() {
   }
 
   if (!ret.success) {
-    throw new Error("Couldn't start game: " + ret.fail_reason)
+    throw new Error("Couldn't add AI: " + ret.fail_reason)
   }
 
   num_ai.value = num_ai.value + 1
@@ -141,7 +139,7 @@ async function remove_ai() {
         data: {
           serveraction_type: ServerActionType.ServerArenaAction,
           arena_action: {
-            arenaaction_type: ArenaActionType.RemoveAIActionData
+            arenaaction_type: ArenaActionType.RemoveAIArenaAction
           }
         }
       }
@@ -153,7 +151,7 @@ async function remove_ai() {
   }
 
   if (!ret.success) {
-    throw new Error("Couldn't start game: " + ret.fail_reason)
+    throw new Error("Couldn't remove AI: " + ret.fail_reason)
   }
 
   num_ai.value = num_ai.value - 1

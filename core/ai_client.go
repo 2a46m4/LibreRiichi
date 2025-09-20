@@ -17,6 +17,8 @@ type ComputerClient struct {
 	Arena *Arena
 }
 
+type Die struct{}
+
 func (client ComputerClient) GetName() string {
 	return client.Name
 }
@@ -37,7 +39,7 @@ func (ComputerClient) IsAI() bool {
 	return true
 }
 
-func MakeComputerClient(connection ConnChan) (ComputerClient, error) {
+func MakeComputerClient() (ComputerClient, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		return ComputerClient{}, err
@@ -50,17 +52,20 @@ func MakeComputerClient(connection ConnChan) (ComputerClient, error) {
 		Arena: nil,
 	}
 	fmt.Println("Making new client", client)
+
 	return client, nil
 }
 
 func (client ComputerClient) Loop() {
 	log.Println(client.Name, client.ID)
 	for send := range client.Recv {
-		log.Println("Loop")
+		log.Println("Computer Loop")
 
 		switch send := send.(type) {
 		case ServerEvent:
 			ServerEventDecode(&client, send, Unit)
+		case Die:
+			break
 		}
 	}
 }
@@ -100,6 +105,7 @@ func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, e
 
 func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Potential actions available: %+v", client.Name, event.Actions)
+	log.Println("Test!!! ", *client)
 
 	// Immediately do a potential action
 	for _, action := range event.Actions {

@@ -19,8 +19,6 @@ const (
 	LISTARENASACTION ServerActionType = iota
 	CREATEARENAACTION ServerActionType = iota
 	ARENAINFOACTION ServerActionType = iota
-	ADDAIARENAACTION ServerActionType = iota
-	REMOVEAIARENAACTION ServerActionType = iota
 )
 func (InitialMessageAction) serverActionImpl() {}
 func (obj InitialMessageAction) MarshalJSON() ([]byte, error) {
@@ -108,28 +106,6 @@ func (obj ArenaInfoAction) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
-func (AddAIArenaAction) serverActionImpl() {}
-func (obj AddAIArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ServerActionType ServerActionType `json:"serveraction_type"`
-	}
-
-    raw.ServerActionType = ADDAIARENAACTION
-
-    return json.Marshal(raw)
-}
-
-func (RemoveAIArenaAction) serverActionImpl() {}
-func (obj RemoveAIArenaAction) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ServerActionType ServerActionType `json:"serveraction_type"`
-	}
-
-    raw.ServerActionType = REMOVEAIARENAACTION
-
-    return json.Marshal(raw)
-}
-
 
 func (msg *ServerActionUnpacker) Uncover() ServerAction {
 	return msg.ServerAction
@@ -187,20 +163,6 @@ func (msg *ServerActionUnpacker) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.ServerAction = message
-	case ADDAIARENAACTION:
-		message := AddAIArenaAction{}
-		err := json.Unmarshal(rawData, &message)
-		if err != nil {
-			return err
-		}
-		msg.ServerAction = message
-	case REMOVEAIARENAACTION:
-		message := RemoveAIArenaAction{}
-		err := json.Unmarshal(rawData, &message)
-		if err != nil {
-			return err
-		}
-		msg.ServerAction = message
 	default:
 		return fmt.Errorf("unexpected type: %#v", raw.ServerActionType)
 	}
@@ -214,8 +176,6 @@ type ServerActionHandler[T any, E any] interface {
     HandleListArenasAction(ListArenasAction, E) (T, error)
     HandleCreateArenaAction(CreateArenaAction, E) (T, error)
     HandleArenaInfoAction(ArenaInfoAction, E) (T, error)
-    HandleAddAIArenaAction(AddAIArenaAction, E) (T, error)
-    HandleRemoveAIArenaAction(RemoveAIArenaAction, E) (T, error)
 }
 
 func ServerActionDecode[T any, E any](handler ServerActionHandler[T, E], data ServerAction, extraData E) (ret T, err error) {
@@ -232,10 +192,6 @@ func ServerActionDecode[T any, E any](handler ServerActionHandler[T, E], data Se
         return handler.HandleCreateArenaAction(v, extraData)
     case ArenaInfoAction:
         return handler.HandleArenaInfoAction(v, extraData)
-    case AddAIArenaAction:
-        return handler.HandleAddAIArenaAction(v, extraData)
-    case RemoveAIArenaAction:
-        return handler.HandleRemoveAIArenaAction(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

@@ -247,50 +247,6 @@ func (client *HumanClient) HandleClientDestruction() {
 	}
 }
 
-func (client *HumanClient) HandleAddAIArenaAction(data AddAIArenaAction, other any) (any, error) {
-	if client.Arena == nil {
-		return GenericResponse{
-			Success:    false,
-			FailReason: "Not in an arena",
-		}, nil
-	}
-
-	err := client.Arena.JoinArena(&ComputerClient{})
-	if err != nil {
-		return GenericResponse{
-			Success:    false,
-			FailReason: err.Error(),
-		}, nil
-	}
-
-	return GenericResponse{
-		Success:    true,
-		FailReason: "",
-	}, nil
-}
-
-func (client *HumanClient) HandleRemoveAIArenaAction(data RemoveAIArenaAction, other any) (any, error) {
-	if client.Arena == nil {
-		return GenericResponse{
-			Success:    false,
-			FailReason: "Not in an arena",
-		}, nil
-	}
-
-	err := client.Arena.RemoveAI()
-	if err != nil {
-		return GenericResponse{
-			Success:    false,
-			FailReason: err.Error(),
-		}, nil
-	}
-
-	return GenericResponse{
-		Success:    true,
-		FailReason: "",
-	}, nil
-}
-
 func (client HumanClient) GetSendChannel() chan<- any {
 	return client.Recv
 }
