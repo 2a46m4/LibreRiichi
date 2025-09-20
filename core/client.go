@@ -11,7 +11,7 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
-type Client struct {
+type HumanClient struct {
 	Name       string
 	ID         uuid.UUID
 	Connection ConnChan
@@ -23,13 +23,29 @@ type Client struct {
 	EventIndex uint
 }
 
-func MakeClient(connection ConnChan) (Client, error) {
+func (client HumanClient) GetName() string {
+	return client.Name
+}
+
+func (client HumanClient) GetID() uuid.UUID {
+	return client.ID
+}
+
+func (client *HumanClient) SetArena(arena *Arena) {
+	client.Arena = arena
+}
+
+func (client *HumanClient) GetRecv() chan<- any {
+	return client.Recv
+}
+
+func MakeClient(connection ConnChan) (HumanClient, error) {
 	uuid, err := uuid.NewUUID()
 	if err != nil {
-		return Client{}, err
+		return HumanClient{}, err
 	}
 
-	client := Client{
+	client := HumanClient{
 		Name:          "Unnamed User",
 		ID:            uuid,
 		Connection:    connection,
@@ -42,7 +58,7 @@ func MakeClient(connection ConnChan) (Client, error) {
 	return client, nil
 }
 
-func (client Client) Loop() {
+func (client HumanClient) Loop() {
 	fmt.Println(client.Name, client.ID, client.Connection)
 	for {
 		fmt.Println("Loop")
@@ -108,7 +124,7 @@ func (client Client) Loop() {
 	}
 }
 
-func (client *Client) HandleInitialMessageAction(msg InitialMessageAction, other any) (any, error) {
+func (client *HumanClient) HandleInitialMessageAction(msg InitialMessageAction, other any) (any, error) {
 	log.Println("Handling initial message action")
 	client.Name = msg.Name
 	return GenericResponse{
@@ -117,7 +133,7 @@ func (client *Client) HandleInitialMessageAction(msg InitialMessageAction, other
 	}, nil
 }
 
-func (client *Client) HandleListArenasAction(data ListArenasAction, other any) (any, error) {
+func (client *HumanClient) HandleListArenasAction(data ListArenasAction, other any) (any, error) {
 	log.Println("Handling list arenas action")
 
 	list := ListArenas()
@@ -127,7 +143,7 @@ func (client *Client) HandleListArenasAction(data ListArenasAction, other any) (
 	}, nil
 }
 
-func (client *Client) HandleJoinArenaAction(data JoinArenaAction, other any) (any, error) {
+func (client *HumanClient) HandleJoinArenaAction(data JoinArenaAction, other any) (any, error) {
 	if client.Arena != nil {
 		return GenericResponse{
 			Success:    false,
@@ -158,7 +174,7 @@ func (client *Client) HandleJoinArenaAction(data JoinArenaAction, other any) (an
 	}, nil
 }
 
-func (client *Client) HandleServerArenaAction(action ServerArenaAction, other any) (any, error) {
+func (client *HumanClient) HandleServerArenaAction(action ServerArenaAction, other any) (any, error) {
 	if client.Arena == nil {
 		return GenericResponse{
 			Success:    false,
@@ -188,7 +204,7 @@ func (client *Client) HandleServerArenaAction(action ServerArenaAction, other an
 	}, nil
 }
 
-func (client *Client) HandleCreateArenaAction(data CreateArenaAction, other any) (any, error) {
+func (client *HumanClient) HandleCreateArenaAction(data CreateArenaAction, other any) (any, error) {
 	err := CreateAndAddArena(data.ArenaName)
 	if err != nil {
 		return GenericResponse{
@@ -202,7 +218,7 @@ func (client *Client) HandleCreateArenaAction(data CreateArenaAction, other any)
 	}, nil
 }
 
-func (client *Client) HandleArenaInfoAction(data ArenaInfoAction, other any) (any, error) {
+func (client *HumanClient) HandleArenaInfoAction(data ArenaInfoAction, other any) (any, error) {
 	if client.Arena == nil {
 		return GenericResponse{
 			Success:    false,
@@ -213,7 +229,7 @@ func (client *Client) HandleArenaInfoAction(data ArenaInfoAction, other any) (an
 	return client.Arena.GetArenaInfo(), nil
 }
 
-func (client *Client) HandleClientDestruction() {
+func (client *HumanClient) HandleClientDestruction() {
 	if client.Arena != nil {
 		idx, err := client.Arena.getPlayerIdx(client)
 		if err != nil {
@@ -227,6 +243,6 @@ func (client *Client) HandleClientDestruction() {
 	}
 }
 
-func (client Client) GetSendChannel() chan<- any {
+func (client HumanClient) GetSendChannel() chan<- any {
 	return client.Recv
 }
