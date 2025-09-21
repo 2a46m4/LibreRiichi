@@ -209,22 +209,21 @@ function handle_game(event: BoardEvent) {
           <ListItem v-for="player in players">{{ player }}</ListItem>
         </ul>
       </div>
-      <button :class="{ [ButtonStyling]: true }" @click="start_game">
-        Start game
-      </button>
-      <button :class="{ [ButtonStyling]: true }" @click="add_ai">Add AI</button>
-      <button
-        :class="{ [ButtonStyling]: true }"
-        v-if="num_ai > 0"
-        @click="remove_ai"
-      >
-        Remove AI
-      </button>
-      <button :class="{ [ButtonStyling]: true }" @click="in_game = !in_game">
-        {{ in_game ? 'Hide' : 'Show' }} 3D Game View (Test)
-      </button>
-      <div v-if="in_game" class="game-container">
-        <GameView></GameView>
+      <div class="game-container">
+        <div id="ui">
+          <button :class="{ [ButtonStyling]: true }" @click="start_game">
+            Start game
+          </button>
+          <button :class="{ [ButtonStyling]: true }" @click="add_ai">Add AI</button>
+          <button
+              :class="{ [ButtonStyling]: true }"
+              v-if="num_ai > 0"
+              @click="remove_ai"
+          >
+            Remove AI
+          </button>
+        </div>
+        <GameView id="game"></GameView>
       </div>
     </div>
   </Suspense>
@@ -233,8 +232,21 @@ function handle_game(event: BoardEvent) {
 <style scoped>
 .game-container {
   margin-top: 2rem;
+  position: relative;
   width: 100%;
   display: flex;
   justify-content: center;
+}
+
+#ui {
+  position: absolute;  /* let us position ourself inside the container */
+  left: 0;             /* make our position the top left of the container */
+  top: 0;
+  color: white;
+}
+
+#game {
+  height: 100%;
+  width: 100%;
 }
 </style>

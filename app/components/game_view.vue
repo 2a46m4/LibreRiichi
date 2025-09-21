@@ -6,6 +6,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 const props = defineProps<{}>()
 
 const threeCanvas = ref<HTMLCanvasElement>()
+const gameContainer = ref<HTMLDivElement>()
+const isFullscreen = ref(false)
+
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
@@ -14,6 +17,7 @@ let animationId: number
 
 const mahjongTiles: THREE.Mesh[] = []
 const dealerMarker: THREE.Mesh[] = []
+
 
 onMounted(() => {
   if (!threeCanvas.value) return
@@ -30,7 +34,7 @@ onMounted(() => {
 function setupScene() {
   // Scene setup
   scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x0a4d3a) // Mahjong table green
+  scene.background = new THREE.Color(0xffffff) // Mahjong table green
 
   // Camera setup
   camera = new THREE.PerspectiveCamera(
@@ -58,9 +62,12 @@ function setupScene() {
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.05
-  controls.maxPolarAngle = Math.PI / 2.2 // Limit vertical rotation
-  controls.maxAzimuthAngle = Math.PI
-  controls.minAzimuthAngle = 0
+  controls.maxPolarAngle = Math.PI / 2
+  controls.minPolarAngle = Math.PI / 5
+  controls.maxAzimuthAngle = Math.PI/12
+  controls.minAzimuthAngle = -Math.PI/12
+  controls.maxDistance = 20
+  controls.minDistance = 15
 
   // Add lighting
   const ambientLight = new THREE.AmbientLight(0x404040, 0.6)
@@ -86,6 +93,7 @@ function createMahjongTable() {
   const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 }) // Brown wood
   const table = new THREE.Mesh(tableGeometry, tableMaterial)
   table.position.y = -2
+  table.rotation.y = Math.PI/8
   table.receiveShadow = true
   scene.add(table)
 
@@ -94,6 +102,7 @@ function createMahjongTable() {
   const surfaceMaterial = new THREE.MeshLambertMaterial({ color: 0x0a7c4a })
   const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial)
   surface.position.y = -1.7
+  surface.rotation.y = Math.PI/8
   surface.receiveShadow = true
   scene.add(surface)
 
@@ -132,13 +141,13 @@ function createMahjongTiles() {
 
   // Create tile walls for each player
   const positions = [
-    { x: 0, z: 3, rotation: 0 }, // South
-    { x: 3, z: 0, rotation: Math.PI / 2 }, // East
-    { x: 0, z: -3, rotation: Math.PI }, // North
-    { x: -3, z: 0, rotation: -Math.PI / 2 }, // West
+    { x: 0, z: 5, rotation: 0 }, // South
+    { x: 5, z: 0, rotation: Math.PI / 2 }, // East
+    { x: 0, z: -5, rotation: Math.PI }, // North
+    { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
   ]
 
-  positions.forEach((pos, playerIndex) => {
+  positions.forEach((pos) => {
     for (let i = 0; i < 13; i++) {
       const tile = new THREE.Mesh(
         tileGeometry,
@@ -216,14 +225,14 @@ function animate() {
 }
 
 function onWindowResize() {
-  if (!threeCanvas.value) return
+  if (!threeCanvas.value || !gameContainer.value) return
 
-  camera.aspect = threeCanvas.value.clientWidth / threeCanvas.value.clientHeight
+  const width = gameContainer.value.clientWidth
+  const height = gameContainer.value.clientHeight
+
+  camera.aspect = width / height
   camera.updateProjectionMatrix()
-  renderer.setSize(
-    threeCanvas.value.clientWidth,
-    threeCanvas.value.clientHeight,
-  )
+  renderer.setSize(width, height)
 }
 
 onUnmounted(() => {
@@ -238,12 +247,13 @@ onUnmounted(() => {
   }
   if (scene) {
     scene.traverse((object) => {
-      if (object instanceof THREE.Mesh) {
-        object.geometry.dispose()
-        if (Array.isArray(object.material)) {
-          object.material.forEach((material) => material.dispose())
+      if (object.type === 'Mesh') {
+        const mesh = object as THREE.Mesh
+        mesh.geometry.dispose()
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((material) => material.dispose())
         } else {
-          object.material.dispose()
+          mesh.material.dispose()
         }
       }
     })
@@ -252,12 +262,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="game-view-container">
+  <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
     <canvas ref="threeCanvas" class="game-canvas"></canvas>
     <div class="game-ui">
       <div class="game-info">
         <h3>Mahjong Game</h3>
-        <p>Use mouse to orbit • Scroll to zoom</p>
+        <p>{{ isFullscreen ? 'Mouse to orbit • Scroll to zoom' : 'Mouse to orbit • Scroll to zoom' }}</p>
       </div>
     </div>
   </div>
@@ -270,7 +280,19 @@ onUnmounted(() => {
   height: 600px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.game-view-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  border-radius: 0;
+  cursor: auto;
 }
 
 .game-canvas {
