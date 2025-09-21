@@ -1,36 +1,33 @@
 <script setup lang="ts">
 import {
-  BoxStyling,
   ButtonStyling,
-  FlexBox,
-  H1Styling,
-  Spacing,
-  ULStyling,
 } from '../styling'
-import { ref, Ref } from 'vue'
-import ListItem from '../components/list_item.vue'
-import GameBoard from '../components/game_board.vue'
+import {ref, Ref} from 'vue'
+import BoxElement from '../components/box_element.vue'
+import TitleBoxElement from '../components/title_box_element.vue'
 import GameView from '../components/game_view.vue'
-import { use_room_state, use_websocket_state } from '../index'
-import { MessageType } from '../messaging/message'
-import { ServerActionType } from '../messaging/server_action_generated'
-import { ArenaMessageBus, register_request } from '../messaging/event_handler'
-import { ServerResponseType } from '../messaging/server_response_generated'
+import List from '../components/list.vue'
+import {use_room_state, use_websocket_state} from '../index'
+import {MessageType} from '../messaging/message'
+import {ServerActionType} from '../messaging/server_action_generated'
+import {ArenaMessageBus, register_request} from '../messaging/event_handler'
+import {ServerResponseType} from '../messaging/server_response_generated'
 import {
   ServerEvent,
   ServerEventType,
 } from '../messaging/server_event_generated'
-import { ArenaEventType } from '../messaging/arena_event_generated'
-import { ArenaActionType } from '../messaging/arena_action_generated'
-import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
-import { SetupType } from '../types/setup'
+import {ArenaEventType} from '../messaging/arena_event_generated'
+import {ArenaActionType} from '../messaging/arena_action_generated'
+import {BoardEvent, BoardEventType} from '../messaging/board_event_generated'
+import {SetupType} from '../types/setup'
+import Button from "../components/button.vue";
 
 const players: Ref<string[]> = ref([])
 const num_ai: Ref<number> = ref(0)
 
 const room_state = use_room_state()
 if (!room_state.room_set) {
-  throw new Error('Room not set')
+  error_status.value = 'Room not set'
 }
 
 const websocket_state = use_websocket_state()
@@ -80,16 +77,19 @@ let callback = (data: ServerEvent) => {
           break
         case ArenaEventType.ArenaBoardEvent:
           if (!in_game.value) {
-            throw new Error('Game not started')
+            error_status.value = 'Game not started'
+            return true
           }
           handle_game(message.board_event)
           break
         default:
-          throw new Error('Unknown arena event')
+          error_status.value = 'Unknown arena event'
+          return true
       }
       break
     default:
-      throw new Error('Unknown server event')
+      error_status.value = 'Unknown server event'
+      return true
   }
   return true
 }
@@ -108,11 +108,11 @@ async function start_game() {
 
   let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
-    throw new Error('Connection error: Wrong Type')
+    error_status.value = 'Connection error: Wrong Type'
   }
 
   if (!ret.success) {
-    throw new Error("Couldn't start game: " + ret.fail_reason)
+    error_status.value = "Couldn't start game: " + ret.fail_reason
   }
 }
 
@@ -129,11 +129,11 @@ async function add_ai() {
 
   let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
-    throw new Error('Connection error: Wrong Type')
+    error_status.value = 'Connection error: Wrong Type'
   }
 
   if (!ret.success) {
-    throw new Error("Couldn't add AI: " + ret.fail_reason)
+    error_status.value = "Couldn't add AI: " + ret.fail_reason
   }
 
   num_ai.value = num_ai.value + 1
@@ -198,32 +198,19 @@ function handle_game(event: BoardEvent) {
 <template>
   <Suspense>
     <div>
-      <div :class="BoxStyling">
-        <h1 :class="H1Styling">{{ room_state.room_name }}</h1>
-      </div>
-      <div :class="BoxStyling">
-        <div :class="FlexBox">
-          <h1 :class="H1Styling">Players {{ players.length }} / 4</h1>
-        </div>
-        <ul :class="ULStyling" v-if="players.length !== 0">
-          <ListItem v-for="player in players">{{ player }}</ListItem>
-        </ul>
-      </div>
       <div class="game-container">
         <div id="ui">
-          <button :class="{ [ButtonStyling]: true }" @click="start_game">
-            Start game
-          </button>
-          <button :class="{ [ButtonStyling]: true }" @click="add_ai">Add AI</button>
-          <button
-              :class="{ [ButtonStyling]: true }"
-              v-if="num_ai > 0"
-              @click="remove_ai"
-          >
-            Remove AI
-          </button>
+          <TitleBoxElement :text="'Room name: ' + room_state.room_name"/>
+          <div class="container outline bg-white rounded shadow-md pb-5 mb-5">
+            <h1 class="font-bold text-xl text-center pt-2">Players {{ players.length }} / 4</h1>
+            <List :items="players" class="p-1"></List>
+          </div>
+          <Button :condition="!in_game" :on_click="start_game" text="Start game"/>
+          <Button :condition="!in_game" :on_click="add_ai" text="Add AI"/>
+          <Button :condition="num_ai > 0" :on_click="remove_ai" text="Remove AI"/>
+          <BoxElement :text="error_status" v-if="error_status.length !== 0"/>
         </div>
-        <GameView id="game"></GameView>
+        <GameView id="game"/>
       </div>
     </div>
   </Suspense>
@@ -231,18 +218,17 @@ function handle_game(event: BoardEvent) {
 
 <style scoped>
 .game-container {
-  margin-top: 2rem;
   position: relative;
   width: 100%;
-  display: flex;
-  justify-content: center;
+  height: 100%;
 }
 
 #ui {
-  position: absolute;  /* let us position ourself inside the container */
-  left: 0;             /* make our position the top left of the container */
-  top: 0;
-  color: white;
+  position: absolute; /* let us position ourself inside the container */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
 }
 
 #game {

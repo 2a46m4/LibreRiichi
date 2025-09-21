@@ -3,7 +3,7 @@ import { ListStyling } from '../styling'
 </script>
 
 <template>
-  <li :class="ListStyling">
+  <li class="list-none outline mt-4 p-1 mx-1 rounded shadow-md">
     <slot />
   </li>
 </template>

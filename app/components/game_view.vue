@@ -68,6 +68,7 @@ function setupScene() {
   controls.minAzimuthAngle = -Math.PI/12
   controls.maxDistance = 20
   controls.minDistance = 15
+  controls.enablePan = false
 
   // Add lighting
   const ambientLight = new THREE.AmbientLight(0x404040, 0.6)
@@ -230,6 +231,9 @@ function onWindowResize() {
   const width = gameContainer.value.clientWidth
   const height = gameContainer.value.clientHeight
 
+  threeCanvas.value.width = width
+  threeCanvas.value.height = height
+
   camera.aspect = width / height
   camera.updateProjectionMatrix()
   renderer.setSize(width, height)
@@ -264,12 +268,7 @@ onUnmounted(() => {
 <template>
   <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
     <canvas ref="threeCanvas" class="game-canvas"></canvas>
-    <div class="game-ui">
-      <div class="game-info">
-        <h3>Mahjong Game</h3>
-        <p>{{ isFullscreen ? 'Mouse to orbit • Scroll to zoom' : 'Mouse to orbit • Scroll to zoom' }}</p>
-      </div>
-    </div>
+    <div class="game-ui"></div>
   </div>
 </template>
 
@@ -277,22 +276,11 @@ onUnmounted(() => {
 .game-view-container {
   position: relative;
   width: 100%;
-  height: 600px;
+  height: 100%;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.game-view-container.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1000;
-  border-radius: 0;
-  cursor: auto;
 }
 
 .game-canvas {
