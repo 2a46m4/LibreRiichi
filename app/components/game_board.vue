@@ -1,14 +1,10 @@
-<script setup lang="ts">
-
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <p>Opponents</p>
 
   <p>Points</p>
-<p>Your tiles</p>
+  <p>Your tiles</p>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

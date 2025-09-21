@@ -21,3 +21,5 @@ type PlayerActionData struct {
 type AddAIArenaAction struct{}
 
 type RemoveAIArenaAction struct{}
+
+type GameInfoActionData struct{}

@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import Tile from "./tile_component.vue";
+import Tile from './tile_component.vue'
 
-  const props = defineProps<{
-    tile_paths: URL[]
-  }>()
-
+const props = defineProps<{
+  tile_paths: URL[]
+}>()
 </script>
 
 <template>
-  <img v-for="tile_path in props.tile_paths" :src=tile_path.toString() alt="A tile"/>
+  <img
+    v-for="tile_path in props.tile_paths"
+    :src="tile_path.toString()"
+    alt="A tile"
+  />
 </template>
 
 <style scoped>

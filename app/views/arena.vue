@@ -1,107 +1,114 @@
 <script setup lang="ts">
-
-import {BoxStyling, ButtonStyling, FlexBox, H1Styling, Spacing, ULStyling} from "../styling";
-import {ref, Ref} from "vue";
-import ListItem from "../components/list_item.vue";
-import GameBoard from "../components/game_board.vue";
-import {use_room_state, use_websocket_state} from "../index";
-import {MessageType} from "../messaging/message";
-import {ServerActionType} from "../messaging/server_action_generated";
-import {ArenaMessageBus, register_request} from "../messaging/event_handler";
-import {ServerResponseType} from "../messaging/server_response_generated";
-import {ServerEvent, ServerEventType} from "../messaging/server_event_generated";
-import {ArenaEventType} from "../messaging/arena_event_generated";
-import {ArenaActionType} from "../messaging/arena_action_generated";
+import {
+  BoxStyling,
+  ButtonStyling,
+  FlexBox,
+  H1Styling,
+  Spacing,
+  ULStyling,
+} from '../styling'
+import { ref, Ref } from 'vue'
+import ListItem from '../components/list_item.vue'
+import GameBoard from '../components/game_board.vue'
+import GameView from '../components/game_view.vue'
+import { use_room_state, use_websocket_state } from '../index'
+import { MessageType } from '../messaging/message'
+import { ServerActionType } from '../messaging/server_action_generated'
+import { ArenaMessageBus, register_request } from '../messaging/event_handler'
+import { ServerResponseType } from '../messaging/server_response_generated'
+import {
+  ServerEvent,
+  ServerEventType,
+} from '../messaging/server_event_generated'
+import { ArenaEventType } from '../messaging/arena_event_generated'
+import { ArenaActionType } from '../messaging/arena_action_generated'
+import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
+import { SetupType } from '../types/setup'
 
 const players: Ref<string[]> = ref([])
 const num_ai: Ref<number> = ref(0)
 
 const room_state = use_room_state()
 if (!room_state.room_set) {
-  throw new Error("Room not set")
+  throw new Error('Room not set')
 }
 
 const websocket_state = use_websocket_state()
 const error_status = ref('')
 
-let in_game = false
+const in_game = ref(false)
 
 async function get_arena_info() {
-  let msg_idx = websocket_state.conn.send(
-      {
-        message_type: MessageType.REQUEST,
-        data: {
-          serveraction_type: ServerActionType.ArenaInfoAction,
-        }
-      }
-  )
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ArenaInfoAction,
+    },
+  })
 
   let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.ArenaInfoResponse) {
-    error_status.value = "Connection error: wrong type"
+    error_status.value = 'Connection error: wrong type'
     return
   }
 
   if (!ret.success) {
-    error_status.value = "Could not get arena data"
+    error_status.value = 'Could not get arena data'
     return
   }
 
-  players.value = ret.agents.map(x => x.name)
+  players.value = ret.agents.map((x) => x.name)
   room_state.room_name = ret.name
 }
 
 get_arena_info()
 
 let callback = (data: ServerEvent) => {
-  console.log("Arena listener called")
+  console.log('Arena listener called')
   switch (data.serverevent_type) {
     case ServerEventType.ServerArenaEvent:
       let message = data.arena_message
       switch (message.arenaevent_type) {
         case ArenaEventType.GameStartedEvent:
-          in_game = true
-          ArenaMessageBus.unregister(callback_idx)
-          // TODO
-          break;
+          in_game.value = true
+          break
         case ArenaEventType.PlayerJoinedEvent:
-          players.value.push(message.name);
-          break;
+          players.value.push(message.name)
+          break
         case ArenaEventType.PlayerQuitEvent:
           players.value = players.value.filter((v) => v !== message.name)
-          break;
+          break
         case ArenaEventType.ArenaBoardEvent:
-          if (!in_game) {
-            throw new Error("Game not started")
+          if (!in_game.value) {
+            throw new Error('Game not started')
           }
-          break;
+          handle_game(message.board_event)
+          break
         default:
-          throw new Error("Unknown arena event")
+          throw new Error('Unknown arena event')
       }
-      break;
+      break
     default:
-      throw new Error("Unknown server event")
+      throw new Error('Unknown server event')
   }
   return true
 }
 let callback_idx = ArenaMessageBus.register(callback)
 
 async function start_game() {
-  let msg_idx = websocket_state.conn.send(
-      {
-        message_type: MessageType.REQUEST,
-        data: {
-          serveraction_type: ServerActionType.ServerArenaAction,
-          arena_action: {
-            arenaaction_type: ArenaActionType.StartGameActionData
-          }
-        }
-      }
-  )
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.StartGameActionData,
+      },
+    },
+  })
 
-  let ret = await register_request(msg_idx);
+  let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
-    throw new Error("Connection error: Wrong Type")
+    throw new Error('Connection error: Wrong Type')
   }
 
   if (!ret.success) {
@@ -115,14 +122,14 @@ async function add_ai() {
     data: {
       serveraction_type: ServerActionType.ServerArenaAction,
       arena_action: {
-        arenaaction_type: ArenaActionType.AddAIArenaAction
-      }
-    }
+        arenaaction_type: ArenaActionType.AddAIArenaAction,
+      },
+    },
   })
 
-  let ret = await register_request(msg_idx);
+  let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
-    throw new Error("Connection error: Wrong Type")
+    throw new Error('Connection error: Wrong Type')
   }
 
   if (!ret.success) {
@@ -133,21 +140,19 @@ async function add_ai() {
 }
 
 async function remove_ai() {
-  let msg_idx = websocket_state.conn.send(
-      {
-        message_type: MessageType.REQUEST,
-        data: {
-          serveraction_type: ServerActionType.ServerArenaAction,
-          arena_action: {
-            arenaaction_type: ArenaActionType.RemoveAIArenaAction
-          }
-        }
-      }
-  )
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.RemoveAIArenaAction,
+      },
+    },
+  })
 
-  let ret = await register_request(msg_idx);
+  let ret = await register_request(msg_idx)
   if (ret.serverresponse_type !== ServerResponseType.GenericResponse) {
-    throw new Error("Connection error: Wrong Type")
+    throw new Error('Connection error: Wrong Type')
   }
 
   if (!ret.success) {
@@ -157,6 +162,37 @@ async function remove_ai() {
   num_ai.value = num_ai.value - 1
 }
 
+// Handles game events
+function handle_game(event: BoardEvent) {
+  switch (event.boardevent_type) {
+    case BoardEventType.PotentialActionEvent:
+      break
+    case BoardEventType.PlayerActionEvent:
+      break
+    case BoardEventType.GameSetupEvent:
+      for (let setup of event.setup) {
+        switch (setup.setup_type) {
+          case SetupType.INITIAL_TILES:
+            break
+          case SetupType.DORA:
+            break
+          case SetupType.STARTING_POINTS:
+            break
+          case SetupType.PLAYER_NUMBER:
+            break
+          case SetupType.PLAYER_ORDER:
+            break
+          case SetupType.ROUND_WIND:
+            break
+          case SetupType.ROUND_NUMBER:
+            break
+        }
+      }
+      break
+    case BoardEventType.GameEndEvent:
+      break
+  }
+}
 </script>
 
 <template>
@@ -173,22 +209,32 @@ async function remove_ai() {
           <ListItem v-for="player in players">{{ player }}</ListItem>
         </ul>
       </div>
-      <button :class="{[ButtonStyling]: true}"
-              @click="start_game">Start game
+      <button :class="{ [ButtonStyling]: true }" @click="start_game">
+        Start game
       </button>
-      <button :class="{[ButtonStyling]: true}"
-              @click="add_ai">Add AI
+      <button :class="{ [ButtonStyling]: true }" @click="add_ai">Add AI</button>
+      <button
+        :class="{ [ButtonStyling]: true }"
+        v-if="num_ai > 0"
+        @click="remove_ai"
+      >
+        Remove AI
       </button>
-      <button :class="{[ButtonStyling]: true}"
-              v-if="num_ai > 0"
-              @click="remove_ai">Remove AI</button>
-      <div v-if="in_game">
-        <GameBoard></GameBoard>
+      <button :class="{ [ButtonStyling]: true }" @click="in_game = !in_game">
+        {{ in_game ? 'Hide' : 'Show' }} 3D Game View (Test)
+      </button>
+      <div v-if="in_game" class="game-container">
+        <GameView></GameView>
       </div>
     </div>
   </Suspense>
 </template>
 
 <style scoped>
-
+.game-container {
+  margin-top: 2rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
 </style>

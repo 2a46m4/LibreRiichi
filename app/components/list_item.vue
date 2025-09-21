@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import {ListStyling} from "../styling";
+import { ListStyling } from '../styling'
 </script>
 
 <template>
-<li :class="ListStyling">
-  <slot/>
-</li>
+  <li :class="ListStyling">
+    <slot />
+  </li>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

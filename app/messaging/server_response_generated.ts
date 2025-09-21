@@ -2,37 +2,38 @@
 
 // ServerResponse Union Type and Enum
 
-export type ServerResponse = GenericResponse | ListArenasResponse | ArenaInfoResponse;
+export type ServerResponse =
+  | GenericResponse
+  | ListArenasResponse
+  | ArenaInfoResponse
 
 export enum ServerResponseType {
-    GenericResponse = 0,
-    ListArenasResponse = 1,
-    ArenaInfoResponse = 2,
+  GenericResponse = 0,
+  ListArenasResponse = 1,
+  ArenaInfoResponse = 2,
 }
 
 // Individual struct interfaces
 
-class AgentInfo {
-
-}
+class AgentInfo {}
 
 export interface GenericResponse {
-    serverresponse_type: ServerResponseType.GenericResponse;
-    success: boolean;
-    fail_reason: string;
+  serverresponse_type: ServerResponseType.GenericResponse
+  success: boolean
+  fail_reason: string
 }
 
 export interface ListArenasResponse {
-    serverresponse_type: ServerResponseType.ListArenasResponse;
-    success: boolean;
-    arena_list: string[];
+  serverresponse_type: ServerResponseType.ListArenasResponse
+  success: boolean
+  arena_list: string[]
 }
 
 export interface ArenaInfoResponse {
-    serverresponse_type: ServerResponseType.ArenaInfoResponse;
-    success: boolean;
-    name: string;
-    agents: AgentInfo[];
-    game_started: boolean;
-    date_created: string;
+  serverresponse_type: ServerResponseType.ArenaInfoResponse
+  success: boolean
+  name: string
+  agents: AgentInfo[]
+  game_started: boolean
+  date_created: string
 }

@@ -8,42 +8,48 @@ export enum SetupType {
   ROUND_NUMBER = 6,
 }
 
-export type Setup = InitialTiles | Dora | StartingPoints | PlayerNumber | PlayerOrder | RoundWind | RoundNumber
+export type Setup =
+  | InitialTiles
+  | Dora
+  | StartingPoints
+  | PlayerNumber
+  | PlayerOrder
+  | RoundWind
+  | RoundNumber
 
 export type TileArray = string
 
 export type InitialTiles = {
-    setup_type: SetupType.INITIAL_TILES,
-    data: TileArray
+  setup_type: SetupType.INITIAL_TILES
+  data: TileArray
 }
 
 export type Dora = {
-    setup_type: SetupType.DORA,
-    data: number
+  setup_type: SetupType.DORA
+  data: number
 }
 
 export type StartingPoints = {
-    setup_type: SetupType.STARTING_POINTS,
-    data: number[]
+  setup_type: SetupType.STARTING_POINTS
+  data: number[]
 }
 
 export type PlayerNumber = {
-    setup_type: SetupType.PLAYER_NUMBER,
-    data: number
+  setup_type: SetupType.PLAYER_NUMBER
+  data: number
 }
 
 export type PlayerOrder = {
-    setup_type: SetupType.PLAYER_ORDER,
-    data: TileArray
+  setup_type: SetupType.PLAYER_ORDER
+  data: TileArray
 }
 
 export type RoundWind = {
-    setup_type: SetupType.ROUND_WIND,
-    data: number
+  setup_type: SetupType.ROUND_WIND
+  data: number
 }
 
 export type RoundNumber = {
-    setup_type: SetupType.ROUND_NUMBER,
-    data: number // int
+  setup_type: SetupType.ROUND_NUMBER
+  data: number // int
 }
-

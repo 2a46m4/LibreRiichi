@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2024",
     "module": "preserve",
-    "moduleResolution": "Node",
+    "moduleResolution": "node16",
     "jsx": "react",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
