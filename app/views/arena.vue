@@ -24,6 +24,8 @@ import Button from "../components/button.vue";
 
 const players: Ref<string[]> = ref([])
 const num_ai: Ref<number> = ref(0)
+const error_status = ref('')
+const in_game = ref(false)
 
 const room_state = use_room_state()
 if (!room_state.room_set) {
@@ -31,9 +33,7 @@ if (!room_state.room_set) {
 }
 
 const websocket_state = use_websocket_state()
-const error_status = ref('')
 
-const in_game = ref(false)
 
 async function get_arena_info() {
   let msg_idx = websocket_state.conn.send({
@@ -61,7 +61,7 @@ async function get_arena_info() {
 get_arena_info()
 
 let callback = (data: ServerEvent) => {
-  console.log('Arena listener called')
+  console.log('Arena listener called: ', data)
   switch (data.serverevent_type) {
     case ServerEventType.ServerArenaEvent:
       let message = data.arena_message
@@ -199,14 +199,14 @@ function handle_game(event: BoardEvent) {
   <Suspense>
     <div>
       <div class="game-container">
-        <div id="ui">
+        <div v-if="!in_game" id="ui">
           <TitleBoxElement :text="'Room name: ' + room_state.room_name"/>
           <div class="container outline bg-white rounded shadow-md pb-5 mb-5">
             <h1 class="font-bold text-xl text-center pt-2">Players {{ players.length }} / 4</h1>
             <List :items="players" class="p-1"></List>
           </div>
-          <Button :condition="!in_game" :on_click="start_game" text="Start game"/>
-          <Button :condition="!in_game" :on_click="add_ai" text="Add AI"/>
+          <Button :condition="true" :on_click="start_game" text="Start game"/>
+          <Button :condition="true" :on_click="add_ai" text="Add AI"/>
           <Button :condition="num_ai > 0" :on_click="remove_ai" text="Remove AI"/>
           <BoxElement :text="error_status" v-if="error_status.length !== 0"/>
         </div>
@@ -229,6 +229,10 @@ function handle_game(event: BoardEvent) {
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 #game {

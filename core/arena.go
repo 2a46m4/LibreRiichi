@@ -278,6 +278,12 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 		return Unit, err
 	}
 
+    // Send start game event
+    err = arena.Send(GameStartedEvent{}, GLOBAL, 0)
+    if err != nil {
+        panic(err)
+    }
+
 	// Send over the setups for each player
 	for idx, setup := range setups {
 
