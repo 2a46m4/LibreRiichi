@@ -24,7 +24,11 @@ let animation_id: number
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
-const mahjong_tiles: THREE.Mesh[] = []
+const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
+let selected: THREE.Mesh | null = null
+let selected_old_mat: THREE.Material
+let selected_mat = new THREE.MeshLambertMaterial({color: 0xff0000})
+
 const dealerMarker: THREE.Mesh[] = []
 
 let textures: Map<number, THREE.Texture>
@@ -195,7 +199,7 @@ function createMahjongTiles() {
     tile_mesh.castShadow = true
     tile_mesh.receiveShadow = true
 
-    mahjong_tiles.push(tile_mesh)
+    mahjong_tiles.set(tile_mesh.uuid, tile_mesh)
     scene.add(tile_mesh)
   }
 
@@ -228,7 +232,6 @@ function createMahjongTiles() {
       tile.castShadow = true
       tile.receiveShadow = true
 
-      mahjong_tiles.push(tile)
       scene.add(tile)
     }
   })
@@ -242,7 +245,6 @@ function createMahjongTiles() {
     tile.rotation.y = angle + Math.PI / 2
     tile.castShadow = true
     tile.receiveShadow = true
-    mahjong_tiles.push(tile)
     scene.add(tile)
   }
 }
@@ -275,22 +277,38 @@ function animate() {
     marker.rotation.y += 0.005
   })
 
-  // Subtle floating animation for some tiles
-  mahjong_tiles.forEach((tile, index) => {
-    if (index < 4) {
-      // Only animate a few tiles
-      tile.position.y = -1.3 + Math.sin(Date.now() * 0.001 + index) * 0.05
-    }
-  })
-
   // update the picking ray with the camera and pointer position
   raycaster.setFromCamera(pointer, camera);
 
   // calculate objects intersecting the picking ray
   const intersects = raycaster.intersectObjects(scene.children);
+  console.log(intersects.length)
 
+  let intersect_occurred = false
   for (let i = 0; i < intersects.length; i++) {
-    console.log(intersects[i].object)
+    if (mahjong_tiles.has(intersects[i].object.uuid)) {
+      intersect_occurred = true
+
+      if (selected !== null) {
+        selected.material = selected_old_mat
+        selected = null
+      }
+
+      let tile = mahjong_tiles.get(intersects[i].object.uuid)
+      if (tile === undefined) {
+        throw new Error("Tile not found")
+      }
+
+      selected = tile
+      selected_old_mat = tile.material as THREE.Material
+      tile.material = selected_mat
+      break
+    }
+  }
+
+  if (!intersect_occurred && selected !== null) {
+    selected.material = selected_old_mat
+    selected = null
   }
 
   controls.update()
