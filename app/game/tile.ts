@@ -72,20 +72,20 @@ export class Tile {
 
   static get_string_representation(tile_array: Tile[]) {
     let sorted = tile_array
-      .map((a) => a.clear_red_or_dora())
-      .sort((a, b) => (a.value > b.value ? 1 : -1))
+        .map((a) => a.clear_red_or_dora())
+        .sort((a, b) => (a.value > b.value ? 1 : -1))
 
     let str = ''
 
-    for (let i = 0; i < sorted.length; ) {
+    for (let i = 0; i < sorted.length;) {
       let current_meld = sorted[i].value & TileMask
       let meld_list = [sorted[i]]
       let j = i + 1
 
       while (
-        j < sorted.length &&
-        (sorted[j].value & TileMask) == current_meld
-      ) {
+          j < sorted.length &&
+          (sorted[j].value & TileMask) == current_meld
+          ) {
         meld_list.push(sorted[j])
         j++
       }
@@ -95,21 +95,21 @@ export class Tile {
       switch (current_meld >> TileShift) {
         case ManzuBit:
           console.log(
-            meld_list.map((tile) => (tile.value & NumberMask) + 1).join(''),
+              meld_list.map((tile) => (tile.value & NumberMask) + 1).join(''),
           )
           str +=
-            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-            'M'
+              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+              'M'
           break
         case SouzuBit:
           str +=
-            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-            'S'
+              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+              'S'
           break
         case PinzuBit:
           str +=
-            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-            'P'
+              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+              'P'
           break
         case HonourBit:
           str += meld_list.map((tile) => tile.value - 47).join('') + 'Z'
@@ -122,9 +122,11 @@ export class Tile {
     return str
   }
 
-  static get_base64_representation(tile_array: Tile[]) {}
+  static get_base64_representation(tile_array: Tile[]) {
+  }
 
   clear_red_or_dora(): Tile {
+    if (this.value === TileValue.Invalid || this.value === TileValue.Hidden) return this
     return new Tile(this.value & ~(TileValue.DoraTile | TileValue.RedTile))
   }
 
@@ -137,7 +139,7 @@ export class Tile {
   }
 
   is_honour(): boolean {
-    return (this.value & TileMask) === HonourBit
+    return ((this.value & TileMask) >> TileShift) === HonourBit
   }
 
   is_wind(): boolean {
@@ -148,16 +150,25 @@ export class Tile {
     return this.value >= 52 && this.value <= 54
   }
 
+  get_tile_type(): number {
+    return (this.value & TileMask) >> TileShift
+  }
+
+  // returns the number of the tile, 0-indexed
+  get_tile_number(): number {
+    return this.value & NumberMask
+  }
+
+  is_souzu(): boolean {
+    return this.get_tile_type() === SouzuBit
+  }
+
   is_manzu(): boolean {
-    return (this.value & TileMask) === ManzuBit
+    return this.get_tile_type() === ManzuBit
   }
 
   is_pinzu(): boolean {
-    return (this.value & TileMask) === PinzuBit
-  }
-
-  get_tile_number(): number {
-    return this.value & NumberMask
+    return this.get_tile_type() === PinzuBit
   }
 
   set_red_tile(): Tile {
@@ -170,5 +181,36 @@ export class Tile {
 
   set_tile_number(num: number): Tile {
     return new Tile((this.value & (TileMask | SpecialMask)) | num)
+  }
+
+  get_tile_image_path(): URL {
+    const base = '/app/assets/riichi-mahjong-tiles/Export/Regular/'
+
+    const honour_map = new Map<number, string>([
+      [TileValue.EastTile, 'Ton.png'],
+      [TileValue.SouthTile, 'Nan.png'],
+      [TileValue.WestTile, 'Shaa.png'],
+      [TileValue.NorthTile, 'Pei.png'],
+      [TileValue.White, 'Haku.png'],
+      [TileValue.Red, 'Chun.png'],
+      [TileValue.Green, 'Hatsu.png'],
+    ])
+
+    let url_construct = (name: string) => new URL(base + name + (this.get_tile_number() + 1) + '.png', import.meta.url)
+
+    if (this.is_honour()) {
+      return new URL(
+          base + honour_map.get(this.value)!,
+          import.meta.url,
+      )
+    } else if (this.is_manzu()) {
+      return url_construct('Man')
+    } else if (this.is_pinzu()) {
+      return url_construct('Pin')
+    } else if (this.is_souzu()) {
+      return url_construct('Sou')
+    } else {
+      throw new Error('Unknown tile type')
+    }
   }
 }

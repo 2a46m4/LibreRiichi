@@ -5,7 +5,7 @@ import {
 import {ref, Ref} from 'vue'
 import BoxElement from '../components/box_element.vue'
 import TitleBoxElement from '../components/title_box_element.vue'
-import GameView from '../components/game_view.vue'
+import ThreeJSGameView from '../components/threejs_game_view.vue'
 import List from '../components/list.vue'
 import {use_room_state, use_websocket_state} from '../index'
 import {MessageType} from '../messaging/message'
@@ -21,6 +21,7 @@ import {ArenaActionType} from '../messaging/arena_action_generated'
 import {BoardEvent, BoardEventType} from '../messaging/board_event_generated'
 import {SetupType} from '../game/setup'
 import Button from "../components/button.vue";
+import {Tile, TileValue} from "../game/tile";
 
 const players: Ref<string[]> = ref([])
 const num_ai: Ref<number> = ref(0)
@@ -59,6 +60,10 @@ async function get_arena_info() {
 }
 
 get_arena_info()
+
+let tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map((i)=>new Tile(i))
+console.log(tiles)
+
 
 let callback = (data: ServerEvent) => {
   console.log('Arena listener called: ', data)
@@ -210,7 +215,7 @@ function handle_game(event: BoardEvent) {
           <Button :condition="num_ai > 0" :on_click="remove_ai" text="Remove AI"/>
           <BoxElement :text="error_status" v-if="error_status.length !== 0"/>
         </div>
-        <GameView id="game"/>
+        <ThreeJSGameView :tiles="tiles"/>
       </div>
     </div>
   </Suspense>
