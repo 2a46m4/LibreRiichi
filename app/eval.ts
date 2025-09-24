@@ -18,7 +18,7 @@ import {
 import { ArenaEventType } from './messaging/arena_event_generated'
 import { ArenaActionType } from './messaging/arena_action_generated'
 import { BoardEvent, BoardEventType } from './messaging/board_event_generated'
-import { SetupType } from './types/setup'
+import { SetupType } from './game/setup'
 import { decode, Tile } from './game/tile'
 import { ActionType } from './messaging/action_generated'
 

@@ -2,7 +2,7 @@
 
 // BoardEvent Union Type and Enum
 import { Action } from './action_generated'
-import { Setup } from '../types/setup'
+import { Setup } from '../game/setup'
 
 export type BoardEvent =
   | PlayerActionEvent

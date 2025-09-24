@@ -90,20 +90,20 @@ function setupScene() {
 
 function createMahjongTable() {
   // Table base
-  const tableGeometry = new THREE.CylinderGeometry(7, 7, 0.5, 8)
+  const tableGeometry = new THREE.BoxGeometry(13, 13, 0.5)
   const tableMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 }) // Brown wood
   const table = new THREE.Mesh(tableGeometry, tableMaterial)
   table.position.y = -2
-  table.rotation.y = Math.PI/8
+  table.rotation.x = Math.PI/2
   table.receiveShadow = true
   scene.add(table)
 
   // Table surface (green felt)
-  const surfaceGeometry = new THREE.CylinderGeometry(6.8, 6.8, 0.1, 8)
+  const surfaceGeometry = new THREE.BoxGeometry(12.8, 12.8, 0.1)
   const surfaceMaterial = new THREE.MeshLambertMaterial({ color: 0x0a7c4a })
   const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial)
   surface.position.y = -1.7
-  surface.rotation.y = Math.PI/8
+  surface.rotation.x = Math.PI/2
   surface.receiveShadow = true
   scene.add(surface)
 
@@ -148,11 +148,34 @@ function createMahjongTiles() {
     { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
   ]
 
+  let import_url = new URL("../assets/riichi-mahjong-tiles/Export/Regular/Chun.png", import.meta.url)
+
   positions.forEach((pos) => {
     for (let i = 0; i < 13; i++) {
+      const loader = new THREE.TextureLoader()
+      const texture = loader.load(
+          import_url.toString(),
+        // onLoad callback
+        (tex) => {
+          console.log('Texture loaded successfully')
+        },
+        // onProgress callback
+        undefined,
+        // onError callback
+        (err) => {
+          console.error('Error loading texture:', err)
+        }
+      )
+      texture.colorSpace = THREE.SRGBColorSpace
+
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        color: 0xffffff
+      })
+
       const tile = new THREE.Mesh(
         tileGeometry,
-        tileMaterials[i % tileMaterials.length],
+        material
       )
 
       // Position tiles in a row

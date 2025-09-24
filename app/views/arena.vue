@@ -19,7 +19,7 @@ import {
 import {ArenaEventType} from '../messaging/arena_event_generated'
 import {ArenaActionType} from '../messaging/arena_action_generated'
 import {BoardEvent, BoardEventType} from '../messaging/board_event_generated'
-import {SetupType} from '../types/setup'
+import {SetupType} from '../game/setup'
 import Button from "../components/button.vue";
 
 const players: Ref<string[]> = ref([])
