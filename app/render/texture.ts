@@ -6,6 +6,7 @@ export function load_texture(url: string) {
         url,
         (tex) => {
             console.log(`Texture ${tex} loaded successfully`)
+            tex.colorSpace = THREE.SRGBColorSpace
         },
         undefined,
         (err) => {

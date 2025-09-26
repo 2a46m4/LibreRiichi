@@ -3,9 +3,7 @@ import * as THREE from 'three'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js'
 import {ref, onMounted, onUnmounted} from 'vue'
 import {Tile, TileValue} from "../game/tile";
-import {alphatest_colour, load_texture} from "../render/texture";
-import {MeshLambertMaterial} from "three";
-import {load_all_textures} from "../render/tile";
+import {initialize_tiles, load_all_textures, TileObject} from "../render/tile";
 
 const props = defineProps<{
   tiles: Tile[]
@@ -24,10 +22,32 @@ let animation_id: number
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
+// mesh uuid to mesh
 const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
-let selected: THREE.Mesh | null = null
-let selected_old_mat: THREE.Material
-let selected_mat = new THREE.MeshLambertMaterial({color: 0xff0000})
+
+let selection: {
+  material: THREE.MeshLambertMaterial,
+  mesh: THREE.Mesh,
+  tile: TileObject | null,
+}
+function init_selection() {
+  let material = new THREE.MeshLambertMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.5,
+      })
+  let mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.26), material)
+  mesh.visible = false
+  let selected_tile: TileObject | null = null
+
+  selection = {
+    material: material,
+    mesh: mesh,
+    tile: selected_tile
+  }
+
+  scene.add(selection.mesh)
+}
 
 const dealerMarker: THREE.Mesh[] = []
 
@@ -37,27 +57,43 @@ onMounted(() => {
   if (!threeCanvas.value) return
 
   setupScene()
-  textures = load_all_textures()
+  initialize_tiles()
+  init_selection()
   createMahjongTable()
   createMahjongTiles()
   createDealerMarker()
   animate()
 
   window.addEventListener('resize', onWindowResize)
-
-
-  function onPointerMove(event: PointerEvent) {
-
-    // calculate pointer position in normalized device coordinates
-    // (-1 to +1) for both components
-
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  }
-
-  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointermove', on_pointer_move);
+  window.addEventListener('click', on_click)
 })
+
+function on_click(event: MouseEvent) {
+  if (selection.tile !== null) {
+    console.log("clicked on", selection.tile)
+  }
+}
+
+// ndc coords, update pointer
+function on_pointer_move(event: PointerEvent) {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+}
+
+function onWindowResize() {
+  if (!threeCanvas.value || !gameContainer.value) return
+
+  const width = gameContainer.value.clientWidth
+  const height = gameContainer.value.clientHeight
+
+  threeCanvas.value.width = width
+  threeCanvas.value.height = height
+
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+}
 
 function setupScene() {
   // Scene setup
@@ -161,9 +197,6 @@ function createMahjongTable() {
 }
 
 function createMahjongTiles() {
-  // Create sample mahjong tiles around the table
-  const tileGeometry = new THREE.BoxGeometry(0.4, 0.6, 0.25)
-
   const player_position = {x: 0, z: 5, rotation: 0}
 
   // Create tile walls for each player
@@ -174,78 +207,52 @@ function createMahjongTiles() {
   ]
 
   for (const [i, tile] of props.tiles.entries()) {
-    console.log(tile, tile.value)
-    const texture = textures.get(tile.value)!
-    texture.colorSpace = THREE.SRGBColorSpace
-    const material = new THREE.MeshLambertMaterial({
-      map: texture,
-      color: 0xffffff,
-      transparent: false,
-      side: THREE.DoubleSide,
-      alphaTest: 0.9
-    })
-    material.onBeforeCompile = alphatest_colour
-
-    const tile_mesh = new THREE.Mesh(tileGeometry, material)
-
+    let tile_obj = new TileObject(tile)
     // Position tiles in a row
     const offsetX = (i - 6) * 0.45
-    tile_mesh.position.set(
+    tile_obj.position.set(
         player_position.x + Math.cos(player_position.rotation) * offsetX,
         -1.3,
         player_position.z + Math.sin(player_position.rotation) * offsetX,
     )
-    tile_mesh.rotation.y = player_position.rotation
-    tile_mesh.castShadow = true
-    tile_mesh.receiveShadow = true
+    tile_obj.rotation.y = player_position.rotation
+    tile_obj.castShadow = true
+    tile_obj.receiveShadow = true
 
-    mahjong_tiles.set(tile_mesh.uuid, tile_mesh)
-    scene.add(tile_mesh)
+    mahjong_tiles.set(tile_obj.uuid, tile_obj)
+    scene.add(tile_obj)
   }
 
   let blank_tile = new Tile(TileValue.Hidden)
-  const blank_texture = textures.get(blank_tile.value)!
-  blank_texture.colorSpace = THREE.SRGBColorSpace
-  const blank_material = new THREE.MeshLambertMaterial({
-    map: blank_texture,
-    color: 0xffffff,
-    transparent: false,
-    side: THREE.DoubleSide,
-    alphaTest: 0.9
-  })
-  blank_material.onBeforeCompile = alphatest_colour
-
   positions.forEach((pos) => {
     for (let i = 0; i < 13; i++) {
-      const tile = new THREE.Mesh(
-          tileGeometry, blank_material
-      )
+      let blank_tile_obj = new TileObject(blank_tile)
 
       // Position tiles in a row
       const offsetX = (i - 6) * 0.45
-      tile.position.set(
+      blank_tile_obj.position.set(
           pos.x + Math.cos(pos.rotation) * offsetX,
           -1.3,
           pos.z + Math.sin(pos.rotation) * offsetX,
       )
-      tile.rotation.y = pos.rotation
-      tile.castShadow = true
-      tile.receiveShadow = true
+      blank_tile_obj.rotation.y = pos.rotation
+      blank_tile_obj.castShadow = true
+      blank_tile_obj.receiveShadow = true
 
-      scene.add(tile)
+      scene.add(blank_tile_obj)
     }
   })
 
   // Center tiles (discarded pile)
   for (let i = 0; i < 12; i++) {
-    const tile = new THREE.Mesh(tileGeometry, new MeshLambertMaterial())
+    const tile_obj = new TileObject(new Tile(TileValue.Invalid))
     const angle = (i / 12) * Math.PI * 2
     const radius = 1.5
-    tile.position.set(Math.cos(angle) * radius, -1.3, Math.sin(angle) * radius)
-    tile.rotation.y = angle + Math.PI / 2
-    tile.castShadow = true
-    tile.receiveShadow = true
-    scene.add(tile)
+    tile_obj.position.set(Math.cos(angle) * radius, -1.3, Math.sin(angle) * radius)
+    tile_obj.rotation.y = angle + Math.PI / 2
+    tile_obj.castShadow = true
+    tile_obj.receiveShadow = true
+    scene.add(tile_obj)
   }
 }
 
@@ -282,51 +289,30 @@ function animate() {
 
   // calculate objects intersecting the picking ray
   const intersects = raycaster.intersectObjects(scene.children);
-  console.log(intersects.length)
 
   let intersect_occurred = false
   for (let i = 0; i < intersects.length; i++) {
     if (mahjong_tiles.has(intersects[i].object.uuid)) {
       intersect_occurred = true
-
-      if (selected !== null) {
-        selected.material = selected_old_mat
-        selected = null
-      }
-
       let tile = mahjong_tiles.get(intersects[i].object.uuid)
       if (tile === undefined) {
         throw new Error("Tile not found")
       }
 
-      selected = tile
-      selected_old_mat = tile.material as THREE.Material
-      tile.material = selected_mat
+      selection.mesh.visible = true
+      selection.mesh.position.copy(tile.position)
+      // selected_tile =
+
       break
     }
   }
 
-  if (!intersect_occurred && selected !== null) {
-    selected.material = selected_old_mat
-    selected = null
+  if (!intersect_occurred) {
+    selection.mesh.visible = false
   }
 
   controls.update()
   renderer.render(scene, camera)
-}
-
-function onWindowResize() {
-  if (!threeCanvas.value || !gameContainer.value) return
-
-  const width = gameContainer.value.clientWidth
-  const height = gameContainer.value.clientHeight
-
-  threeCanvas.value.width = width
-  threeCanvas.value.height = height
-
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  renderer.setSize(width, height)
 }
 
 onUnmounted(() => {

@@ -1,5 +1,5 @@
 import {Tile, TileValue} from "../game/tile";
-import {load_texture} from "./texture";
+import {alphatest_colour, load_texture} from "./texture";
 import * as THREE from "three";
 
 const map = new Map<number, string>([
@@ -51,6 +51,17 @@ const map = new Map<number, string>([
     [TileValue.Hidden, new URL('/app/assets/riichi-mahjong-tiles/Export/Regular/Back.png', import.meta.url).href],
 ])
 
+let tile_geometry: THREE.BoxGeometry
+let tile_textures: Map<number, THREE.Texture>
+let tile_materials: Map<number, THREE.Material>
+
+export function initialize_tiles() {
+    tile_geometry = new THREE.BoxGeometry(0.4, 0.6, 0.25)
+    tile_textures = load_all_textures()
+    tile_materials = load_all_materials(tile_textures)
+}
+
+
 export function get_image_texture(tile: Tile) {
     let result = map.get(tile.clear_red_or_dora().value)
     if (result === undefined) {
@@ -65,4 +76,29 @@ export function load_all_textures() {
         texture_map.set(value, load_texture(url))
     }
     return texture_map
+}
+
+export function load_all_materials(tile_textures: Map<number, THREE.Texture>) {
+    return tile_textures.entries()
+        .map(([tile_value, texture]): [number, THREE.Material] => {
+            const material = new THREE.MeshLambertMaterial({
+                map: texture,
+                color: 0xffffff,
+                transparent: false,
+                alphaTest: 0.8,
+            })
+            material.onBeforeCompile = alphatest_colour
+            return [tile_value, material]
+        })
+        .reduce((map, [tile_value, material]) => map.set(tile_value, material),
+            new Map<number, THREE.Material>())
+}
+
+// A tile that exists on screen
+export class TileObject extends THREE.Mesh {
+    public tile: Tile
+    constructor(tile: Tile) {
+        super(tile_geometry, tile_materials.get(tile.value));
+        this.tile = tile
+    }
 }
