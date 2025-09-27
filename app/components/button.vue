@@ -8,14 +8,12 @@ defineProps<{
 
 <template>
   <button
-      class="outline p-1 rounded shadow-md bg-white"
-      v-if="condition"
-      @click="on_click"
+    class="outline p-1 rounded shadow-md bg-white"
+    v-if="condition"
+    @click="on_click"
   >
-    {{text}}
+    {{ text }}
   </button>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

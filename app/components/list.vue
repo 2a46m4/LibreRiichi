@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import ListItem from "./list_item.vue";
+import ListItem from './list_item.vue'
 
 defineProps<{
   items: string[]
 }>()
-
 </script>
 
 <template>

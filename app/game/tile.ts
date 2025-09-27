@@ -74,20 +74,20 @@ export class Tile {
 
   static get_string_representation(tile_array: Tile[]) {
     let sorted = tile_array
-        .map((a) => a.clear_red_or_dora())
-        .sort((a, b) => (a.value > b.value ? 1 : -1))
+      .map((a) => a.clear_red_or_dora())
+      .sort((a, b) => (a.value > b.value ? 1 : -1))
 
     let str = ''
 
-    for (let i = 0; i < sorted.length;) {
+    for (let i = 0; i < sorted.length; ) {
       let current_meld = sorted[i].value & TileMask
       let meld_list = [sorted[i]]
       let j = i + 1
 
       while (
-          j < sorted.length &&
-          (sorted[j].value & TileMask) == current_meld
-          ) {
+        j < sorted.length &&
+        (sorted[j].value & TileMask) == current_meld
+      ) {
         meld_list.push(sorted[j])
         j++
       }
@@ -97,21 +97,21 @@ export class Tile {
       switch (current_meld >> TileShift) {
         case ManzuBit:
           console.log(
-              meld_list.map((tile) => (tile.value & NumberMask) + 1).join(''),
+            meld_list.map((tile) => (tile.value & NumberMask) + 1).join(''),
           )
           str +=
-              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-              'M'
+            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+            'M'
           break
         case SouzuBit:
           str +=
-              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-              'S'
+            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+            'S'
           break
         case PinzuBit:
           str +=
-              meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
-              'P'
+            meld_list.map((tile) => (tile.value & NumberMask) + 1).join('') +
+            'P'
           break
         case HonourBit:
           str += meld_list.map((tile) => tile.value - 47).join('') + 'Z'
@@ -124,11 +124,11 @@ export class Tile {
     return str
   }
 
-  static get_base64_representation(tile_array: Tile[]) {
-  }
+  static get_base64_representation(tile_array: Tile[]) {}
 
   clear_red_or_dora(): Tile {
-    if (this.value === TileValue.Invalid || this.value === TileValue.Hidden) return this
+    if (this.value === TileValue.Invalid || this.value === TileValue.Hidden)
+      return this
     return new Tile(this.value & ~(TileValue.DoraTile | TileValue.RedTile))
   }
 
@@ -141,7 +141,7 @@ export class Tile {
   }
 
   is_honour(): boolean {
-    return ((this.value & TileMask) >> TileShift) === HonourBit
+    return (this.value & TileMask) >> TileShift === HonourBit
   }
 
   is_wind(): boolean {
@@ -198,13 +198,14 @@ export class Tile {
       [TileValue.Green, 'Hatsu.png'],
     ])
 
-    let url_construct = (name: string) => new URL(base + name + (this.get_tile_number() + 1) + '.png', import.meta.url)
+    let url_construct = (name: string) =>
+      new URL(
+        base + name + (this.get_tile_number() + 1) + '.png',
+        import.meta.url,
+      )
 
     if (this.is_honour()) {
-      return new URL(
-          base + honour_map.get(this.value)!,
-          import.meta.url,
-      )
+      return new URL(base + honour_map.get(this.value)!, import.meta.url)
     } else if (this.is_manzu()) {
       return url_construct('Man')
     } else if (this.is_pinzu()) {

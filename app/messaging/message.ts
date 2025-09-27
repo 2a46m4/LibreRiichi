@@ -1,12 +1,12 @@
 import {
-  ServerActionMessage,
+  ServerAction as ServerActionData,
   ServerActionType,
 } from './server_action_generated'
 import {
-  ServerResponseMessage,
+  ServerResponse as ServerResponseData,
   ServerResponseType,
 } from './server_response_generated'
-import { ServerEventMessage, ServerEventType } from './server_event_generated'
+import { ServerEvent as ServerEventData, ServerEventType } from './server_event_generated'
 
 export enum MessageType {
   RESPONSE = 0,
@@ -18,17 +18,17 @@ export type Message = ServerAction | ServerResponse | ServerEvent
 
 export type ServerAction = {
   message_type: MessageType.REQUEST
-  data: ServerActionMessage
+  data: ServerActionData
 }
 
 export type ServerResponse = {
   message_type: MessageType.RESPONSE
-  data: ServerResponseMessage
+  data: ServerResponseData
 }
 
 export type ServerEvent = {
   message_type: MessageType.EVENT
-  data: ServerEventMessage
+  data: ServerEventData
 }
 
 export type IncomingMessage = Message & { message_index: number }

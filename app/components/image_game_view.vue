@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Tile, TileValue } from "../game/tile"
+import { Tile, TileValue } from '../game/tile'
 
 const props = defineProps<{
   tiles: Tile[]
@@ -10,25 +10,30 @@ const gameContainer = ref<HTMLDivElement>()
 const isFullscreen = ref(false)
 
 // Mock data for demonstration - in real game this would come from props/store
-const playerTiles = computed(() => props.tiles || [
-  new Tile(TileValue.Manzu + 0),
-  new Tile(TileValue.Manzu + 1),
-  new Tile(TileValue.Manzu + 2),
-  new Tile(TileValue.Pinzu + 0),
-  new Tile(TileValue.Pinzu + 1),
-  new Tile(TileValue.Souzu + 0),
-  new Tile(TileValue.Souzu + 1),
-  new Tile(TileValue.EastTile),
-  new Tile(TileValue.SouthTile),
-  new Tile(TileValue.WestTile),
-  new Tile(TileValue.White),
-  new Tile(TileValue.Red),
-  new Tile(TileValue.Green)
-])
+const playerTiles = computed(
+  () =>
+    props.tiles || [
+      new Tile(TileValue.Manzu + 0),
+      new Tile(TileValue.Manzu + 1),
+      new Tile(TileValue.Manzu + 2),
+      new Tile(TileValue.Pinzu + 0),
+      new Tile(TileValue.Pinzu + 1),
+      new Tile(TileValue.Souzu + 0),
+      new Tile(TileValue.Souzu + 1),
+      new Tile(TileValue.EastTile),
+      new Tile(TileValue.SouthTile),
+      new Tile(TileValue.WestTile),
+      new Tile(TileValue.White),
+      new Tile(TileValue.Red),
+      new Tile(TileValue.Green),
+    ],
+)
 
 // Other players' tiles (face down)
 const otherPlayerTiles = computed(() =>
-  Array(13).fill(null).map(() => new Tile(TileValue.Hidden))
+  Array(13)
+    .fill(null)
+    .map(() => new Tile(TileValue.Hidden)),
 )
 
 // Center discarded tiles
@@ -40,7 +45,7 @@ const discardedTiles = computed(() => [
   new Tile(TileValue.White),
   new Tile(TileValue.Manzu + 1),
   new Tile(TileValue.Pinzu + 8),
-  new Tile(TileValue.Souzu + 2)
+  new Tile(TileValue.Souzu + 2),
 ])
 
 function getTileImageUrl(tile: Tile): string {
@@ -49,7 +54,11 @@ function getTileImageUrl(tile: Tile): string {
 </script>
 
 <template>
-  <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
+  <div
+    ref="gameContainer"
+    class="game-view-container"
+    :class="{ fullscreen: isFullscreen }"
+  >
     <div class="mahjong-table">
       <!-- North player (top) -->
       <div class="player-area north">
@@ -90,7 +99,7 @@ function getTileImageUrl(tile: Tile): string {
               class="tile tile-discarded"
               :style="{
                 transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                zIndex: index
+                zIndex: index,
               }"
               alt="Discarded tile"
             />
@@ -146,7 +155,8 @@ function getTileImageUrl(tile: Tile): string {
   border-radius: 12px;
   overflow: hidden;
   background: linear-gradient(135deg, #0d4f3c 0%, #1a7c5a 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .mahjong-table {
@@ -155,9 +165,9 @@ function getTileImageUrl(tile: Tile): string {
   height: 100%;
   display: grid;
   grid-template-areas:
-    ". north ."
-    "west center east"
-    ". south .";
+    '. north .'
+    'west center east'
+    '. south .';
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-rows: 1fr 2fr 1fr;
   padding: 20px;
@@ -205,7 +215,9 @@ function getTileImageUrl(tile: Tile): string {
   background: radial-gradient(ellipse at center, #0a5c42 0%, #083d2e 70%);
   border-radius: 20px;
   border: 4px solid #654321;
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .discard-pile {
@@ -226,13 +238,18 @@ function getTileImageUrl(tile: Tile): string {
   background: #ff6b6b;
   border-radius: 50%;
   border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .tile-row {
@@ -250,7 +267,7 @@ function getTileImageUrl(tile: Tile): string {
 
 .tile {
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
   cursor: pointer;
   border: 2px solid #fff;
@@ -263,7 +280,7 @@ function getTileImageUrl(tile: Tile): string {
 
 .tile-player:hover {
   transform: translateY(-6px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   border-color: #4a90e2;
 }
 
@@ -296,7 +313,7 @@ function getTileImageUrl(tile: Tile): string {
 .player-info {
   margin: 8px 0;
   padding: 4px 12px;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   color: white;
   border-radius: 16px;
   font-size: 12px;

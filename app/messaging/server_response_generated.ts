@@ -15,7 +15,9 @@ export enum ServerResponseType {
 
 // Individual struct interfaces
 
-class AgentInfo {}
+interface AgentInfo {
+    name: string
+}
 
 export interface GenericResponse {
   serverresponse_type: ServerResponseType.GenericResponse

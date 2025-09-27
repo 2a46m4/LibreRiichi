@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "preserve",
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
     "jsx": "react",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

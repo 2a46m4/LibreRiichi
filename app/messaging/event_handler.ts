@@ -1,9 +1,6 @@
-import { IncomingMessage, MessageType, validate_message } from './message'
-import {
-  ServerResponseMessage,
-  ServerResponseType,
-} from './server_response_generated'
-import { ServerEventMessage } from './server_event_generated'
+import {IncomingMessage, MessageType, validate_message} from './message'
+import { ServerResponse } from './server_response_generated'
+import { ServerEvent } from './server_event_generated'
 
 export class EventHandler<TIncoming> {
   private listeners: Array<(data: TIncoming) => boolean> = []
@@ -34,11 +31,11 @@ export function keep_registered<TIncoming>(
 }
 
 export const ServerMessageBus = new EventHandler<IncomingMessage>()
-export const ArenaMessageBus = new EventHandler<ServerEventMessage>()
+export const ArenaMessageBus = new EventHandler<ServerEvent>()
 ServerMessageBus.register(
   keep_registered((data: IncomingMessage) => {
     if (data.message_type === MessageType.EVENT) {
-      ArenaMessageBus.handle(data.data as ServerEventMessage)
+      ArenaMessageBus.handle(data.data as ServerEvent)
     }
   }),
 )
@@ -46,8 +43,8 @@ ServerMessageBus.register(
 export function register_request(
   msg_idx: number,
   bus = ServerMessageBus,
-): Promise<ServerResponseMessage> {
-  let { promise, resolve } = Promise.withResolvers<ServerResponseMessage>()
+): Promise<ServerResponse> {
+  let { promise, resolve } = Promise.withResolvers<ServerResponse>()
   bus.register((msg) => {
     if (
       msg.message_type === MessageType.RESPONSE &&
