@@ -384,9 +384,9 @@ function handle_game_setup_event(setups: Setup[]) {
   for (let setup of setups) {
     switch (setup.setup_type) {
       case SetupType.INITIAL_TILES:
-        console.log("Handling!!!")
         mahjong_tiles.forEach((mesh)=>scene.remove(mesh))
           let tiles = Tile.from(setup.data)
+          tiles.sort(Tile.sort)
           let tile_objs = tiles.map((tile)=>new TileObject(tile))
           tile_objs.forEach((tile_obj, i)=>{
             const offsetX = (i - 6) * 0.45

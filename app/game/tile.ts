@@ -66,6 +66,10 @@ export class Tile {
     this.value = value
   }
 
+  static sort(a: Tile, b: Tile) {
+      return a.value - b.value
+  }
+
   static from(base64_string: string): Tile[] {
     let result: Tile[] = []
     decode(base64_string).forEach((n) => result.push(new Tile(n)))
