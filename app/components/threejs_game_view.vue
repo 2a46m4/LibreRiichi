@@ -2,17 +2,18 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import {decode, Tile, TileValue} from '../game/tile'
+import { Tile, TileValue } from '../game/tile'
 import { initialize_tiles, TileObject } from '../render/tile'
 import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
-import {ArenaMessageBus} from "../messaging/event_handler";
-import {ArenaEventType} from "../messaging/arena_event_generated";
-import {ServerEvent} from "../messaging/server_event_generated";
+import { ArenaMessageBus } from "../messaging/event_handler";
+import { ArenaEventType } from "../messaging/arena_event_generated";
+import { ServerEvent } from "../messaging/server_event_generated";
+import TopBoxElement from "./top_box_element.vue";
 
-const props = defineProps<{}>()
+const props = defineProps<{in_game: boolean}>()
 
-const threeCanvas = ref<HTMLCanvasElement>()
+const three_canvas = ref<HTMLCanvasElement>()
 const gameContainer = ref<HTMLDivElement>()
 const isFullscreen = ref(false)
 
@@ -28,6 +29,7 @@ const pointer = new THREE.Vector2()
 // mesh uuid to mesh, represents hand
 const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
 const player_position = { x: 0, z: 5, rotation: 0 }
+const dora_tile_position = { x: -5, z: 5, y: -1.3 }
 
 let selection: {
   material: THREE.MeshLambertMaterial
@@ -55,8 +57,10 @@ function init_selection() {
 
 const dealerMarker: THREE.Mesh[] = []
 
+let dora_tiles = []
+
 onMounted(() => {
-  if (!threeCanvas.value) return
+  if (!three_canvas.value) return
 
   setup_scene()
   initialize_tiles()
@@ -86,13 +90,13 @@ function on_pointer_move(event: PointerEvent) {
 }
 
 function on_window_resize() {
-  if (!threeCanvas.value || !gameContainer.value) return
+  if (!three_canvas.value || !gameContainer.value) return
 
   const width = gameContainer.value.clientWidth
   const height = gameContainer.value.clientHeight
 
-  threeCanvas.value.width = width
-  threeCanvas.value.height = height
+  three_canvas.value.width = width
+  three_canvas.value.height = height
 
   camera.aspect = width / height
   camera.updateProjectionMatrix()
@@ -107,7 +111,7 @@ function setup_scene() {
   // Camera setup
   camera = new THREE.PerspectiveCamera(
     35,
-    threeCanvas.value!.clientWidth / threeCanvas.value!.clientHeight,
+    three_canvas.value!.clientWidth / three_canvas.value!.clientHeight,
     0.1,
     1000,
   )
@@ -116,12 +120,12 @@ function setup_scene() {
 
   // Renderer setup
   renderer = new THREE.WebGLRenderer({
-    canvas: threeCanvas.value!,
+    canvas: three_canvas.value!,
     antialias: true,
   })
   renderer.setSize(
-    threeCanvas.value!.clientWidth,
-    threeCanvas.value!.clientHeight,
+    three_canvas.value!.clientWidth,
+    three_canvas.value!.clientHeight,
   )
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFShadowMap
@@ -131,11 +135,11 @@ function setup_scene() {
   controls.enableDamping = true
   controls.dampingFactor = 0.05
   controls.maxPolarAngle = Math.PI / 2
-  controls.minPolarAngle = Math.PI / 5
+  controls.minPolarAngle = 0
   controls.maxAzimuthAngle = Math.PI / 12
   controls.minAzimuthAngle = -Math.PI / 12
   controls.maxDistance = 20
-  controls.minDistance = 15
+  controls.minDistance = 12
   controls.enablePan = false
 
   // Add lighting
@@ -202,14 +206,7 @@ function create_mahjong_table() {
 
 function create_mahjong_tiles() {
 
-  // Create tile walls for each player
-  const positions = [
-    { x: 5, z: 0, rotation: Math.PI / 2 }, // East
-    { x: 0, z: -5, rotation: Math.PI }, // North
-    { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
-  ]
-
-  let tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
+  const tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
     (i) => new Tile(i),
   )
   for (const [i, tile] of tiles.entries()) {
@@ -229,6 +226,12 @@ function create_mahjong_tiles() {
     scene.add(tile_obj)
   }
 
+  // Create tile walls for each player
+  const positions = [
+    { x: 5, z: 0, rotation: Math.PI / 2 }, // East
+    { x: 0, z: -5, rotation: Math.PI }, // North
+    { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
+  ]
   let blank_tile = new Tile(TileValue.Hidden)
   positions.forEach((pos) => {
     for (let i = 0; i < 13; i++) {
@@ -384,27 +387,38 @@ function handle_game_setup_event(setups: Setup[]) {
   for (let setup of setups) {
     switch (setup.setup_type) {
       case SetupType.INITIAL_TILES:
-        mahjong_tiles.forEach((mesh)=>scene.remove(mesh))
-          let tiles = Tile.from(setup.data)
-          tiles.sort(Tile.sort)
-          let tile_objs = tiles.map((tile)=>new TileObject(tile))
-          tile_objs.forEach((tile_obj, i)=>{
-            const offsetX = (i - 6) * 0.45
-            tile_obj.position.set(
-                player_position.x + Math.cos(player_position.rotation) * offsetX,
-                -1.3,
-                player_position.z + Math.sin(player_position.rotation) * offsetX,
-            )
-            tile_obj.rotation.y = player_position.rotation
-            tile_obj.castShadow = true
-            tile_obj.receiveShadow = true
-            scene.add(tile_obj)
-            mahjong_tiles.set(tile_obj.uuid, tile_obj)
-          })
+        mahjong_tiles.forEach((mesh) => scene.remove(mesh))
+        let tiles = Tile.from(setup.data)
+        tiles.sort(Tile.sort)
+        let tile_objs = tiles.map((tile) => new TileObject(tile))
+        tile_objs.forEach((tile_obj, i) => {
+          const offsetX = (i - 6) * 0.45
+          tile_obj.position.set(
+            player_position.x + Math.cos(player_position.rotation) * offsetX,
+            -1.3,
+            player_position.z + Math.sin(player_position.rotation) * offsetX,
+          )
+          tile_obj.rotation.y = player_position.rotation
+          tile_obj.castShadow = true
+          tile_obj.receiveShadow = true
+          scene.add(tile_obj)
+          mahjong_tiles.set(tile_obj.uuid, tile_obj)
+        })
         break
+
       case SetupType.DORA:
+        const dora_tile = new Tile(setup.data)
+        dora_tiles.push(dora_tile)
+        const dora_tile_obj = new TileObject(dora_tile)
+        dora_tile_obj.position.set(
+          dora_tile_position.x, dora_tile_position.y, dora_tile_position.z
+        )
+        scene.add(dora_tile_obj)
+
         break
       case SetupType.STARTING_POINTS:
+        scoreboard_state.starting_points = setup.data
+
         break
       case SetupType.PLAYER_NUMBER:
         break
@@ -420,12 +434,9 @@ function handle_game_setup_event(setups: Setup[]) {
 </script>
 
 <template>
-  <div
-    ref="gameContainer"
-    class="game-view-container"
-    :class="{ fullscreen: isFullscreen }"
-  >
-    <canvas ref="threeCanvas" class="game-canvas"></canvas>
+  <TopBoxElement :text="'Points: ' + scoreboard_state.starting_points" v-if="in_game"></TopBoxElement>
+  <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
+    <canvas ref="three_canvas" class="game-canvas"></canvas>
     <div class="game-ui"></div>
   </div>
 </template>
