@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, Ref } from 'vue'
 import BoxElement from '../components/box_element.vue'
-import TopBoxElement from '../components/top_box_element.vue'
 import TitleBoxElement from '../components/title_box_element.vue'
 import ThreeJSGameView from '../components/threejs_game_view.vue'
 import List from '../components/list.vue'
@@ -20,11 +19,15 @@ import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { SetupType } from '../game/setup'
 import Button from '../components/button.vue'
 import { AgentInfo } from "../game/agent_info";
+import {Arena} from "../game/arena";
 
-const players: Ref<string[]> = ref([])
 const num_ai: Ref<number> = ref(0)
 const error_status = ref('')
 const in_game = ref(false)
+const arena: Ref<Arena> = ref({
+  agents: [],
+  game_started: false
+})
 const events: BoardEvent[] = []
 
 const room_state = use_room_state()
@@ -53,7 +56,7 @@ async function get_arena_info() {
     return
   }
 
-  players.value = ret.agents.map((x: AgentInfo) => x.name)
+  arena.value.agents = ret.agents
   room_state.room_name = ret.name
 }
 
@@ -69,7 +72,7 @@ let callback = (data: ServerEvent) => {
           in_game.value = true
           break
         case ArenaEventType.PlayerJoinedEvent:
-          players.value.push(message.name)
+          arena.value.agents.push(message.name)
           break
         case ArenaEventType.PlayerQuitEvent:
           players.value = players.value.filter((v) => v !== message.name)

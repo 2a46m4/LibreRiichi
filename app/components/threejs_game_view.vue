@@ -10,6 +10,7 @@ import { ArenaMessageBus } from "../messaging/event_handler";
 import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent } from "../messaging/server_event_generated";
 import TopBoxElement from "./top_box_element.vue";
+import {ScoreboardState} from "../game/scoreboard";
 
 const props = defineProps<{in_game: boolean}>()
 
@@ -30,6 +31,13 @@ const pointer = new THREE.Vector2()
 const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
 const player_position = { x: 0, z: 5, rotation: 0 }
 const dora_tile_position = { x: -5, z: 5, y: -1.3 }
+
+let scoreboard_state: ScoreboardState = {
+  scoreboard_values: [],
+  player_to_order_map: [],
+  round_wind: 0,
+  round_number: 0,
+}
 
 let selection: {
   material: THREE.MeshLambertMaterial
@@ -417,7 +425,7 @@ function handle_game_setup_event(setups: Setup[]) {
 
         break
       case SetupType.STARTING_POINTS:
-        scoreboard_state.starting_points = setup.data
+        scoreboard_state.scoreboard_values = setup.data
 
         break
       case SetupType.PLAYER_NUMBER:
@@ -434,7 +442,12 @@ function handle_game_setup_event(setups: Setup[]) {
 </script>
 
 <template>
-  <TopBoxElement :text="'Points: ' + scoreboard_state.starting_points" v-if="in_game"></TopBoxElement>
+  <TopBoxElement v-if="in_game"
+    :scoreboard_values="scoreboard_state.scoreboard_values"
+    :player_to_order_map="scoreboard_state.player_to_order_map"
+    :round_wind="scoreboard_state.round_wind"
+    :round_number="scoreboard_state.round_number">
+  </TopBoxElement>
   <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
     <canvas ref="three_canvas" class="game-canvas"></canvas>
     <div class="game-ui"></div>

@@ -1,7 +1,5 @@
 package core
 
-import "github.com/google/uuid"
-
 //go:generate go run ../generate_message.go -- ArenaEvent
 
 type ArenaEvent interface {
@@ -9,8 +7,7 @@ type ArenaEvent interface {
 }
 
 type PlayerJoinedEvent struct {
-	Name string    `json:"name"`
-	ID   uuid.UUID `json:"id"`
+	AgentInfo AgentInfo `json:"agent_info"`
 }
 
 type PlayerQuitEvent struct {

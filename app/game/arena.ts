@@ -1,6 +1,7 @@
+import {AgentInfo} from "./agent_info";
+
 export interface Arena {
-  name: string
-  agents: { name: string }[]
+  agents: AgentInfo[]
   game_started: boolean
-  date_created: string
 }
+

@@ -19,6 +19,7 @@ const (
 	PLAYERACTIONDATA ArenaActionType = iota
 	ADDAIARENAACTION ArenaActionType = iota
 	REMOVEAIARENAACTION ArenaActionType = iota
+	GAMEINFOACTIONDATA ArenaActionType = iota
 )
 func (StartGameActionData) ArenaActionImpl() {}
 func (obj StartGameActionData) MarshalJSON() ([]byte, error) {
@@ -89,6 +90,17 @@ func (obj RemoveAIArenaAction) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
+func (GameInfoActionData) ArenaActionImpl() {}
+func (obj GameInfoActionData) MarshalJSON() ([]byte, error) {
+    var raw struct {
+		ArenaActionType ArenaActionType `json:"arenaaction_type"`
+	}
+
+    raw.ArenaActionType = GAMEINFOACTIONDATA
+
+    return json.Marshal(raw)
+}
+
 
 func (msg *ArenaActionUnpacker) Uncover() ArenaAction {
 	return msg.ArenaAction
@@ -139,6 +151,13 @@ func (msg *ArenaActionUnpacker) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.ArenaAction = message
+	case GAMEINFOACTIONDATA:
+		message := GameInfoActionData{}
+		err := json.Unmarshal(rawData, &message)
+		if err != nil {
+			return err
+		}
+		msg.ArenaAction = message
 	default:
 		return fmt.Errorf("unexpected type: %#v", raw.ArenaActionType)
 	}
@@ -151,6 +170,7 @@ type ArenaActionHandler[T any, E any] interface {
     HandlePlayerActionData(PlayerActionData, E) (T, error)
     HandleAddAIArenaAction(AddAIArenaAction, E) (T, error)
     HandleRemoveAIArenaAction(RemoveAIArenaAction, E) (T, error)
+    HandleGameInfoActionData(GameInfoActionData, E) (T, error)
 }
 
 func ArenaActionDecode[T any, E any](handler ArenaActionHandler[T, E], data ArenaAction, extraData E) (ret T, err error) {
@@ -165,6 +185,8 @@ func ArenaActionDecode[T any, E any](handler ArenaActionHandler[T, E], data Aren
         return handler.HandleAddAIArenaAction(v, extraData)
     case RemoveAIArenaAction:
         return handler.HandleRemoveAIArenaAction(v, extraData)
+    case GameInfoActionData:
+        return handler.HandleGameInfoActionData(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

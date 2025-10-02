@@ -17,6 +17,7 @@ const (
 	GENERICRESPONSE ServerResponseType = iota
 	LISTARENASRESPONSE ServerResponseType = iota
 	ARENAINFORESPONSE ServerResponseType = iota
+	GAMEINFORESPONSE ServerResponseType = iota
 )
 func (GenericResponse) serverResponseImpl() {}
 func (obj GenericResponse) MarshalJSON() ([]byte, error) {
@@ -69,6 +70,17 @@ func (obj ArenaInfoResponse) MarshalJSON() ([]byte, error) {
     return json.Marshal(raw)
 }
 
+func (GameInfoResponse) serverResponseImpl() {}
+func (obj GameInfoResponse) MarshalJSON() ([]byte, error) {
+    var raw struct {
+		ServerResponseType ServerResponseType `json:"serverresponse_type"`
+	}
+
+    raw.ServerResponseType = GAMEINFORESPONSE
+
+    return json.Marshal(raw)
+}
+
 
 func (msg *ServerResponseUnpacker) Uncover() ServerResponse {
 	return msg.ServerResponse
@@ -105,6 +117,13 @@ func (msg *ServerResponseUnpacker) UnmarshalJSON(rawData []byte) error {
 			return err
 		}
 		msg.ServerResponse = message
+	case GAMEINFORESPONSE:
+		message := GameInfoResponse{}
+		err := json.Unmarshal(rawData, &message)
+		if err != nil {
+			return err
+		}
+		msg.ServerResponse = message
 	default:
 		return fmt.Errorf("unexpected type: %#v", raw.ServerResponseType)
 	}
@@ -115,6 +134,7 @@ type ServerResponseHandler[T any, E any] interface {
     HandleGenericResponse(GenericResponse, E) (T, error)
     HandleListArenasResponse(ListArenasResponse, E) (T, error)
     HandleArenaInfoResponse(ArenaInfoResponse, E) (T, error)
+    HandleGameInfoResponse(GameInfoResponse, E) (T, error)
 }
 
 func ServerResponseDecode[T any, E any](handler ServerResponseHandler[T, E], data ServerResponse, extraData E) (ret T, err error) {
@@ -125,6 +145,8 @@ func ServerResponseDecode[T any, E any](handler ServerResponseHandler[T, E], dat
         return handler.HandleListArenasResponse(v, extraData)
     case ArenaInfoResponse:
         return handler.HandleArenaInfoResponse(v, extraData)
+    case GameInfoResponse:
+        return handler.HandleGameInfoResponse(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

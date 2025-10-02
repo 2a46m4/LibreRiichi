@@ -4,7 +4,6 @@ package core
 import (
     "encoding/json"
     "fmt"
-    "github.com/google/uuid"
 )
 
 type ArenaEventType uint8
@@ -23,13 +22,11 @@ func (PlayerJoinedEvent) ArenaEventImpl() {}
 func (obj PlayerJoinedEvent) MarshalJSON() ([]byte, error) {
     var raw struct {
 		ArenaEventType ArenaEventType `json:"arenaevent_type"`
-        Name string `json:"name"`
-        ID uuid.UUID `json:"id"`
+        AgentInfo AgentInfo `json:"agent_info"`
 	}
 
     raw.ArenaEventType = PLAYERJOINEDEVENT
-    raw.Name = obj.Name
-    raw.ID = obj.ID
+    raw.AgentInfo = obj.AgentInfo
 
     return json.Marshal(raw)
 }

@@ -113,8 +113,11 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	defer arena.Unlock()
 
 	agents := make([]AgentInfo, 0)
-	for _, agent := range arena.agents {
-		agents = append(agents, AgentInfo{Name: agent.GetName()})
+	for i, agent := range arena.agents {
+		agents = append(agents, AgentInfo{
+			Name:  agent.GetName(),
+			Order: uint8(i),
+		})
 	}
 
 	return ArenaInfoResponse{
@@ -201,8 +204,9 @@ func (arena *Arena) JoinArena(agent Client) error {
 	arena.agents = append(arena.agents, agent)
 
 	data := PlayerJoinedEvent{
-		Name: agent.GetName(),
-		ID:   agent.GetID(),
+		Name:  agent.GetName(),
+		ID:    agent.GetID(),
+		Index: uint8(len(arena.agents) - 1),
 	}
 
 	err := arena.Send(
@@ -278,11 +282,11 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 		return Unit, err
 	}
 
-    // Send start game event
-    err = arena.Send(GameStartedEvent{}, GLOBAL, 0)
-    if err != nil {
-        panic(err)
-    }
+	// Send start game event
+	err = arena.Send(GameStartedEvent{}, GLOBAL, 0)
+	if err != nil {
+		panic(err)
+	}
 
 	// Send over the setups for each player
 	for idx, setup := range setups {
