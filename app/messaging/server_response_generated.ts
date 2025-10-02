@@ -2,6 +2,8 @@
 
 // ServerResponse Union Type and Enum
 
+import {AgentInfo} from "../game/agent_info";
+
 export type ServerResponse = GenericResponse | ListArenasResponse | ArenaInfoResponse | GameInfoResponse;
 
 export enum ServerResponseType {
@@ -12,10 +14,6 @@ export enum ServerResponseType {
 }
 
 // Individual struct interfaces
-
-class AgentInfo {
-
-}
 
 export interface GenericResponse {
     serverresponse_type: ServerResponseType.GenericResponse;

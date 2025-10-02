@@ -204,9 +204,11 @@ func (arena *Arena) JoinArena(agent Client) error {
 	arena.agents = append(arena.agents, agent)
 
 	data := PlayerJoinedEvent{
-		Name:  agent.GetName(),
-		ID:    agent.GetID(),
-		Index: uint8(len(arena.agents) - 1),
+		AgentInfo: AgentInfo{
+			Name:  agent.GetName(),
+			ID:    agent.GetID(),
+			Order: uint8(len(arena.agents) - 1),
+		},
 	}
 
 	err := arena.Send(
@@ -363,6 +365,10 @@ func (arena *Arena) HandleAddAIArenaAction(data AddAIArenaAction, fromPlayer uin
 
 func (arena *Arena) HandleRemoveAIArenaAction(data RemoveAIArenaAction, fromPlayer uint8) (UnitType, error) {
 	// TODO: Send Die struct to client
+	panic("NYI")
+}
+
+func (arena *Arena) HandleGameInfoActionData(data GameInfoActionData, fromPlayer uint8) (UnitType, error) {
 	panic("NYI")
 }
 

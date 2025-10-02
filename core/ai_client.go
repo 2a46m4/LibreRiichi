@@ -77,7 +77,7 @@ func (client *ComputerClient) HandleServerArenaEvent(event ServerArenaEvent, ext
 }
 
 func (client *ComputerClient) HandlePlayerJoinedEvent(event PlayerJoinedEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Player %s joined the arena", client.Name, event.Name)
+	log.Printf("ComputerClient %s: Player %s joined the arena", client.Name, event.AgentInfo.Name)
 	return Unit, nil
 }
 

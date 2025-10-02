@@ -18,7 +18,6 @@ import { ArenaActionType } from '../messaging/arena_action_generated'
 import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { SetupType } from '../game/setup'
 import Button from '../components/button.vue'
-import { AgentInfo } from "../game/agent_info";
 import {Arena} from "../game/arena";
 
 const num_ai: Ref<number> = ref(0)
@@ -72,17 +71,16 @@ let callback = (data: ServerEvent) => {
           in_game.value = true
           break
         case ArenaEventType.PlayerJoinedEvent:
-          arena.value.agents.push(message.name)
+          arena.value.agents.push(message.agent_info)
           break
         case ArenaEventType.PlayerQuitEvent:
-          players.value = players.value.filter((v) => v !== message.name)
+          arena.value.agents = arena.value.agents.filter((v) => v.name !== message.name)
           break
         case ArenaEventType.ArenaBoardEvent:
           if (!in_game.value) {
             error_status.value = 'Game not started'
             return true
           }
-          handle_game(message.board_event)
           break
         default:
           error_status.value = 'Unknown arena event'
@@ -96,38 +94,6 @@ let callback = (data: ServerEvent) => {
   return true
 }
 let callback_idx = ArenaMessageBus.register(callback)
-
-// Handles game events
-function handle_game(event: BoardEvent) {
-  switch (event.boardevent_type) {
-    case BoardEventType.PotentialActionEvent:
-      break
-    case BoardEventType.PlayerActionEvent:
-      break
-    case BoardEventType.GameSetupEvent:
-      for (let setup of event.setup) {
-        switch (setup.setup_type) {
-          case SetupType.INITIAL_TILES:
-            break
-          case SetupType.DORA:
-            break
-          case SetupType.STARTING_POINTS:
-            break
-          case SetupType.PLAYER_NUMBER:
-            break
-          case SetupType.PLAYER_ORDER:
-            break
-          case SetupType.ROUND_WIND:
-            break
-          case SetupType.ROUND_NUMBER:
-            break
-        }
-      }
-      break
-    case BoardEventType.GameEndEvent:
-      break
-  }
-}
 </script>
 
 <template>
@@ -138,9 +104,9 @@ function handle_game(event: BoardEvent) {
           <TitleBoxElement :text="'Room name: ' + room_state.room_name" />
           <div class="container outline bg-white rounded shadow-md pb-5 mb-5">
             <h1 class="font-bold text-xl text-center pt-2">
-              Players {{ players.length }} / 4
+              Players {{ arena.agents.length }} / 4
             </h1>
-            <List :items="players" class="p-1"></List>
+            <List :items="arena.agents.map(a=>a.name)" class="p-1"></List>
           </div>
 
           <Button text="Start game" :condition="!in_game" :on_click="async () => {

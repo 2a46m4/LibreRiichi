@@ -37,6 +37,7 @@ let scoreboard_state: ScoreboardState = {
   player_to_order_map: [],
   round_wind: 0,
   round_number: 0,
+  players: [],
 }
 
 let selection: {
@@ -446,7 +447,10 @@ function handle_game_setup_event(setups: Setup[]) {
     :scoreboard_values="scoreboard_state.scoreboard_values"
     :player_to_order_map="scoreboard_state.player_to_order_map"
     :round_wind="scoreboard_state.round_wind"
-    :round_number="scoreboard_state.round_number">
+    :round_number="scoreboard_state.round_number"
+    :players="scoreboard_state.players"
+    :player_idx="0"
+  >
   </TopBoxElement>
   <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
     <canvas ref="three_canvas" class="game-canvas"></canvas>
