@@ -113,76 +113,54 @@ func (client *ComputerClient) HandleArenaBoardEvent(event ArenaBoardEvent, extra
 
 func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Player %d performed action: %+v", client.Name, event.FromPlayer, event.Action)
+	isOurMove := client.ourMove(event.FromPlayer)
 
-	// Update AI game state based on player action
 	switch action := event.Action.(type) {
 	case Toss:
-		client.KnownDiscards = append(client.KnownDiscards, action.TileToToss)
-		log.Printf("ComputerClient %s: Player %d discarded tile %v", client.Name, event.FromPlayer, action.TileToToss)
-
-		if event.FromPlayer == client.PlayerIndex {
+		if isOurMove {
+			client.KnownDiscards = append(client.KnownDiscards, action.TileToToss)
 			client.removeFromHand(action.TileToToss)
 		}
 
 	case Draw:
-		// If this is our own draw, update our hand
-		if event.FromPlayer == uint8(client.PlayerIndex) {
+		if isOurMove {
 			client.CurrentHand = append(client.CurrentHand, action.DrawnTile)
-			log.Printf("ComputerClient %s: Drew tile %v", client.Name, action.DrawnTile)
 		}
 
 	case Chii:
-		// Track exposed melds
-		if event.FromPlayer != uint8(client.PlayerIndex) {
+		if !isOurMove {
 			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
 				action.TileToChii, action.TilesInHand[0], action.TilesInHand[1])
 		} else {
-			// Update our own hand if we made the chii
 			client.removeFromHand(action.TilesInHand[0])
 			client.removeFromHand(action.TilesInHand[1])
 		}
-		log.Printf("ComputerClient %s: Player %d called Chii with tiles %v", client.Name, event.FromPlayer,
-			[]Tile{action.TileToChii, action.TilesInHand[0], action.TilesInHand[1]})
-
 	case Pon:
-		// Track exposed melds
-		if event.FromPlayer != uint8(client.PlayerIndex) {
+		if !isOurMove {
 			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
 				action.TileToPon, action.TileToPon, action.TileToPon)
 		} else {
-			// Update our own hand if we made the pon
 			client.removeFromHand(action.TileToPon)
 			client.removeFromHand(action.TileToPon)
 		}
-		log.Printf("ComputerClient %s: Player %d called Pon on tile %v", client.Name, event.FromPlayer, action.TileToPon)
 
 	case Kan:
-		// Track exposed melds
-		if event.FromPlayer != uint8(client.PlayerIndex) {
+		if !isOurMove {
 			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
 				action.TileToKan, action.TileToKan, action.TileToKan, action.TileToKan)
 		} else {
-			// Update our own hand if we made the kan
-			if event.FromPlayer == uint8(client.PlayerIndex) {
-				for i := 0; i < 4; i++ {
-					client.removeFromHand(action.TileToKan)
-				}
+			for i := 0; i < 4; i++ {
+				client.removeFromHand(action.TileToKan)
 			}
 		}
-		log.Printf("ComputerClient %s: Player %d called Kan on tile %v", client.Name, event.FromPlayer, action.TileToKan)
 
 	case Riichi:
-		log.Printf("ComputerClient %s: Player %d declared Riichi on tile %v", client.Name, event.FromPlayer, action.TileToRiichi)
-		// If this is our own riichi, update our hand
-		if event.FromPlayer == uint8(client.PlayerIndex) {
+		if isOurMove {
 			client.removeFromHand(action.TileToRiichi)
 		}
 
 	case Ron:
-		log.Printf("ComputerClient %s: Player %d called Ron on tile %v", client.Name, event.FromPlayer, action.TileToRon)
-
 	case Tsumo:
-		log.Printf("ComputerClient %s: Player %d called Tsumo on tile %v", client.Name, event.FromPlayer, action.TileToTsumo)
 	}
 
 	return Unit, nil
@@ -270,8 +248,11 @@ func (client *ComputerClient) HandleGameSetupEvent(event GameSetupEvent, extraDa
 
 func (client *ComputerClient) HandleGameEndEvent(event GameEndEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Game ended: %+v", client.Name, event.GameResult)
-	// TODO: Process game end results for AI learning
 	return Unit, nil
+}
+
+func (client *ComputerClient) ourMove(fromPlayer uint8) bool {
+	return client.PlayerIndex == fromPlayer
 }
 
 // Helper method to remove a tile from the AI's tracked hand
