@@ -235,6 +235,7 @@ func (arena *Arena) driveGame() error {
 	log.Println("Driving game")
 
 	sendInfos, shouldEnd := arena.game.GetNextEvent()
+	time.Sleep(1 * time.Second)
 
 	if shouldEnd {
 		log.Println("Finishing")

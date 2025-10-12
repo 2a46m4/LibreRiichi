@@ -21,6 +21,10 @@ type Message struct {
 	Data         any         `json:"data"`
 }
 
+func (m Message) String() string {
+	return fmt.Sprintf("Message{Type: %s, Index: %d, Data: %#v}", m.MessageType, m.MessageIndex, m.Data)
+}
+
 type WrongIndexError struct {
 	Wanted uint
 	Got    uint

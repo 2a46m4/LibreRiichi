@@ -82,11 +82,11 @@ func (client HumanClient) Loop() {
 				client.EventIndex += 1
 			}
 
+			fmt.Printf("Sending back %s\n", msg)
 			bytes, err := json.Marshal(msg)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Sending", string(bytes))
 			client.Connection.Send(bytes)
 
 		case recv := <-client.Connection.RecvChan():
@@ -117,12 +117,14 @@ func (client HumanClient) Loop() {
 			ret_msg.MessageType = RESPONSE
 			ret_msg.MessageIndex = client.ResponseIndex
 			ret_msg.Data = dispatchResult
+			fmt.Printf("Sending back %s\n", ret_msg)
+
 			client.ResponseIndex += 1
 			bytes, err := json.Marshal(ret_msg)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("Sending", string(bytes))
+
 			client.Connection.Send(bytes)
 		}
 	}
