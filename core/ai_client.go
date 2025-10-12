@@ -6,15 +6,28 @@ import (
 
 	"github.com/google/uuid"
 
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
 type ComputerClient struct {
-	Name  string
-	ID    uuid.UUID
-	Recv  chan any
+	Name string
+	ID   uuid.UUID
+	Recv chan any
+
 	Arena *Arena
+
+	// AI state
+	PlayerIndex    uint8
+	InitialTiles   []Tile
+	Dora           Tile
+	PlayerOrder    []uint8
+	RoundWind      Wind
+	StartingPoints [4]uint32
+	CurrentHand    []Tile
+	KnownDiscards  []Tile
+	KnownMelds     map[uint8][]Tile // Track other players' exposed melds
 }
 
 type Die struct{}
@@ -46,10 +59,11 @@ func MakeComputerClient() (ComputerClient, error) {
 	}
 
 	client := ComputerClient{
-		Name:  "Computer Client " + uuid.String(),
-		ID:    uuid,
-		Recv:  make(chan any, 32),
-		Arena: nil,
+		Name:       "Computer Client " + uuid.String(),
+		ID:         uuid,
+		Recv:       make(chan any, 32),
+		Arena:      nil,
+		KnownMelds: make(map[uint8][]Tile),
 	}
 	fmt.Println("Making new client", client)
 
@@ -99,13 +113,83 @@ func (client *ComputerClient) HandleArenaBoardEvent(event ArenaBoardEvent, extra
 
 func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Player %d performed action: %+v", client.Name, event.FromPlayer, event.Action)
-	// TODO: Update AI game state based on player action
+
+	// Update AI game state based on player action
+	switch action := event.Action.(type) {
+	case Toss:
+		client.KnownDiscards = append(client.KnownDiscards, action.TileToToss)
+		log.Printf("ComputerClient %s: Player %d discarded tile %v", client.Name, event.FromPlayer, action.TileToToss)
+
+		if event.FromPlayer == client.PlayerIndex {
+			client.removeFromHand(action.TileToToss)
+		}
+
+	case Draw:
+		// If this is our own draw, update our hand
+		if event.FromPlayer == uint8(client.PlayerIndex) {
+			client.CurrentHand = append(client.CurrentHand, action.DrawnTile)
+			log.Printf("ComputerClient %s: Drew tile %v", client.Name, action.DrawnTile)
+		}
+
+	case Chii:
+		// Track exposed melds
+		if event.FromPlayer != uint8(client.PlayerIndex) {
+			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
+				action.TileToChii, action.TilesInHand[0], action.TilesInHand[1])
+		} else {
+			// Update our own hand if we made the chii
+			client.removeFromHand(action.TilesInHand[0])
+			client.removeFromHand(action.TilesInHand[1])
+		}
+		log.Printf("ComputerClient %s: Player %d called Chii with tiles %v", client.Name, event.FromPlayer,
+			[]Tile{action.TileToChii, action.TilesInHand[0], action.TilesInHand[1]})
+
+	case Pon:
+		// Track exposed melds
+		if event.FromPlayer != uint8(client.PlayerIndex) {
+			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
+				action.TileToPon, action.TileToPon, action.TileToPon)
+		} else {
+			// Update our own hand if we made the pon
+			client.removeFromHand(action.TileToPon)
+			client.removeFromHand(action.TileToPon)
+		}
+		log.Printf("ComputerClient %s: Player %d called Pon on tile %v", client.Name, event.FromPlayer, action.TileToPon)
+
+	case Kan:
+		// Track exposed melds
+		if event.FromPlayer != uint8(client.PlayerIndex) {
+			client.KnownMelds[event.FromPlayer] = append(client.KnownMelds[event.FromPlayer],
+				action.TileToKan, action.TileToKan, action.TileToKan, action.TileToKan)
+		} else {
+			// Update our own hand if we made the kan
+			if event.FromPlayer == uint8(client.PlayerIndex) {
+				for i := 0; i < 4; i++ {
+					client.removeFromHand(action.TileToKan)
+				}
+			}
+		}
+		log.Printf("ComputerClient %s: Player %d called Kan on tile %v", client.Name, event.FromPlayer, action.TileToKan)
+
+	case Riichi:
+		log.Printf("ComputerClient %s: Player %d declared Riichi on tile %v", client.Name, event.FromPlayer, action.TileToRiichi)
+		// If this is our own riichi, update our hand
+		if event.FromPlayer == uint8(client.PlayerIndex) {
+			client.removeFromHand(action.TileToRiichi)
+		}
+
+	case Ron:
+		log.Printf("ComputerClient %s: Player %d called Ron on tile %v", client.Name, event.FromPlayer, action.TileToRon)
+
+	case Tsumo:
+		log.Printf("ComputerClient %s: Player %d called Tsumo on tile %v", client.Name, event.FromPlayer, action.TileToTsumo)
+	}
+
 	return Unit, nil
 }
 
 func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Potential actions available: %+v", client.Name, event.Actions)
-	log.Println("Test!!! ", *client)
 
 	// Immediately do a potential action
 	for _, action := range event.Actions {
@@ -113,18 +197,74 @@ func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEv
 		if err != nil {
 			panic(err)
 		}
-		ArenaActionDecode(client.Arena, PlayerActionData{
-			Action: action,
-		}, idx)
+		switch action.(type) {
+		case Toss:
+			_, err = ArenaActionDecode(client.Arena, PlayerActionData{
+				Action: Toss{
+					TileToToss: Last(client.InitialTiles),
+				},
+			}, idx)
+			if err != nil {
+				panic(err)
+			}
+		default:
+			_, err = ArenaActionDecode(client.Arena, PlayerActionData{
+				Action: action,
+			}, idx)
+			if err != nil {
+				panic(err)
+			}
+		}
+
 	}
 
-	// TODO: Implement AI decision making for potential actions
 	return Unit, nil
 }
 
 func (client *ComputerClient) HandleGameSetupEvent(event GameSetupEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Game setup: %+v", client.Name, event.Setup)
-	// TODO: Initialize AI with game setup information (tiles, dora, etc.)
+
+	// Initialize AI with game setup information
+	for _, setup := range event.Setup {
+		switch setup.Type {
+		case INITIAL_TILES:
+			if tiles, ok := setup.Data.([]Tile); ok {
+				client.InitialTiles = tiles
+				client.CurrentHand = make([]Tile, len(tiles))
+				copy(client.CurrentHand, tiles)
+				log.Printf("ComputerClient %s: Received %d initial tiles", client.Name, len(tiles))
+			}
+		case DORA:
+			if dora, ok := setup.Data.(Tile); ok {
+				client.Dora = dora
+				log.Printf("ComputerClient %s: Dora tile: %v", client.Name, dora)
+			}
+		case PLAYER_NUMBER:
+			if playerNum, ok := setup.Data.(uint8); ok {
+				client.PlayerIndex = playerNum
+				log.Printf("ComputerClient %s: Player index: %d", client.Name, playerNum)
+			}
+		case PLAYER_ORDER:
+			if order, ok := setup.Data.([]uint8); ok {
+				client.PlayerOrder = order
+				log.Printf("ComputerClient %s: Player order: %v", client.Name, order)
+			}
+		case ROUND_WIND:
+			if wind, ok := setup.Data.(Wind); ok {
+				client.RoundWind = wind
+				log.Printf("ComputerClient %s: Round wind: %v", client.Name, wind)
+			}
+		case STARTING_POINTS:
+			if points, ok := setup.Data.([4]uint32); ok {
+				client.StartingPoints = points
+				log.Printf("ComputerClient %s: Starting points: %v", client.Name, points)
+			}
+		case ROUND_NUMBER:
+			// Handle round number if needed
+			log.Printf("ComputerClient %s: Round number setup received", client.Name)
+		}
+	}
+
 	return Unit, nil
 }
 
@@ -132,6 +272,16 @@ func (client *ComputerClient) HandleGameEndEvent(event GameEndEvent, extraData U
 	log.Printf("ComputerClient %s: Game ended: %+v", client.Name, event.GameResult)
 	// TODO: Process game end results for AI learning
 	return Unit, nil
+}
+
+// Helper method to remove a tile from the AI's tracked hand
+func (client *ComputerClient) removeFromHand(tile Tile) {
+	for i, handTile := range client.CurrentHand {
+		if handTile == tile {
+			Remove(&client.CurrentHand, i)
+			return
+		}
+	}
 }
 
 func (client *ComputerClient) HandleClientDestruction() {

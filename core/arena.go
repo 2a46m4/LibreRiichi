@@ -382,6 +382,13 @@ func (arena *Arena) EndArena() error {
 	return nil
 }
 
+// Gives a copy of the game
+func (arena *Arena) QueryGame() MahjongGame {
+	arena.Mutex.Lock()
+	defer arena.Mutex.Unlock()
+	return arena.game
+}
+
 func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
 	switch msg := msg.(type) {
 	case ArenaBoardEvent:
@@ -390,6 +397,8 @@ func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
 		return altMsg, errors.New("Not correct type")
 	}
 }
+
+// ====================
 
 type AltMessageHandler struct{}
 

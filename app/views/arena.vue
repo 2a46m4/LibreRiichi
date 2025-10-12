@@ -130,6 +130,7 @@ let callback_idx = ArenaMessageBus.register(callback)
 
             if (!ret.success) {
               error_status = 'Couldn\'t start game: ' + ret.fail_reason
+              return
             }
 
             in_game = true

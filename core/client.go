@@ -101,7 +101,7 @@ func (client HumanClient) Loop() {
 				client.ResponseIndex,
 			)
 
-			log.Println("Message received: ", msg)
+			log.Printf("Message received: %+v\n", msg)
 
 			if err != nil {
 				log.Println(err)

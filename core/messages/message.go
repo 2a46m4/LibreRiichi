@@ -103,7 +103,7 @@ func ReceiveRequest(bytes []byte, index uint) (ServerAction, error) {
 			was:      msg.MessageType,
 		}
 	}
-	log.Println(msg)
+	log.Printf("%+v", msg)
 
 	return msg.Data.(ServerAction), nil
 }

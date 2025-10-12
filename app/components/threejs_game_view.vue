@@ -9,8 +9,8 @@ import { Setup, SetupType } from '../game/setup'
 import { ArenaMessageBus } from "../messaging/event_handler";
 import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent } from "../messaging/server_event_generated";
-import TopBoxElement from "./top_box_element.vue";
 import {ScoreboardState} from "../game/scoreboard";
+import ScoreBoard from "../components/scoreboard.vue"
 
 const props = defineProps<{in_game: boolean}>()
 
@@ -443,7 +443,7 @@ function handle_game_setup_event(setups: Setup[]) {
 </script>
 
 <template>
-  <TopBoxElement v-if="in_game"
+  <ScoreBoard v-if="in_game"
     :scoreboard_values="scoreboard_state.scoreboard_values"
     :player_to_order_map="scoreboard_state.player_to_order_map"
     :round_wind="scoreboard_state.round_wind"
@@ -451,7 +451,7 @@ function handle_game_setup_event(setups: Setup[]) {
     :players="scoreboard_state.players"
     :player_idx="0"
   >
-  </TopBoxElement>
+  </ScoreBoard>
   <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">
     <canvas ref="three_canvas" class="game-canvas"></canvas>
     <div class="game-ui"></div>
