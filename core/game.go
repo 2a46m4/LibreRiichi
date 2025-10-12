@@ -598,6 +598,7 @@ func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 	}
 
 	tileTossed, err := game.lastTile()
+	log.Println("Tile just tossed: ", tileTossed)
 	if err != nil {
 		panic(err)
 	}
