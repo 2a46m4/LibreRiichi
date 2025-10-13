@@ -187,15 +187,17 @@ async function remove_ai() {
             <List :items="arena.agents.map(a=>a.name)" class="p-1"></List>
           </div>
 
-          <Button text="Start game" :condition="!in_game" :on_click="start_game" />
-
-          <Button text="Add AI" :condition="!in_game" :on_click="add_ai" />
-
-          <Button text="Remove AI" :condition="num_ai > 0" :on_click="remove_ai" />
-          <BoxElement :text="error_status" v-if="error_status.length !== 0" />
+            <BoxElement :text="error_status" v-if="error_status.length !== 0" />
         </div>
         <ThreeJSGameView :events="events"
         :in_game="in_game"/>
+      </div>
+
+      <!-- Fixed bottom button container -->
+      <div v-if="!in_game" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50">
+        <Button text="Start game" :condition="!in_game" :on_click="start_game" />
+        <Button text="Add AI" :condition="!in_game" :on_click="add_ai" />
+        <Button text="Remove AI" :condition="num_ai > 0" :on_click="remove_ai" />
       </div>
     </div>
   </Suspense>
