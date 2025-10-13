@@ -31,10 +31,7 @@ function get_ordering() {
 </template>
 
 <style scoped>
-div {
-  position: relative;
-  display: inline;
-}
+
 img {
   position: absolute;
 }

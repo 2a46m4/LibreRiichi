@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { Tile, TileValue } from '../game/tile'
+import {ref, onMounted, onUnmounted, watch, Ref} from 'vue'
+import {decode, Tile, TileValue} from '../game/tile'
 import { initialize_tiles, TileObject } from '../render/tile'
 import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
@@ -11,6 +11,7 @@ import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent } from "../messaging/server_event_generated";
 import {ScoreboardState} from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
+import {Action, ActionType} from "../messaging/action_generated";
 
 const props = defineProps<{in_game: boolean}>()
 
@@ -32,13 +33,14 @@ const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
 const player_position = { x: 0, z: 5, rotation: 0 }
 const dora_tile_position = { x: -5, z: 5, y: -1.3 }
 
-let scoreboard_state: ScoreboardState = {
+const scoreboard_state: Ref<ScoreboardState> = ref({
   scoreboard_values: [],
   player_to_order_map: [],
   round_wind: 0,
   round_number: 0,
   players: [],
-}
+  player_idx: 0,
+})
 
 let selection: {
   material: THREE.MeshLambertMaterial
@@ -378,7 +380,7 @@ function handle_board_event(new_event: BoardEvent) {
     case BoardEventType.PlayerActionEvent:
       break
     case BoardEventType.PotentialActionEvent:
-      // Handle potential action event
+      handle_potential_action_event(new_event.actions)
       break
     case BoardEventType.GameSetupEvent:
       handle_game_setup_event(new_event.setup)
@@ -389,6 +391,31 @@ function handle_board_event(new_event: BoardEvent) {
     default:
       // Handle unknown event type
       break
+  }
+}
+
+function handle_potential_action_event(actions: Action[]) {
+  for (let action of actions) {
+    switch (action.action_type) {
+      case ActionType.Tsumo:
+        break;
+      case ActionType.Ron:
+        break;
+      case ActionType.Riichi:
+        break;
+      case ActionType.Toss:
+        break;
+      case ActionType.Skip:
+        break;
+      case ActionType.Pon:
+        break;
+      case ActionType.Kan:
+        break;
+      case ActionType.Chii:
+        break;
+      case ActionType.Draw:
+        break;
+    }
   }
 }
 
@@ -426,16 +453,19 @@ function handle_game_setup_event(setups: Setup[]) {
 
         break
       case SetupType.STARTING_POINTS:
-        scoreboard_state.scoreboard_values = setup.data
-
+        scoreboard_state.value.scoreboard_values = setup.data
         break
       case SetupType.PLAYER_NUMBER:
+        scoreboard_state.value.player_idx = setup.data
         break
       case SetupType.PLAYER_ORDER:
+        scoreboard_state.value.player_to_order_map = Array.from(decode(setup.data))
         break
       case SetupType.ROUND_WIND:
+        scoreboard_state.value.round_wind = setup.data
         break
       case SetupType.ROUND_NUMBER:
+        scoreboard_state.value.round_number = setup.data
         break
     }
   }
@@ -449,7 +479,7 @@ function handle_game_setup_event(setups: Setup[]) {
     :round_wind="scoreboard_state.round_wind"
     :round_number="scoreboard_state.round_number"
     :players="scoreboard_state.players"
-    :player_idx="0"
+    :player_idx="scoreboard_state.player_idx"
   >
   </ScoreBoard>
   <div ref="gameContainer" class="game-view-container" :class="{ fullscreen: isFullscreen }">

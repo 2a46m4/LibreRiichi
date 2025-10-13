@@ -6,4 +6,5 @@ export type ScoreboardState = {
     round_wind: number,
     round_number: number,
     players: AgentInfo[]
+    player_idx: number,
 }
