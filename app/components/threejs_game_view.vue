@@ -1,38 +1,30 @@
 <script setup lang="ts">
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import {ref, onMounted, onUnmounted, watch, Ref, render} from 'vue'
-import {decode, Tile} from '../game/tile'
+import { ref, onMounted, onUnmounted, watch, Ref, render } from 'vue'
+import { decode, Tile } from '../game/tile'
 import { initialize_tiles, TileObject } from '../render/tile'
-import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
+import { BoardEvent, BoardEventType, PlayerActionEvent } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
 import { ArenaMessageBus } from "../messaging/event_handler";
 import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent } from "../messaging/server_event_generated";
-import {ScoreboardState} from "../game/scoreboard";
+import { ScoreboardState } from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
-import {Action, ActionType} from "../messaging/action_generated";
-import {IRenderer, ThreeJSRenderer} from "../render/renderer_setup";
-import {Raycaster} from "../render/raycaster";
+import { Action, ActionType } from "../messaging/action_generated";
+import { IRenderer, ThreeJSRenderer } from "../render/renderer_setup";
+import { Raycaster, Selector } from "../render/raycaster";
 
-const props = defineProps<{in_game: boolean}>()
+const props = defineProps<{ in_game: boolean }>()
 
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
 const is_fullscreen = ref(false)
 
-let scene: THREE.Scene
-let camera: THREE.PerspectiveCamera
-let controls: OrbitControls
 let animation_id: number
 
-// mesh uuid to mesh, represents hand
-const mahjong_tiles: Map<string, THREE.Mesh> = new Map<string, THREE.Mesh>()
-const player_position = { x: 0, z: 5, rotation: 0 }
-const dora_tile_position = { x: -5, z: 5, y: -1.3 }
-
 let renderer: IRenderer
-let raycaster: Raycaster
+let raycaster: Selector
 
 const scoreboard_state: Ref<ScoreboardState> = ref({
   scoreboard_values: [],
@@ -59,7 +51,12 @@ onMounted(() => {
 })
 
 function on_click(event: MouseEvent) {
-    console.log('clicked')
+  const selection = renderer.get_selection()
+  if (selection === null) {
+    return
+  } else {
+    throw new Error("Not yet implemented")
+  }
 }
 
 function on_window_resize() {
@@ -120,13 +117,32 @@ function handle_board_event(new_event: BoardEvent) {
       // Handle game end event
       break
     default:
-      // Handle unknown event type
-      break
+      throw new Error("Unexpected")
   }
 }
 
 function handle_player_action_event(action: PlayerActionEvent) {
+  switch (action.action_data.action_type) {
+    case ActionType.Tsumo:
+      throw new Error("Win")
+    case ActionType.Ron:
+      throw new Error("Win")
+    case ActionType.Riichi:
+      break;
+    case ActionType.Toss:
+      break;
+    case ActionType.Skip:
+      break;
+    case ActionType.Pon:
+      break;
+    case ActionType.Kan:
+      break;
+    case ActionType.Chii:
+      break;
+    case ActionType.Draw:
 
+      break;
+  }
 }
 
 function handle_potential_action_event(actions: Action[]) {
@@ -158,34 +174,13 @@ function handle_game_setup_event(setups: Setup[]) {
   for (let setup of setups) {
     switch (setup.setup_type) {
       case SetupType.INITIAL_TILES:
-        mahjong_tiles.forEach((mesh) => scene.remove(mesh))
-        let tiles = Tile.from(setup.data)
-        tiles.sort(Tile.sort)
-        let tile_objs = tiles.map((tile) => new TileObject(tile))
-        tile_objs.forEach((tile_obj, i) => {
-          const offsetX = (i - 6) * 0.45
-          tile_obj.position.set(
-            player_position.x + Math.cos(player_position.rotation) * offsetX,
-            -1.3,
-            player_position.z + Math.sin(player_position.rotation) * offsetX,
-          )
-          tile_obj.rotation.y = player_position.rotation
-          tile_obj.castShadow = true
-          tile_obj.receiveShadow = true
-          scene.add(tile_obj)
-          mahjong_tiles.set(tile_obj.uuid, tile_obj)
-        })
+        renderer.clear_tiles()
+        Tile.from(setup.data)
+          .sort(Tile.sort)
+          .forEach((tile) => renderer.add_tile(tile))
         break
-
       case SetupType.DORA:
-        const dora_tile = new Tile(setup.data)
-        dora_tiles.push(dora_tile)
-        const dora_tile_obj = new TileObject(dora_tile)
-        dora_tile_obj.position.set(
-          dora_tile_position.x, dora_tile_position.y, dora_tile_position.z
-        )
-        scene.add(dora_tile_obj)
-
+        renderer.add_dora(new Tile(setup.data))
         break
       case SetupType.STARTING_POINTS:
         scoreboard_state.value.scoreboard_values = setup.data
@@ -208,14 +203,10 @@ function handle_game_setup_event(setups: Setup[]) {
 </script>
 
 <template>
-  <ScoreBoard v-if="in_game"
-    :scoreboard_values="scoreboard_state.scoreboard_values"
-    :player_to_order_map="scoreboard_state.player_to_order_map"
-    :round_wind="scoreboard_state.round_wind"
-    :round_number="scoreboard_state.round_number"
-    :players="scoreboard_state.players"
-    :player_idx="scoreboard_state.player_idx"
-  >
+  <ScoreBoard v-if="in_game" :scoreboard_values="scoreboard_state.scoreboard_values"
+    :player_to_order_map="scoreboard_state.player_to_order_map" :round_wind="scoreboard_state.round_wind"
+    :round_number="scoreboard_state.round_number" :players="scoreboard_state.players"
+    :player_idx="scoreboard_state.player_idx">
   </ScoreBoard>
   <div ref="game_container" class="game-view-container" :class="{ fullscreen: is_fullscreen }">
     <canvas ref="three_canvas" class="game-canvas"></canvas>

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import {IRenderer, ThreeJSRenderer} from "./renderer_setup";
+import { IRenderer, ThreeJSRenderer } from "./renderer_setup";
 
 export interface Selection {
     id: string
@@ -37,7 +37,7 @@ export class Raycaster implements Selector {
         this.raycaster.setFromCamera(this.pointer, this.renderer.camera)
         return this.raycaster.intersectObjects(this.renderer.scene.children)
             .filter(this.filter)
-            .map(obj => ({data: obj, id: obj.object.uuid}))
+            .map(obj => ({ data: obj, id: obj.object.uuid }))
     }
 
     stop() {
