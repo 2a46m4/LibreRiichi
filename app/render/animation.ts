@@ -39,12 +39,10 @@ export class TileAnimation implements IAnimation {
 		this.tile.position.lerpVectors(
 			this.start, this.end, this.interp(this.t)
 		)
-		
-		if (this.t >= 1.0) {
+
+		this.t += dt
+		if (this.t >= 1.0)
 			this.is_finished = true
-		} else {
-			this.t += dt
-		}
     }
 
     finished(): boolean {
@@ -66,7 +64,7 @@ export class AnimationManager implements IAnimationManager {
 			animation.next_step(dt)
 		}
 			
-		this.animations_in_flight.filter(a=>!a.finished())
+		this.animations_in_flight = this.animations_in_flight.filter(a=>!a.finished())
     }
 }
 
