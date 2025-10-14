@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Tile, TileValue } from "../game/tile";
-import { TileObject } from "./tile";
+import { tile_width, TileObject } from "./tile";
 import { Selection } from "./raycaster";
-import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
+import { AnimationManager, IAnimationManager, linear_interpolator, quadratic_interpolator, TileAnimation } from "./animation";
 
 export interface IRenderer {
     animate_frame(dt: number): void
@@ -42,6 +42,12 @@ const tile_positions = [
     { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
 ]
 
+const discard_positions = [
+    { x: 2, z: 0, rotation: Math.PI / 2 }, // East
+    { x: 0, z: -2, rotation: Math.PI }, // North
+    { x: -2, z: 0, rotation: -Math.PI / 2 }, // West
+]
+
 const dora_tile_position = { x: -5, z: 5, y: -1.3 }
 
 const player_position = { x: 0, z: 5, rotation: 0 }
@@ -49,6 +55,8 @@ const player_position = { x: 0, z: 5, rotation: 0 }
 const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
     (i) => new Tile(i),
 )
+
+const tile_width_gap = tile_width + 0.05
 
 export class ThreeJSRenderer implements IRenderer {
 
@@ -63,6 +71,7 @@ export class ThreeJSRenderer implements IRenderer {
     other_tiles: THREE.Group[]
     dora_tiles: THREE.Mesh[] = []
 
+    discard_pile: TileObject[][]
 
     selection: {
         material: THREE.MeshLambertMaterial
@@ -180,7 +189,7 @@ export class ThreeJSRenderer implements IRenderer {
             for (const [i, tile] of default_tiles.entries()) {
                 let tile_obj = new TileObject(tile)
 
-                const offset_x = (i - 6) * 0.45
+                const offset_x = (i - 6) * tile_width_gap
                 tile_obj.position.set(
                     player_position.x + Math.cos(player_position.rotation) * offset_x,
                     -1.3,
@@ -215,20 +224,7 @@ export class ThreeJSRenderer implements IRenderer {
 
         // Discard piles
         {
-            for (let i = 0; i < 12; i++) {
-                const tile_obj = new TileObject(new Tile(TileValue.Invalid))
-                const angle = (i / 12) * Math.PI * 2
-                const radius = 1.5
-                tile_obj.position.set(
-                    Math.cos(angle) * radius,
-                    -1.3,
-                    Math.sin(angle) * radius,
-                )
-                tile_obj.rotation.y = angle + Math.PI / 2
-                tile_obj.castShadow = true
-                tile_obj.receiveShadow = true
-                this.scene.add(tile_obj)
-            }
+            this.discard_pile = new Array(4)
         }
 
         // Dealer marker
@@ -274,8 +270,19 @@ export class ThreeJSRenderer implements IRenderer {
             this.scene.add(this.selection.mesh)
         }
     }
+
     render_toss(player_idx: number, tile: Tile): void {
-        throw new Error('Method not implemented.');
+        let pile = this.discard_pile[player_idx]
+
+        let tile_obj = new TileObject(tile)
+
+        // Start a new row
+        if (pile.length % 6 === 0) {
+            const offset = ((pile.length % 6) - 3) * tile_width_gap
+
+        }
+        pile.push(tile_obj)
+
     }
 
     animate_frame(dt: number): void {

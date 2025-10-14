@@ -1,5 +1,5 @@
-import {Tile, TileValue} from '../game/tile'
-import {alphatest_colour, load_texture} from './texture'
+import { Tile, TileValue } from '../game/tile'
+import { alphatest_colour, load_texture } from './texture'
 import * as THREE from 'three'
 
 const map = new Map<number, string>([
@@ -267,13 +267,17 @@ const map = new Map<number, string>([
     ],
 ])
 
+export const tile_width = 0.4
+export const tile_height = 0.6
+export const tile_depth = 0.25
+
 let tile_geometry: THREE.BoxGeometry
 let tile_textures: Map<number, THREE.Texture>
 let tile_materials: Map<number, THREE.Material>
 export let tiles_initialized: boolean = false
 
 export function initialize_tiles() {
-    tile_geometry = new THREE.BoxGeometry(0.4, 0.6, 0.25)
+    tile_geometry = new THREE.BoxGeometry(tile_width, tile_height, tile_depth)
     tile_textures = load_all_textures()
     tile_materials = load_all_materials(tile_textures)
     tiles_initialized = true
