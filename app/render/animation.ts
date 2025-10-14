@@ -23,7 +23,7 @@ export function quadratic_interpolator(t: number): number {
 
 export class TileAnimation implements IAnimation {
     is_finished: boolean = false
-	t: number = 0
+    t: number = 0
 
     constructor(
         private tile: TileObject,
@@ -33,20 +33,20 @@ export class TileAnimation implements IAnimation {
     ) { }
 
     next_step(dt: number): void {
-        if (this.is_finished)
-            throw new Error("Animation already finished")
-		
-		this.tile.position.lerpVectors(
-			this.start, this.end, this.interp(this.t)
-		)
+        if (this.t >= 1.0) {
+            this.is_finished = true
+            this.t = 1.0
+        }
 
-		this.t += dt
-		if (this.t >= 1.0)
-			this.is_finished = true
+        this.tile.position.lerpVectors(
+            this.start, this.end, this.interp(this.t)
+        )
+
+        this.t += dt / 500000
     }
 
     finished(): boolean {
-		return this.is_finished
+        return this.is_finished
     }
 }
 
@@ -56,15 +56,15 @@ export class AnimationManager implements IAnimationManager {
     constructor() { }
 
     add_animation(obj: IAnimation): void {
-		this.animations_in_flight.push(obj)
+        this.animations_in_flight.push(obj)
     }
 
     animate_step(dt: number): void {
         for (let animation of this.animations_in_flight) {
-			animation.next_step(dt)
-		}
-			
-		this.animations_in_flight = this.animations_in_flight.filter(a=>!a.finished())
+            animation.next_step(dt)
+        }
+
+        this.animations_in_flight = this.animations_in_flight.filter(a => !a.finished())
     }
 }
 

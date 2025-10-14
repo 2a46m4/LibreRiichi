@@ -3,10 +3,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Tile, TileValue } from "../game/tile";
 import { TileObject } from "./tile";
 import { Selection } from "./raycaster";
-import { Animation } from "./animation";
+import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
 
 export interface IRenderer {
-    animate_frame(): void
+    animate_frame(dt: number): void
 
     stop(): void
 
@@ -25,6 +25,8 @@ export interface IRenderer {
     get_selection(): { tile: Tile, id: string } | null
 
     render_draw(player_idx: number, tile?: Tile): void
+
+    render_toss(player_idx: number, tile: Tile): void
 }
 
 const marker_positions = [
@@ -61,14 +63,14 @@ export class ThreeJSRenderer implements IRenderer {
     other_tiles: THREE.Group[]
     dora_tiles: THREE.Mesh[] = []
 
-    animations_in_flight: Animation[] = []
 
-    animation_id = 0
     selection: {
         material: THREE.MeshLambertMaterial
         mesh: THREE.Mesh
         tile: TileObject | null
     }
+
+    animation_manager: IAnimationManager = new AnimationManager()
 
     constructor(canvas: HTMLCanvasElement) {
         // Scene
@@ -272,10 +274,14 @@ export class ThreeJSRenderer implements IRenderer {
             this.scene.add(this.selection.mesh)
         }
     }
+    render_toss(player_idx: number, tile: Tile): void {
+        throw new Error('Method not implemented.');
+    }
 
-    animate_frame(): void {
+    animate_frame(dt: number): void {
         this.controls.update()
         this.renderer.render(this.scene, this.camera)
+        this.animation_manager.animate_step(dt)
     }
 
     stop(): void {
@@ -321,14 +327,18 @@ export class ThreeJSRenderer implements IRenderer {
     }
 
     add_tile(tile: Tile, location: number = this.tiles.size): string {
-        let tile_obj = new TileObject(tile)
-        let offset_x = (location - 6) * 0.45
-        tile_obj.position.set(
+        const tile_obj = new TileObject(tile)
+        tile_obj.rotation.y = player_position.rotation
+
+        const offset_x = (location - 6) * 0.45
+
+        const start = new THREE.Vector3(0, 0, 0)
+        const end = new THREE.Vector3(
             player_position.x + Math.cos(player_position.rotation) * offset_x,
             -1.3,
-            player_position.z + Math.sin(player_position.rotation) * offset_x,
+            player_position.z + Math.sin(player_position.rotation) * offset_x
         )
-        tile_obj.rotation.y = player_position.rotation
+        this.animation_manager.add_animation(new TileAnimation(tile_obj, start, end, quadratic_interpolator))
         this.tiles.set(tile_obj.uuid, tile_obj)
         this.scene.add(tile_obj)
         return tile_obj.uuid

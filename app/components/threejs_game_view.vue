@@ -12,7 +12,7 @@ import { ServerEvent } from "../messaging/server_event_generated";
 import { ScoreboardState } from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
-import { IRenderer, ThreeJSRenderer } from "../render/renderer_setup";
+import { IRenderer, ThreeJSRenderer } from "../render/renderer";
 import { Raycaster, Selector } from "../render/raycaster";
 
 const props = defineProps<{ in_game: boolean }>()
@@ -42,7 +42,7 @@ onMounted(() => {
   initialize_tiles()
   renderer = new ThreeJSRenderer(three_canvas.value)
   raycaster = new Raycaster(renderer)
-  animate()
+  animate(0)
 
   window.addEventListener('resize', on_window_resize)
   window.addEventListener('click', on_click)
@@ -55,7 +55,7 @@ function on_click(event: MouseEvent) {
   if (selection === null) {
     return
   } else {
-    throw new Error("Not yet implemented")
+    console.warn("Not yet implemented")
   }
 }
 
@@ -71,12 +71,12 @@ function on_window_resize() {
   renderer.window_resize(width, height)
 }
 
-function animate() {
+function animate(t: number) {
   animation_id = requestAnimationFrame(animate)
 
   let selections = raycaster.get_selections()
   renderer.render_selection(selections)
-  renderer.animate_frame()
+  renderer.animate_frame(t)
 }
 
 onUnmounted(() => {

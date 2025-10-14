@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { IRenderer, ThreeJSRenderer } from "./renderer_setup";
+import { IRenderer, ThreeJSRenderer } from "./renderer";
 
 export interface Selection {
     id: string
