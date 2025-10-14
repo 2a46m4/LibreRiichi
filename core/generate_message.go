@@ -58,6 +58,15 @@ func goTypeToTypeScript(goType string) string {
 		// Slice/array type
 		innerType := strings.TrimPrefix(goType, "[]")
 		return goTypeToTypeScript(innerType) + "[]"
+	case strings.Contains(goType, "]") && strings.HasPrefix(goType, "["):
+		// Fixed-size array type like [2]Tile -> Tile[] in TypeScript
+		re := regexp.MustCompile(`\[(\d+)\](.+)`)
+		matches := re.FindStringSubmatch(goType)
+		if len(matches) >= 3 {
+			innerType := matches[2]
+			return goTypeToTypeScript(innerType) + "[]"
+		}
+		return goType
 	case strings.Contains(goType, "Unpacker"):
 		// Handle unpacker types - strip the Unpacker suffix
 		return strings.Replace(goType, "Unpacker", "", 1)
@@ -78,6 +87,71 @@ func extractJsonTag(tag string) string {
 		return matches[1]
 	}
 	return ""
+}
+
+func getImports(decls []StructDecl) []string {
+	imports := make(map[string]string)
+
+	for _, decl := range decls {
+		for _, field := range decl.Fields {
+			fieldType := field.Type
+			// Handle array types
+			if strings.HasPrefix(fieldType, "[]") {
+				fieldType = strings.TrimPrefix(fieldType, "[]")
+			}
+
+			switch fieldType {
+			case "Action":
+				imports["action"] = `import {Action} from "./action_generated";`
+			case "Tile":
+				imports["tile"] = `import {Tile} from "../game/tile";`
+			case "Setup":
+				imports["setup"] = `import {Setup} from "../types/setup";`
+			case "ArenaEvent":
+				imports["arena_event"] = `import {ArenaEvent} from "./arena_event_generated";`
+			case "BoardEvent":
+				imports["board_event"] = `import {BoardEvent} from "./board_event_generated";`
+			case "ServerEvent":
+				imports["server_event"] = `import {ServerEvent} from "./server_event_generated";`
+			case "ArenaAction":
+				imports["arena_action"] = `import {ArenaAction} from "./arena_action_generated";`
+			case "ServerAction":
+				imports["server_action"] = `import {ServerAction} from "./server_action_generated";`
+			}
+		}
+	}
+
+	result := make([]string, 0, len(imports))
+	for _, imp := range imports {
+		result = append(result, imp)
+	}
+	return result
+}
+
+func getMissingTypes(decls []StructDecl) []string {
+	missingTypes := make(map[string]bool)
+
+	for _, decl := range decls {
+		for _, field := range decl.Fields {
+			fieldType := field.Type
+			// Handle array types
+			if strings.HasPrefix(fieldType, "[]") {
+				fieldType = strings.TrimPrefix(fieldType, "[]")
+			}
+
+			// Check for types that don't have imports and aren't primitives
+			switch fieldType {
+			case "WinResult", "GameResult", "AgentInfo":
+				missingTypes[fieldType] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(missingTypes))
+	for typeName := range missingTypes {
+		result = append(result, typeName)
+	}
+	return result
 }
 
 func parseStruct(structType *ast.StructType, fset *token.FileSet) (decls []FieldDecl) {
@@ -216,8 +290,10 @@ func main() {
 	// they have interfaces within them
 
 	tmpl := template.Must(template.New("action").Funcs(template.FuncMap{
-		"upper": strings.ToUpper,
-		"lower": strings.ToLower,
+		"upper":      strings.ToUpper,
+		"lower":      strings.ToLower,
+		"hasPrefix":  strings.HasPrefix,
+		"trimPrefix": strings.TrimPrefix,
 	}).Parse(registryTemplate))
 
 	out, err := os.Create(strings.Split(os.Getenv("GOFILE"), ".")[0] + "_generated.go")
@@ -245,10 +321,12 @@ func main() {
 
 	// Generate TypeScript file
 	tsTemplate := template.Must(template.New("typescript").Funcs(template.FuncMap{
-		"upper":          strings.ToUpper,
-		"lower":          strings.ToLower,
-		"tsType":         goTypeToTypeScript,
-		"extractJsonTag": extractJsonTag,
+		"upper":           strings.ToUpper,
+		"lower":           strings.ToLower,
+		"tsType":          goTypeToTypeScript,
+		"extractJsonTag":  extractJsonTag,
+		"getImports":      getImports,
+		"getMissingTypes": getMissingTypes,
 	}).Parse(typescriptTemplate))
 
 	// Create TypeScript output file in the app/messaging directory
@@ -333,7 +411,11 @@ func (obj *{{ .Name}}) UnmarshalJSON(rawData []byte) error {
         {{$.InterfaceName}}Type {{$.InterfaceName}}Type ` + "`" + `json:"{{lower $.InterfaceName}}_type"` + "`" + `
 		{{- range .Fields}}
         {{- if .ShouldWrap}}
+        {{- if hasPrefix .Type "[]"}}
+        {{.Name}} []{{trimPrefix .Type "[]"}}Unpacker {{.Tag}}
+        {{- else}}
         {{.Name}} {{.Type}}Unpacker {{.Tag}}
+        {{- end}}
         {{- else}}
         {{.Name}} {{.Type}} {{.Tag}} {{- end}}
 		{{- end}}
@@ -343,7 +425,14 @@ func (obj *{{ .Name}}) UnmarshalJSON(rawData []byte) error {
 
     {{- range .Fields}}
     {{- if .ShouldWrap}}
+    {{- if hasPrefix .Type "[]"}}
+    obj.{{.Name}} = make([]{{trimPrefix .Type "[]"}}, len(raw.{{.Name}}))
+    for i, item := range raw.{{.Name}} {
+        obj.{{.Name}}[i] = item.{{trimPrefix .Type "[]"}}
+    }
+    {{- else}}
     obj.{{.Name}} = raw.{{.Name}}.{{.Type}}
+    {{- end}}
     {{- else}}
     obj.{{.Name}} = raw.{{.Name}}
     {{- end}}
@@ -404,6 +493,11 @@ func {{.InterfaceName}}Decode[T any, E any](handler {{.InterfaceName}}Handler[T,
 const typescriptTemplate = `// Code generated by go generate; DO NOT EDIT.
 
 // {{.InterfaceName}} Union Type and Enum
+{{- $imports := getImports .Decls}}
+{{- range $imports}}
+{{.}}
+{{- end}}
+
 export type {{.InterfaceName}} = {{range $i, $decl := .Decls}}{{if $i}} | {{end}}{{$decl.Name}}{{end}};
 
 export enum {{.InterfaceName}}Type {
@@ -413,9 +507,17 @@ export enum {{.InterfaceName}}Type {
 }
 
 // Individual struct interfaces
+{{- $missingTypes := getMissingTypes .Decls}}
+{{- range $missingTypes}}
+
+class {{.}} {
+
+}
+{{- end}}
 {{- range .Decls}}
 
 export interface {{.Name}} {
+    {{lower $.InterfaceName}}_type: {{$.InterfaceName}}Type.{{.Name}};
 {{- range .Fields}}
     {{- $jsonTag := extractJsonTag .Tag}}
     {{- if $jsonTag}}

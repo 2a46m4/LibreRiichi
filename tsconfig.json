@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2024",
+    "target": "esnext",
     "module": "preserve",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "jsx": "react",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

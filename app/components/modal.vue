@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
 })
 </script>
 
@@ -10,6 +10,4 @@ const props = defineProps({
   </div>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

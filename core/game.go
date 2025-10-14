@@ -19,6 +19,9 @@ const (
 	GAME_ENDED
 )
 
+var TossAction = Toss{TileToToss: Invalid}
+var TossPotential = PotentialActionEvent{Actions: []Action{TossAction}}
+
 // TODO: With the pending game actions stored in the game, we don't
 // have to re-check a lot of the actions
 
@@ -249,11 +252,7 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 
 		// TODO: Check if the player can make a kan
 		private := PrivateMessage(game.currentPlayerIdx())
-		private.Add(ArenaBoardEvent{
-			BoardEvent: PotentialActionEvent{
-				Action: Toss{
-					TileToToss: Invalid,
-				}}})
+		private.Add(ArenaBoardEvent{BoardEvent: TossPotential})
 		actions.Add(private)
 
 		shouldEnd = false
@@ -270,14 +269,21 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 
 		if len(pendingActions) == 0 {
 			game.GameState = POST_TURN_PLAYED
-			// TODO: Get next event again here?
+			return game.GetNextEvent()
 		}
 
+		// Group pending actions by player
+		playerActions := make(map[uint8][]Action)
 		for _, pendingAction := range pendingActions {
-			private := PrivateMessage(pendingAction.fromPlayer)
+			playerActions[pendingAction.fromPlayer] = append(playerActions[pendingAction.fromPlayer], pendingAction.Action)
+		}
+
+		// Send all actions for each player in a single message
+		for playerIdx, actionsForPlayer := range playerActions {
+			private := PrivateMessage(playerIdx)
 			private.Add(ArenaBoardEvent{
 				BoardEvent: PotentialActionEvent{
-					Action: pendingAction.Action}})
+					Actions: actionsForPlayer}})
 			actions.Add(private)
 		}
 
@@ -307,13 +313,13 @@ func (game *MahjongGame) GetNextEvent() (actions InfoList, shouldEnd bool) {
 		actions.Add(partial)
 
 		private := PrivateMessage(game.currentPlayerIdx())
-		private.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Toss{TileToToss: Invalid}}})
+		private.Add(ArenaBoardEvent{BoardEvent: TossPotential})
 		actions.Add(private)
 
 		// Get potential for performing a Riichi
 		for _, discard := range game.currentPlayer().GetRiichiDiscards() {
 			partial := PrivateMessage(game.currentPlayerIdx())
-			partial.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Action: Riichi{TileToRiichi: discard}}})
+			partial.Add(ArenaBoardEvent{BoardEvent: PotentialActionEvent{Actions: []Action{Riichi{TileToRiichi: discard}}}})
 			actions.Add(partial)
 		}
 
@@ -405,7 +411,10 @@ func (game *MahjongGame) HandleKan(kanData Kan, fromPlayer uint8) (info InfoList
 		game.CurrentTurnOrder = fromPlayer
 
 		global := GlobalMessage()
-		global.Add(ArenaBoardEvent{PlayerActionEvent{Kan{kanData.TileToKan}, fromPlayer}})
+		global.Add(ArenaBoardEvent{
+			BoardEvent: PlayerActionEvent{
+				Action:     Kan{TileToKan: kanData.TileToKan},
+				FromPlayer: fromPlayer}})
 		info.Add(global)
 
 	case POST_TURN_PLAYED: // Invalid
@@ -589,6 +598,7 @@ func (game *MahjongGame) getPostTossActions() ([]PendingAction, error) {
 	}
 
 	tileTossed, err := game.lastTile()
+	log.Println("Tile just tossed: ", tileTossed)
 	if err != nil {
 		panic(err)
 	}

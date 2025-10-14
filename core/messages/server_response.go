@@ -25,3 +25,7 @@ type ArenaInfoResponse struct {
 	GameStarted bool        `json:"game_started"`
 	DateCreated time.Time   `json:"date_created"`
 }
+
+type GameInfoResponse struct {
+    
+}

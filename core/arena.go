@@ -13,11 +13,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type Client interface {
+	GetName() string
+	GetID() uuid.UUID
+	SetArena(*Arena)
+	GetRecv() chan<- any
+	IsAI() bool
+}
+
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	agents      []*Client
-	spectators  []*Client
+	agents      []Client
+	spectators  []Client
 	gameStarted bool
 	game        MahjongGame
 	// AwaitingInputs []??? that stores the list of agents that it is waiting on
@@ -105,8 +113,11 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	defer arena.Unlock()
 
 	agents := make([]AgentInfo, 0)
-	for _, agent := range arena.agents {
-		agents = append(agents, AgentInfo{Name: agent.Name})
+	for i, agent := range arena.agents {
+		agents = append(agents, AgentInfo{
+			Name:  agent.GetName(),
+			Order: uint8(i),
+		})
 	}
 
 	return ArenaInfoResponse{
@@ -118,19 +129,18 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 	}
 }
 
-// TODO: This should be explicit
 func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) error {
 	switch visibility {
 	case GLOBAL:
 		for i, player := range arena.agents {
 			fmt.Println("Sending index: ", i)
-			player.Recv <- ServerArenaEvent{
+			player.GetRecv() <- ServerArenaEvent{
 				ArenaMessage: data,
 			}
 		}
 
 	case PARTIAL:
-		arena.agents[sendTo].Recv <- ServerArenaEvent{ArenaMessage: data}
+		arena.agents[sendTo].GetRecv() <- ServerArenaEvent{ArenaMessage: data}
 
 		altMessage, err := GetAltMessage(data)
 		if err != nil {
@@ -142,13 +152,13 @@ func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) e
 			if idx == int(sendTo) {
 				continue
 			}
-			player.Recv <- ServerArenaEvent{
+			player.GetRecv() <- ServerArenaEvent{
 				ArenaMessage: altMessage,
 			}
 		}
 
 	case PLAYER:
-		arena.agents[sendTo].Recv <- ServerArenaEvent{
+		arena.agents[sendTo].GetRecv() <- ServerArenaEvent{
 			ArenaMessage: data,
 		}
 	case EXCLUDE:
@@ -159,7 +169,7 @@ func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) e
 				continue
 			}
 			fmt.Println("Exclude: Continuing with: ", i)
-			player.Recv <- ServerArenaEvent{
+			player.GetRecv() <- ServerArenaEvent{
 				ArenaMessage: data,
 			}
 		}
@@ -172,8 +182,8 @@ func (arena *Arena) Send(data ArenaEvent, visibility Visibility, sendTo uint8) e
 
 func CreateArena(name string, uuid uuid.UUID) Arena {
 	return Arena{
-		agents:      make([]*Client, 0),
-		spectators:  make([]*Client, 0),
+		agents:      make([]Client, 0),
+		spectators:  make([]Client, 0),
 		gameStarted: false,
 		game:        MahjongGame{},
 		DateCreated: time.Now(),
@@ -183,11 +193,7 @@ func CreateArena(name string, uuid uuid.UUID) Arena {
 	}
 }
 
-func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
-	if !joinAsPlayer {
-		panic("NYI")
-	}
-
+func (arena *Arena) JoinArena(agent Client) error {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -198,8 +204,11 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 	arena.agents = append(arena.agents, agent)
 
 	data := PlayerJoinedEvent{
-		Name: agent.Name,
-		ID:   agent.ID,
+		AgentInfo: AgentInfo{
+			Name:  agent.GetName(),
+			ID:    agent.GetID(),
+			Order: uint8(len(arena.agents) - 1),
+		},
 	}
 
 	err := arena.Send(
@@ -209,7 +218,7 @@ func (arena *Arena) JoinArena(agent *Client, joinAsPlayer bool) error {
 		panic(err)
 	}
 
-	agent.Arena = arena
+	agent.SetArena(arena)
 
 	return nil
 }
@@ -226,6 +235,7 @@ func (arena *Arena) driveGame() error {
 	log.Println("Driving game")
 
 	sendInfos, shouldEnd := arena.game.GetNextEvent()
+	time.Sleep(1 * time.Second)
 
 	if shouldEnd {
 		log.Println("Finishing")
@@ -243,7 +253,7 @@ func (arena *Arena) driveGame() error {
 	return nil
 }
 
-func (arena *Arena) getPlayerIdx(client *Client) (uint8, error) {
+func (arena *Arena) getPlayerIdx(client Client) (uint8, error) {
 	arena.Lock()
 	defer arena.Unlock()
 
@@ -273,6 +283,12 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 	setups, err := arena.game.StartNewGame()
 	if err != nil {
 		return Unit, err
+	}
+
+	// Send start game event
+	err = arena.Send(GameStartedEvent{}, GLOBAL, 0)
+	if err != nil {
+		panic(err)
 	}
 
 	// Send over the setups for each player
@@ -328,10 +344,33 @@ func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPl
 		agent := arena.agents[fromPlayer]
 		Remove(&arena.agents, uint(fromPlayer))
 		arena.Send(PlayerQuitEvent{
-			Name: agent.Name,
+			Name: agent.GetName(),
 		}, GLOBAL, 0)
 	}
 	return Unit, nil
+}
+
+func (arena *Arena) HandleAddAIArenaAction(data AddAIArenaAction, fromPlayer uint8) (UnitType, error) {
+	aiClient, err := MakeComputerClient()
+	if err != nil {
+		return Unit, err
+	}
+
+	err = arena.JoinArena(&aiClient)
+	if err != nil {
+		return Unit, err
+	}
+	go aiClient.Loop()
+	return Unit, nil
+}
+
+func (arena *Arena) HandleRemoveAIArenaAction(data RemoveAIArenaAction, fromPlayer uint8) (UnitType, error) {
+	// TODO: Send Die struct to client
+	panic("NYI")
+}
+
+func (arena *Arena) HandleGameInfoActionData(data GameInfoActionData, fromPlayer uint8) (UnitType, error) {
+	panic("NYI")
 }
 
 // FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
@@ -344,6 +383,13 @@ func (arena *Arena) EndArena() error {
 	return nil
 }
 
+// Gives a copy of the game
+func (arena *Arena) QueryGame() MahjongGame {
+	arena.Mutex.Lock()
+	defer arena.Mutex.Unlock()
+	return arena.game
+}
+
 func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
 	switch msg := msg.(type) {
 	case ArenaBoardEvent:
@@ -352,6 +398,8 @@ func GetAltMessage(msg ArenaEvent) (altMsg ArenaEvent, err error) {
 		return altMsg, errors.New("Not correct type")
 	}
 }
+
+// ====================
 
 type AltMessageHandler struct{}
 

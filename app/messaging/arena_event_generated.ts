@@ -2,6 +2,7 @@
 
 // ArenaEvent Union Type and Enum
 import {BoardEvent} from "./board_event_generated";
+import {AgentInfo} from "../game/agent_info";
 
 export type ArenaEvent = PlayerJoinedEvent | PlayerQuitEvent | GameStartedEvent | ArenaBoardEvent;
 
@@ -16,8 +17,7 @@ export enum ArenaEventType {
 
 export interface PlayerJoinedEvent {
     arenaevent_type: ArenaEventType.PlayerJoinedEvent;
-    name: string;
-    id: string;
+    agent_info: AgentInfo;
 }
 
 export interface PlayerQuitEvent {

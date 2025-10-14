@@ -17,3 +17,9 @@ type PlayerQuitActionData struct{}
 type PlayerActionData struct {
 	Action Action // wrap
 }
+
+type AddAIArenaAction struct{}
+
+type RemoveAIArenaAction struct{}
+
+type GameInfoActionData struct{}
