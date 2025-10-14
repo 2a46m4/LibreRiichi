@@ -3,7 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Tile, TileValue } from "../game/tile";
 import { TileObject } from "./tile";
 import { Selection } from "./raycaster";
-import { Animation, defaultAnimationManager } from "./animation";
+import { Animation } from "./animation";
 
 export interface IRenderer {
     animate_frame(): void
