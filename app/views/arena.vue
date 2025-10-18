@@ -17,16 +17,15 @@ import { ArenaEventType } from '../messaging/arena_event_generated'
 import { ArenaActionType } from '../messaging/arena_action_generated'
 import { BoardEvent } from '../messaging/board_event_generated'
 import Button from '../components/button.vue'
-import {Arena} from "../game/arena";
+import { IArena } from "../game/arena";
 
 const num_ai: Ref<number> = ref(0)
 const error_status = ref('')
 const in_game = ref(false)
-const arena: Ref<Arena> = ref({
+const arena: Ref<IArena> = ref({
   agents: [],
   game_started: false
 })
-const events: BoardEvent[] = []
 
 const room_state = use_room_state()
 if (!room_state.room_set) {
@@ -95,81 +94,81 @@ let callback = (data: ServerEvent) => {
 let callback_idx = ArenaMessageBus.register(callback)
 
 async function start_game() {
-    let msg_idx = websocket_state.conn.send({
-      message_type: MessageType.REQUEST,
-      data: {
-        serveraction_type: ServerActionType.ServerArenaAction,
-        arena_action: {
-          arenaaction_type: ArenaActionType.StartGameActionData,
-        },
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.StartGameActionData,
       },
-    })
+    },
+  })
 
-    let ret = await register_request(msg_idx)
-    if (
-        ret.serverresponse_type !== ServerResponseType.GenericResponse
-    ) {
-      error_status.value = 'Connection error: Wrong Type'
-      return
-    }
+  let ret = await register_request(msg_idx)
+  if (
+    ret.serverresponse_type !== ServerResponseType.GenericResponse
+  ) {
+    error_status.value = 'Connection error: Wrong Type'
+    return
+  }
 
-    if (!ret.success) {
-      error_status.value = 'Couldn\'t start game: ' + ret.fail_reason
-      return
-    }
+  if (!ret.success) {
+    error_status.value = 'Couldn\'t start game: ' + ret.fail_reason
+    return
+  }
 
-    in_game.value = true
+  in_game.value = true
 }
 
 async function add_ai() {
-    let msg_idx = websocket_state.conn.send({
-      message_type: MessageType.REQUEST,
-      data: {
-        serveraction_type: ServerActionType.ServerArenaAction,
-        arena_action: {
-          arenaaction_type: ArenaActionType.AddAIArenaAction,
-        },
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.AddAIArenaAction,
       },
-    })
+    },
+  })
 
-    let ret = await register_request(msg_idx)
-    if (
-        ret.serverresponse_type !== ServerResponseType.GenericResponse
-    ) {
-      error_status.value = 'Connection error: Wrong Type'
-      return
-    }
+  let ret = await register_request(msg_idx)
+  if (
+    ret.serverresponse_type !== ServerResponseType.GenericResponse
+  ) {
+    error_status.value = 'Connection error: Wrong Type'
+    return
+  }
 
-    if (!ret.success) {
-      error_status.value = 'Couldn\'t add AI: ' + ret.fail_reason
-    }
+  if (!ret.success) {
+    error_status.value = 'Couldn\'t add AI: ' + ret.fail_reason
+  }
 
-    num_ai.value = num_ai.value + 1
+  num_ai.value = num_ai.value + 1
 }
 
 async function remove_ai() {
-    let msg_idx = websocket_state.conn.send({
-      message_type: MessageType.REQUEST,
-      data: {
-        serveraction_type: ServerActionType.ServerArenaAction,
-        arena_action: {
-          arenaaction_type: ArenaActionType.RemoveAIArenaAction,
-        },
+  let msg_idx = websocket_state.conn.send({
+    message_type: MessageType.REQUEST,
+    data: {
+      serveraction_type: ServerActionType.ServerArenaAction,
+      arena_action: {
+        arenaaction_type: ArenaActionType.RemoveAIArenaAction,
       },
-    })
+    },
+  })
 
-    let ret = await register_request(msg_idx)
-    if (
-        ret.serverresponse_type !== ServerResponseType.GenericResponse
-    ) {
-      throw new Error('Connection error: Wrong Type')
-    }
+  let ret = await register_request(msg_idx)
+  if (
+    ret.serverresponse_type !== ServerResponseType.GenericResponse
+  ) {
+    throw new Error('Connection error: Wrong Type')
+  }
 
-    if (!ret.success) {
-      throw new Error('Couldn\'t remove AI: ' + ret.fail_reason)
-    }
+  if (!ret.success) {
+    throw new Error('Couldn\'t remove AI: ' + ret.fail_reason)
+  }
 
-    num_ai.value = num_ai.value - 1
+  num_ai.value = num_ai.value - 1
 }
 
 </script>
@@ -184,13 +183,12 @@ async function remove_ai() {
             <h1 class="font-bold text-xl text-center pt-2">
               Players {{ arena.agents.length }} / 4
             </h1>
-            <List :items="arena.agents.map(a=>a.name)" class="p-1"></List>
+            <List :items="arena.agents.map(a => a.name)" class="p-1"></List>
           </div>
 
-            <BoxElement :text="error_status" v-if="error_status.length !== 0" />
+          <BoxElement :text="error_status" v-if="error_status.length !== 0" />
         </div>
-        <ThreeJSGameView :events="events"
-        :in_game="in_game"/>
+        <ThreeJSGameView :in_game="in_game" :arena="arena" />
       </div>
 
       <!-- Fixed bottom button container -->

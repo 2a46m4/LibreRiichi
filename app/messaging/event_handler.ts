@@ -1,11 +1,12 @@
-import {IncomingMessage, MessageType, validate_message} from './message'
+import { IncomingMessage, MessageType, validate_message } from './message'
 import { ServerResponse } from './server_response_generated'
 import { ServerEvent } from './server_event_generated'
+import { ArenaEvent } from './arena_event_generated'
 
 export class EventHandler<TIncoming> {
   private listeners: Array<(data: TIncoming) => boolean> = []
 
-  constructor() {}
+  constructor() { }
 
   handle(data: TIncoming): void {
     this.listeners.filter((listener) => listener(data))
@@ -50,7 +51,6 @@ export function register_request(
       msg.message_type === MessageType.RESPONSE &&
       msg.message_index === msg_idx
     ) {
-      console.log('Matched outgoing message', msg_idx, ', resolving')
       resolve(msg.data)
       return false
     } else {

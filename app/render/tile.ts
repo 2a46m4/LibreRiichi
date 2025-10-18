@@ -1,4 +1,5 @@
-import { Tile, TileValue } from '../game/tile'
+import { Tile } from '../game/tile'
+import { Tile as TileValue } from '../messaging/tile'
 import { alphatest_colour, load_texture } from './texture'
 import * as THREE from 'three'
 

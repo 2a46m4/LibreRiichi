@@ -104,7 +104,7 @@ func getImports(decls []StructDecl) []string {
 			case "Action":
 				imports["action"] = `import {Action} from "./action_generated";`
 			case "Tile":
-				imports["tile"] = `import {Tile} from "../game/tile";`
+				imports["tile"] = `import {Tile} from "./tile";`
 			case "Setup":
 				imports["setup"] = `import {Setup} from "../types/setup";`
 			case "ArenaEvent":
@@ -332,13 +332,13 @@ func main() {
 	// Create TypeScript output file in the app/messaging directory
 	baseName := strings.Split(filepath.Base(os.Getenv("GOFILE")), ".")[0]
 	tsOutputPath := filepath.Join("..", "..", "app", "messaging", baseName+"_generated.ts")
-	
+
 	// Ensure the directory exists
 	if err := os.MkdirAll(filepath.Dir(tsOutputPath), 0755); err != nil {
 		fmt.Printf("Warning: Could not create TypeScript directory: %v\n", err)
 		return
 	}
-	
+
 	tsOut, err := os.Create(tsOutputPath)
 	if err != nil {
 		fmt.Printf("Warning: Could not create TypeScript file: %v\n", err)

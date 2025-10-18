@@ -1,32 +1,28 @@
 import * as THREE from 'three'
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { Tile, TileValue } from "../game/tile";
+import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
-import { Selection } from "./raycaster";
-import { AnimationManager, IAnimationManager, linear_interpolator, quadratic_interpolator, TileAnimation } from "./animation";
+import { Raycaster, Selection, Selector } from "./raycaster";
+import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
+
+export interface IActionAnimator {
+    clear_tiles(): void
+    add_tile(tile: Tile, location?: number): string
+    remove_tile(id: string): void
+    add_dora(tile: Tile): void
+    draw(player_idx: number, tile?: Tile): void
+    toss(player_idx: number, tile: Tile): void
+    select(selections: Selection[]): void
+}
 
 export interface IRenderer {
     animate_frame(dt: number): void
-
     stop(): void
-
     window_resize(width: number, height: number): void
+}
 
-    render_selection(selection: Selection[]): void
-
-    clear_tiles(): void
-
-    add_tile(tile: Tile, location?: number): string
-
-    remove_tile(id: string): void
-
-    add_dora(tile: Tile): void
-
+export interface ISelectionManager {
     get_selection(): { tile: Tile, id: string } | null
-
-    render_draw(player_idx: number, tile?: Tile): void
-
-    render_toss(player_idx: number, tile: Tile): void
 }
 
 const marker_positions = [
@@ -58,7 +54,7 @@ const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
 
 const tile_width_gap = tile_width + 0.05
 
-export class ThreeJSRenderer implements IRenderer {
+export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionManager {
 
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
@@ -79,13 +75,15 @@ export class ThreeJSRenderer implements IRenderer {
         tile: TileObject | null
     }
 
+    selector: Selector
+
     animation_manager: IAnimationManager = new AnimationManager()
 
     constructor(canvas: HTMLCanvasElement) {
         // Scene
         {
             this.scene = new THREE.Scene()
-            this.scene.background = new THREE.Color(0xffffff) // Mahjong table green
+            this.scene.background = new THREE.Color(0xffffff)
         }
 
         // Camera
@@ -203,7 +201,7 @@ export class ThreeJSRenderer implements IRenderer {
 
             // Create blank tile walls for the other players
             this.other_tiles = []
-            let blank_tile = new Tile(TileValue.Hidden)
+            let blank_tile = HiddenTile
             tile_positions.forEach((pos) => {
                 const blank_tiles = new THREE.Group()
                 for (let i = 0; i < 13; i++) {
@@ -269,9 +267,15 @@ export class ThreeJSRenderer implements IRenderer {
 
             this.scene.add(this.selection.mesh)
         }
+
+        // Selection manager
+        {
+            this.selector = new Raycaster(this)
+        }
     }
 
-    render_toss(player_idx: number, tile: Tile): void {
+    //TODO
+    toss(player_idx: number, tile: Tile): void {
         let pile = this.discard_pile[player_idx]
 
         let tile_obj = new TileObject(tile)
@@ -289,6 +293,7 @@ export class ThreeJSRenderer implements IRenderer {
         this.controls.update()
         this.renderer.render(this.scene, this.camera)
         this.animation_manager.animate_step(dt)
+        this.select(this.selector.get_selections())
     }
 
     stop(): void {
@@ -304,6 +309,7 @@ export class ThreeJSRenderer implements IRenderer {
                 }
             }
         })
+        this.selector.stop()
     }
 
     window_resize(width: number, height: number) {
@@ -312,7 +318,7 @@ export class ThreeJSRenderer implements IRenderer {
         this.renderer.setSize(width, height)
     }
 
-    render_selection(selection: Selection[]) {
+    select(selection: Selection[]) {
         if (selection.length > 0) {
             let tile = this.tiles.get(selection[0].id)
             if (tile === undefined) {
@@ -380,7 +386,8 @@ export class ThreeJSRenderer implements IRenderer {
     }
 
     // Assumes clockwise index, with our player starting at 0
-    render_draw(player_idx: number, tile?: Tile): void {
+    // TODO
+    draw(player_idx: number, tile?: Tile): void {
         if (player_idx === 0) {
             if (tile === null || tile === undefined) {
                 throw new Error("Tile can't be null")
