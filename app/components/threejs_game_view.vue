@@ -42,7 +42,7 @@ onMounted(() => {
   renderer = manager
   selection_manager = manager
   action_animator = manager
-  animate(0)
+  animate(0, 0)
 
   window.addEventListener('resize', on_window_resize)
   window.addEventListener('click', on_click)
@@ -71,9 +71,9 @@ function on_window_resize() {
   renderer.window_resize(width, height)
 }
 
-function animate(t: number) {
-  animation_id = requestAnimationFrame(animate)
-  renderer.animate_frame(t)
+function animate(t: number, dt: number) {
+  renderer.animate_frame(dt)
+  animation_id = requestAnimationFrame(new_t => { animate(new_t, new_t - t) })
 }
 
 onUnmounted(() => {
@@ -185,7 +185,9 @@ function handle_game_setup_event(setups: Setup[]) {
         scoreboard_state.value.player_idx = setup.data
         break
       case SetupType.PLAYER_ORDER:
-        scoreboard_state.value.player_to_order_map = Array.from(decode(setup.data))
+        const map = Array.from(decode(setup.data))
+        props.arena.set_game_seating(map)
+        scoreboard_state.value.player_to_order_map = map
         break
       case SetupType.ROUND_WIND:
         scoreboard_state.value.round_wind = setup.data

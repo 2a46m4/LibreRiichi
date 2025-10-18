@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { IRenderer, ThreeJSRenderer } from "./renderer";
+import { Hand } from './hand';
 
 export interface Selection {
     id: string
@@ -11,9 +12,9 @@ export interface Selector {
     stop(): void
 }
 
-export function filter_tiles(mahjong_tiles: Map<string, THREE.Mesh>) {
+export function filter_tiles(mahjong_tiles: Hand) {
     return (obj: THREE.Intersection) => {
-        return mahjong_tiles.has(obj.object.uuid)
+        return mahjong_tiles.find_uuid(obj.object.uuid) !== undefined
     }
 }
 
