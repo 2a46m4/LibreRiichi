@@ -27,7 +27,7 @@ export class Raycaster implements Selector {
     constructor(renderer: IRenderer) {
         if (renderer instanceof ThreeJSRenderer) {
             this.renderer = renderer
-            this.filter = filter_tiles(this.renderer.tiles)
+            this.filter = filter_tiles(this.renderer.hands[0])
             window.addEventListener('pointermove', (event) => this.on_pointer_move(event))
         } else {
             throw new Error("Wrong renderer type")

@@ -11,9 +11,9 @@ import { ScoreboardState } from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
 import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
-import { IArena } from '../game/arena'
+import { Arena } from '../game/arena'
 
-const props = defineProps<{ in_game: boolean, arena: IArena }>()
+const props = defineProps<{ in_game: boolean, arena: Arena }>()
 
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
@@ -136,7 +136,8 @@ function handle_player_action_event(action: PlayerActionEvent) {
     case ActionType.Chii:
       break;
     case ActionType.Draw:
-      action_animator.draw(action.action_data.drawn_tile)
+      const seat = props.arena.game_to_seating(action.from_player)
+      action_animator.draw(seat, new Tile(action.action_data.drawn_tile))
       break;
   }
 }

@@ -16,12 +16,12 @@ import {
 import { ArenaEventType } from '../messaging/arena_event_generated'
 import { ArenaActionType } from '../messaging/arena_action_generated'
 import Button from '../components/button.vue'
-import { Arena, IArena } from "../game/arena";
+import { Arena } from "../game/arena";
 
 const num_ai: Ref<number> = ref(0)
 const error_status = ref('')
 const in_game = ref(false)
-const arena: Ref<IArena> = ref(new Arena([], false))
+const arena: Ref<Arena> = ref(new Arena([], false, 0))
 
 const room_state = use_room_state()
 if (!room_state.room_set) {

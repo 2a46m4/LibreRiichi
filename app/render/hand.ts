@@ -4,7 +4,7 @@ import { TileObject } from './tile'
 import { IAnimationManager, quadratic_interpolator, TileAnimation } from './animation'
 
 function offset(i: number) {
-    return i * 0.45
+    return (-7*0.45) + i * 0.45
 }
 
 export class Hand extends THREE.Group {
