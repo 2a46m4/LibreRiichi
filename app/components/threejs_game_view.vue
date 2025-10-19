@@ -55,7 +55,7 @@ function on_click(event: MouseEvent) {
   if (selection === null) {
     return
   } else {
-    console.warn("Not yet implemented")
+    action_animator.remove_tile(selection.id)
   }
 }
 

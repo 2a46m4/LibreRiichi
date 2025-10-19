@@ -23,6 +23,37 @@ export function quadratic_interpolator(t: number): number {
     return t * t
 }
 
+export class MultipleTileAnimation implements IAnimation {
+    constructor(
+        public animations: TileAnimation[],
+        public time_before_start: number = 0
+    ) { }
+
+    add(animation: TileAnimation) {
+        this.animations.push(animation)
+    }
+
+    next_step(dt: number): void {
+        console.log(this.animations, this.current_index)
+        if (this.finished()) {
+            return
+        }
+        if (this.animations[this.current_index].finished()) {
+            this.current_index += 1
+        }
+
+        if (this.finished()) {
+            return
+        }
+
+        this.animations[this.current_index].next_step(dt)
+    }
+    finished(): boolean {
+        return this.current_index === this.animations.length
+    }
+    current_index = 0
+}
+
 export class TileAnimation implements IAnimation {
     is_finished: boolean = false
     t: number = 0

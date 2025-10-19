@@ -189,7 +189,7 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
             this.hands[0].position.set(player_position.x, -1.3, player_position.z)
             this.hands[0].rotation.y = player_position.rotation
             default_tiles.forEach(tile => {
-                this.hands[0].add_tile(tile, this.animation_manager)
+                this.hands[0].add_tile(tile)
             })
             this.scene.add(this.hands[0])
 
@@ -198,8 +198,7 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
             for (let i = 1; i < 4; i++) {
                 const other_hand = new Hand([], this.animation_manager)
                 for (let j = 0; j < 13; j++) {
-                    other_hand.add_tile(blank_tile,
-                        this.animation_manager)
+                    other_hand.add_tile(blank_tile)
                     other_hand.rotation.y = tile_positions[i - 1].rotation
                     other_hand.position.set(tile_positions[i - 1].x, -1.3, tile_positions[i - 1].z)
                 }
@@ -314,8 +313,8 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
             }
 
             this.selection.mesh.visible = true
-            tile.getWorldPosition(this.selection.mesh.position)
-            this.selection.tile = tile as TileObject
+            tile.tile.getWorldPosition(this.selection.mesh.position)
+            this.selection.tile = tile.tile as TileObject
         } else {
             this.selection.mesh.visible = false
             this.selection.tile = null
@@ -328,7 +327,7 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
     }
 
     add_tile(tile: Tile, player_idx: number = 0) {
-        this.hands[player_idx].add_tile(tile, this.animation_manager)
+        this.hands[player_idx].add_tile(tile)
     }
 
     remove_tile(id: string): void {
