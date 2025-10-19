@@ -313,8 +313,8 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
             }
 
             this.selection.mesh.visible = true
-            tile.tile.getWorldPosition(this.selection.mesh.position)
-            this.selection.tile = tile.tile as TileObject
+            tile.getWorldPosition(this.selection.mesh.position)
+            this.selection.tile = tile as TileObject
         } else {
             this.selection.mesh.visible = false
             this.selection.tile = null
