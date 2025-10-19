@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { IRenderer, ThreeJSRenderer } from "./renderer";
+import { Hand } from './hand';
 
 export interface Selection {
     id: string
@@ -11,9 +12,9 @@ export interface Selector {
     stop(): void
 }
 
-export function filter_tiles(mahjong_tiles: Map<string, THREE.Mesh>) {
+export function filter_tiles(mahjong_tiles: Hand) {
     return (obj: THREE.Intersection) => {
-        return mahjong_tiles.has(obj.object.uuid)
+        return mahjong_tiles.find_uuid(obj.object.uuid) !== undefined
     }
 }
 
@@ -26,7 +27,7 @@ export class Raycaster implements Selector {
     constructor(renderer: IRenderer) {
         if (renderer instanceof ThreeJSRenderer) {
             this.renderer = renderer
-            this.filter = filter_tiles(this.renderer.tiles)
+            this.filter = filter_tiles(this.renderer.hands[0])
             window.addEventListener('pointermove', (event) => this.on_pointer_move(event))
         } else {
             throw new Error("Wrong renderer type")

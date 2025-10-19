@@ -1,24 +1,4 @@
-export enum TileValue {
-  Manzu = 0,
-  Pinzu = 16,
-  Souzu = 32,
-
-  Kazehai = 48,
-  EastTile = 48,
-  SouthTile = 49,
-  WestTile = 50,
-  NorthTile = 51,
-
-  Sangenpai = 52,
-  White = 52,
-  Red = 53,
-  Green = 54,
-
-  DoraTile = 64,
-  RedTile = 128,
-  Hidden = 254,
-  Invalid = 255,
-}
+import { Tile as TileValue } from "../messaging/tile"
 
 const TileMask = 0b11 << 4
 const TileShift = 4
@@ -67,7 +47,7 @@ export class Tile {
   }
 
   static sort(a: Tile, b: Tile) {
-      return a.value - b.value
+    return a.value - b.value
   }
 
   static from(base64_string: string): Tile[] {
@@ -83,7 +63,7 @@ export class Tile {
 
     let str = ''
 
-    for (let i = 0; i < sorted.length; ) {
+    for (let i = 0; i < sorted.length;) {
       let current_meld = sorted[i].value & TileMask
       let meld_list = [sorted[i]]
       let j = i + 1
@@ -128,7 +108,7 @@ export class Tile {
     return str
   }
 
-  static get_base64_representation(tile_array: Tile[]) {}
+  static get_base64_representation(tile_array: Tile[]) { }
 
   clear_red_or_dora(): Tile {
     if (this.value === TileValue.Invalid || this.value === TileValue.Hidden)
@@ -221,3 +201,5 @@ export class Tile {
     }
   }
 }
+
+export const HiddenTile = new Tile(TileValue.Hidden)

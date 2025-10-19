@@ -1,32 +1,29 @@
 import * as THREE from 'three'
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { Tile, TileValue } from "../game/tile";
+import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
-import { Selection } from "./raycaster";
-import { AnimationManager, IAnimationManager, linear_interpolator, quadratic_interpolator, TileAnimation } from "./animation";
+import { Raycaster, Selection, Selector } from "./raycaster";
+import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
+import { Hand } from './hand';
+
+export interface IActionAnimator {
+    clear_tiles(): void
+    add_tile(tile: Tile, player_idx?: number): void
+    remove_tile(id: string): void
+    add_dora(tile: Tile): void
+    draw(player_idx: number, tile?: Tile): void
+    toss(player_idx: number, tile: Tile): void
+    select(selections: Selection[]): void
+}
 
 export interface IRenderer {
     animate_frame(dt: number): void
-
     stop(): void
-
     window_resize(width: number, height: number): void
+}
 
-    render_selection(selection: Selection[]): void
-
-    clear_tiles(): void
-
-    add_tile(tile: Tile, location?: number): string
-
-    remove_tile(id: string): void
-
-    add_dora(tile: Tile): void
-
+export interface ISelectionManager {
     get_selection(): { tile: Tile, id: string } | null
-
-    render_draw(player_idx: number, tile?: Tile): void
-
-    render_toss(player_idx: number, tile: Tile): void
 }
 
 const marker_positions = [
@@ -35,6 +32,8 @@ const marker_positions = [
     { x: 0, z: -4, rotation: Math.PI }, // North
     { x: -4, z: 0, rotation: -Math.PI / 2 }, // West
 ]
+
+const tile_width_gap = tile_width + 0.05
 
 const tile_positions = [
     { x: 5, z: 0, rotation: Math.PI / 2 }, // East
@@ -56,9 +55,7 @@ const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
     (i) => new Tile(i),
 )
 
-const tile_width_gap = tile_width + 0.05
-
-export class ThreeJSRenderer implements IRenderer {
+export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionManager {
 
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
@@ -67,8 +64,7 @@ export class ThreeJSRenderer implements IRenderer {
     lights: THREE.Light[] = []
 
     table: THREE.Group
-    tiles: Map<string, TileObject>
-    other_tiles: THREE.Group[]
+    hands: Hand[]
     dora_tiles: THREE.Mesh[] = []
 
     discard_pile: TileObject[][]
@@ -79,13 +75,15 @@ export class ThreeJSRenderer implements IRenderer {
         tile: TileObject | null
     }
 
+    selector: Selector
+
     animation_manager: IAnimationManager = new AnimationManager()
 
     constructor(canvas: HTMLCanvasElement) {
         // Scene
         {
             this.scene = new THREE.Scene()
-            this.scene.background = new THREE.Color(0xffffff) // Mahjong table green
+            this.scene.background = new THREE.Color(0xffffff)
         }
 
         // Camera
@@ -184,42 +182,29 @@ export class ThreeJSRenderer implements IRenderer {
 
         // Mahjong tiles
         {
+            this.hands = []
+
             // Create demo tiles
-            this.tiles = new Map<string, TileObject>()
-            for (const [i, tile] of default_tiles.entries()) {
-                let tile_obj = new TileObject(tile)
-
-                const offset_x = (i - 6) * tile_width_gap
-                tile_obj.position.set(
-                    player_position.x + Math.cos(player_position.rotation) * offset_x,
-                    -1.3,
-                    player_position.z + Math.sin(player_position.rotation) * offset_x,
-                )
-                tile_obj.rotation.y = player_position.rotation
-
-                this.tiles.set(tile_obj.uuid, tile_obj)
-                this.scene.add(tile_obj)
-            }
+            this.hands[0] = new Hand([], this.animation_manager)
+            this.hands[0].position.set(player_position.x, -1.3, player_position.z)
+            this.hands[0].rotation.y = player_position.rotation
+            default_tiles.forEach(tile => {
+                this.hands[0].add_tile(tile)
+            })
+            this.scene.add(this.hands[0])
 
             // Create blank tile walls for the other players
-            this.other_tiles = []
-            let blank_tile = new Tile(TileValue.Hidden)
-            tile_positions.forEach((pos) => {
-                const blank_tiles = new THREE.Group()
-                for (let i = 0; i < 13; i++) {
-                    const blank_tile_obj = new TileObject(blank_tile)
-                    const offset_x = (i - 6) * 0.45
-                    blank_tile_obj.position.set(
-                        pos.x + Math.cos(pos.rotation) * offset_x,
-                        -1.3,
-                        pos.z + Math.sin(pos.rotation) * offset_x,
-                    )
-                    blank_tile_obj.rotation.y = pos.rotation
-                    blank_tiles.add(blank_tile_obj)
+            let blank_tile = HiddenTile
+            for (let i = 1; i < 4; i++) {
+                const other_hand = new Hand([], this.animation_manager)
+                for (let j = 0; j < 13; j++) {
+                    other_hand.add_tile(blank_tile)
+                    other_hand.rotation.y = tile_positions[i - 1].rotation
+                    other_hand.position.set(tile_positions[i - 1].x, -1.3, tile_positions[i - 1].z)
                 }
-                this.other_tiles.push(blank_tiles)
-                this.scene.add(blank_tiles)
-            })
+                this.hands[i] = other_hand
+                this.scene.add(other_hand)
+            }
         }
 
         // Discard piles
@@ -269,9 +254,15 @@ export class ThreeJSRenderer implements IRenderer {
 
             this.scene.add(this.selection.mesh)
         }
+
+        // Selection manager
+        {
+            this.selector = new Raycaster(this)
+        }
     }
 
-    render_toss(player_idx: number, tile: Tile): void {
+    //TODO
+    toss(player_idx: number, tile: Tile): void {
         let pile = this.discard_pile[player_idx]
 
         let tile_obj = new TileObject(tile)
@@ -289,6 +280,7 @@ export class ThreeJSRenderer implements IRenderer {
         this.controls.update()
         this.renderer.render(this.scene, this.camera)
         this.animation_manager.animate_step(dt)
+        this.select(this.selector.get_selections())
     }
 
     stop(): void {
@@ -304,6 +296,7 @@ export class ThreeJSRenderer implements IRenderer {
                 }
             }
         })
+        this.selector.stop()
     }
 
     window_resize(width: number, height: number) {
@@ -312,52 +305,33 @@ export class ThreeJSRenderer implements IRenderer {
         this.renderer.setSize(width, height)
     }
 
-    render_selection(selection: Selection[]) {
+    select(selection: Selection[]) {
         if (selection.length > 0) {
-            let tile = this.tiles.get(selection[0].id)
+            let tile = this.hands[0].find_uuid(selection[0].id)
             if (tile === undefined) {
                 throw new Error('Tile not found')
             }
 
             this.selection.mesh.visible = true
-            this.selection.mesh.position.copy(tile.position)
+            tile.getWorldPosition(this.selection.mesh.position)
             this.selection.tile = tile as TileObject
         } else {
             this.selection.mesh.visible = false
+            this.selection.tile = null
             return
         }
     }
 
     clear_tiles(): void {
-        this.tiles.forEach(mesh => this.scene.remove(mesh))
-        this.tiles.clear()
+        this.hands[0].remove_all()
     }
 
-    add_tile(tile: Tile, location: number = this.tiles.size): string {
-        const tile_obj = new TileObject(tile)
-        tile_obj.rotation.y = player_position.rotation
-
-        const offset_x = (location - 6) * 0.45
-
-        const start = new THREE.Vector3(0, 0, 0)
-        const end = new THREE.Vector3(
-            player_position.x + Math.cos(player_position.rotation) * offset_x,
-            -1.3,
-            player_position.z + Math.sin(player_position.rotation) * offset_x
-        )
-        this.animation_manager.add_animation(new TileAnimation(tile_obj, start, end, quadratic_interpolator))
-        this.tiles.set(tile_obj.uuid, tile_obj)
-        this.scene.add(tile_obj)
-        return tile_obj.uuid
+    add_tile(tile: Tile, player_idx: number = 0) {
+        this.hands[player_idx].add_tile(tile)
     }
 
     remove_tile(id: string): void {
-        let tile_obj = this.tiles.get(id)
-        if (tile_obj === undefined) {
-            throw new Error('Tile not found')
-        }
-        this.scene.remove(tile_obj)
-        this.tiles.delete(id)
+        this.hands[0].remove_tile_id(id)
     }
 
     add_dora(tile: Tile): void {
@@ -380,15 +354,18 @@ export class ThreeJSRenderer implements IRenderer {
     }
 
     // Assumes clockwise index, with our player starting at 0
-    render_draw(player_idx: number, tile?: Tile): void {
+    draw(player_idx: number, tile?: Tile): void {
         if (player_idx === 0) {
             if (tile === null || tile === undefined) {
                 throw new Error("Tile can't be null")
             }
 
-            this.add_tile(tile)
+            this.add_tile(tile, player_idx)
         } else {
-
+            if (tile === undefined) {
+                tile = HiddenTile
+            }
+            this.add_tile(tile, player_idx)
         }
     }
 }

@@ -207,7 +207,7 @@ func (game *MahjongGame) StartNewGame() ([][]Setup, error) {
 		setup[idx] = append(setup[idx],
 			Setup{
 				Type: INITIAL_TILES,
-				Data: player.ClosedHand,
+				Data: player.ClosedHand[:13],
 			},
 			Setup{
 				Type: DORA,

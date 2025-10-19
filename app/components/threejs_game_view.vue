@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { ref, onMounted, onUnmounted, watch, Ref, render } from 'vue'
 import { decode, Tile } from '../game/tile'
-import { initialize_tiles, TileObject } from '../render/tile'
+import { initialize_tiles } from '../render/tile'
 import { BoardEvent, BoardEventType, PlayerActionEvent } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
 import { ArenaMessageBus } from "../messaging/event_handler";
@@ -12,10 +10,10 @@ import { ServerEvent } from "../messaging/server_event_generated";
 import { ScoreboardState } from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
-import { IRenderer, ThreeJSRenderer } from "../render/renderer";
-import { Raycaster, Selector } from "../render/raycaster";
+import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
+import { Arena } from '../game/arena'
 
-const props = defineProps<{ in_game: boolean }>()
+const props = defineProps<{ in_game: boolean, arena: Arena }>()
 
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
@@ -24,7 +22,8 @@ const is_fullscreen = ref(false)
 let animation_id: number
 
 let renderer: IRenderer
-let raycaster: Selector
+let selection_manager: ISelectionManager
+let action_animator: IActionAnimator
 
 const scoreboard_state: Ref<ScoreboardState> = ref({
   scoreboard_values: [],
@@ -35,14 +34,15 @@ const scoreboard_state: Ref<ScoreboardState> = ref({
   player_idx: 0,
 })
 
-let dora_tiles = []
-
 onMounted(() => {
   if (!three_canvas.value) return
   initialize_tiles()
-  renderer = new ThreeJSRenderer(three_canvas.value)
-  raycaster = new Raycaster(renderer)
-  animate(0)
+
+  const manager = new ThreeJSRenderer(three_canvas.value)
+  renderer = manager
+  selection_manager = manager
+  action_animator = manager
+  animate(0, 0)
 
   window.addEventListener('resize', on_window_resize)
   window.addEventListener('click', on_click)
@@ -51,11 +51,11 @@ onMounted(() => {
 })
 
 function on_click(event: MouseEvent) {
-  const selection = renderer.get_selection()
+  const selection = selection_manager.get_selection()
   if (selection === null) {
     return
   } else {
-    console.warn("Not yet implemented")
+    action_animator.remove_tile(selection.id)
   }
 }
 
@@ -71,12 +71,9 @@ function on_window_resize() {
   renderer.window_resize(width, height)
 }
 
-function animate(t: number) {
-  animation_id = requestAnimationFrame(animate)
-
-  let selections = raycaster.get_selections()
-  renderer.render_selection(selections)
-  renderer.animate_frame(t)
+function animate(t: number, dt: number) {
+  renderer.animate_frame(dt)
+  animation_id = requestAnimationFrame(new_t => { animate(new_t, new_t - t) })
 }
 
 onUnmounted(() => {
@@ -87,7 +84,6 @@ onUnmounted(() => {
   window.removeEventListener('click', on_click)
 
   renderer.stop()
-  raycaster.stop()
 })
 
 function message_handler(event: ServerEvent) {
@@ -140,7 +136,8 @@ function handle_player_action_event(action: PlayerActionEvent) {
     case ActionType.Chii:
       break;
     case ActionType.Draw:
-
+      const seat = props.arena.game_to_seating(action.from_player)
+      action_animator.draw(seat, new Tile(action.action_data.drawn_tile))
       break;
   }
 }
@@ -174,13 +171,13 @@ function handle_game_setup_event(setups: Setup[]) {
   for (let setup of setups) {
     switch (setup.setup_type) {
       case SetupType.INITIAL_TILES:
-        renderer.clear_tiles()
+        action_animator.clear_tiles()
         Tile.from(setup.data)
           .sort(Tile.sort)
-          .forEach((tile) => renderer.add_tile(tile))
+          .forEach((tile) => action_animator.add_tile(tile))
         break
       case SetupType.DORA:
-        renderer.add_dora(new Tile(setup.data))
+        action_animator.add_dora(new Tile(setup.data))
         break
       case SetupType.STARTING_POINTS:
         scoreboard_state.value.scoreboard_values = setup.data
@@ -189,7 +186,9 @@ function handle_game_setup_event(setups: Setup[]) {
         scoreboard_state.value.player_idx = setup.data
         break
       case SetupType.PLAYER_ORDER:
-        scoreboard_state.value.player_to_order_map = Array.from(decode(setup.data))
+        const map = Array.from(decode(setup.data))
+        props.arena.set_game_seating(map)
+        scoreboard_state.value.player_to_order_map = map
         break
       case SetupType.ROUND_WIND:
         scoreboard_state.value.round_wind = setup.data
