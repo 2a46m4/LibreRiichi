@@ -57,6 +57,8 @@ type MahjongGame struct {
 
 	// List of actions performed
 	RecordedActions []ActionPerformed
+
+	DiscardPiles [4][]Tile
 }
 
 type ActionPerformed struct {

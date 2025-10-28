@@ -1,9 +1,11 @@
 package core
 
 import (
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 	"errors"
 	"slices"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	"github.com/google/uuid"
 )
 
 // TODO: Separate Kans into the different types
@@ -16,6 +18,7 @@ type Player struct {
 
 	Points   uint32
 	SeatWind Wind
+	ID       uuid.UUID
 }
 
 // ==================== PRIVATE FUNCTIONS ====================
