@@ -1,5 +1,11 @@
 package game
 
+import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+)
+
 type MahjongGame struct {
 	ScoringState
 	TileState
@@ -13,8 +19,9 @@ func InitGame() {
 	
 }
 
-func DriveGame() {
+func DriveGame(action Action) error {
 	
+	return nil
 }
 
 
