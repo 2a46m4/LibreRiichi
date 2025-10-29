@@ -8,3 +8,13 @@ type MahjongGame struct {
 	Ordering
 	TurnState
 }
+
+func InitGame() {
+	
+}
+
+func DriveGame() {
+	
+}
+
+

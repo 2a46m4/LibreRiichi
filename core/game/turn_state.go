@@ -1,23 +1,33 @@
 package game
 
-import "fmt"
-
 type TurnType uint8
-
-const (
-	CHOOSING_DISCARD TurnType = iota
-	POST_ACTIONS_PENDING
-	GAME_ENDED
-)
 
 type TransitionType uint8
 
 const (
-	DRAW_TRANSITION TransitionType = iota
+	INVALID TurnType = iota
+	OUT_OF_GAME 
+	IN_GAME
+	AWAITING_DISCARD
+	DISCARDED
+	AWAITING_NAKI
+	NAKI_CALLED
+	NAKI_FINISHED
+)
+
+const (
+	_ = iota
+	GAME_START_TRANSITION TransitionType = iota << 3
+	DRAW_TRANSITION
 	TOSS_TRANSITION
-	PLAY_POST_ACTIONS_TRANSITION
-	WIN_OR_EXHAUST_TRANSITION
-	RESET_TRANSITION
+	COMPUTE_NAKI_TRANSITION
+	NAKI_CALLED_TRANSITION
+	AWAITING_DISCARD_TRANSITION
+	NO_NAKI_TRANSITION
+	GAME_FINISHED_TRANSITION
+
+	TRANSITION_MASK uint8 = 0b11111000
+	TRANSITION_SHIFT = 3
 )
 
 type BadStateTransition struct{}
@@ -26,35 +36,39 @@ func (BadStateTransition) Error() string {
 	return "Bad state transition"
 }
 
+type I uint8
+var ACTION_TRANSITION_MTX [128]TurnType = [128]TurnType{
+	I(OUT_OF_GAME)		| I(GAME_START_TRANSITION)		: IN_GAME,
+
+	I(IN_GAME)		| I(DRAW_TRANSITION)			: AWAITING_DISCARD,
+
+	I(AWAITING_DISCARD)	| I(TOSS_TRANSITION)			: DISCARDED,
+
+	I(DISCARDED)		| I(COMPUTE_NAKI_TRANSITION)		: AWAITING_NAKI,
+	I(DISCARDED)		| I(NO_NAKI_TRANSITION)			: NAKI_FINISHED,
+	I(DISCARDED)		| I(GAME_FINISHED_TRANSITION)		: OUT_OF_GAME,
+
+	I(AWAITING_NAKI)	| I(NAKI_CALLED_TRANSITION)		: NAKI_CALLED,
+
+	I(NAKI_CALLED)		| I(AWAITING_DISCARD_TRANSITION)	: AWAITING_DISCARD,
+
+	I(NAKI_FINISHED)	| I(DRAW_TRANSITION)			: AWAITING_DISCARD,
+	I(NAKI_FINISHED)	| I(GAME_FINISHED_TRANSITION)		: OUT_OF_GAME,
+}
+
 type TurnState struct {
 	TurnNumber uint8
 	TurnType   TurnType
 }
 
-func (coord *TurnState) transition(intoState TurnType, validStates ...TurnType) error {
-	for _, valid := range validStates {
-		if coord.TurnType == valid {
-			coord.TurnType = intoState
-			return nil	
-		} 
-	}
-	return BadStateTransition{}
-}
-
-// Returns the next action (TurnType), or error if not a valid move
-func (coord *TurnState) Transition(action TransitionType, fromPlayer uint8) (TurnType, error) {
-	switch action {
-	case DRAW_TRANSITION:
-		coord.transition(CHOOSING_DISCARD, POST_ACTIONS_PENDING)
-	case PLAY_POST_ACTIONS_TRANSITION:
-		coord.transition(CHOOSING_DISCARD, POST_ACTIONS_PENDING)
-	case RESET_TRANSITION:
-		coord.transition(CHOOSING_DISCARD, GAME_ENDED)	
-	case TOSS_TRANSITION:
-		coord.transition(POST_ACTIONS_PENDING, CHOOSING_DISCARD)
-	case WIN_OR_EXHAUST_TRANSITION:
-	default:
-		panic(fmt.Sprintf("unexpected game.TransitionType: %#v", action))
+// Returns the next action TurnType
+func (coord *TurnState) Transition(action TransitionType, fromPlayer uint8) error {
+	newState := ACTION_TRANSITION_MTX[I(coord.TurnType) | I(action)]
+	if newState != INVALID {
+		coord.TurnType = newState
+		return nil
+	} else {
+		return BadStateTransition{}
 	}
 }
 
