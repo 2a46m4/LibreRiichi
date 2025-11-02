@@ -61,11 +61,21 @@ type TurnState struct {
 	TurnType   TurnType
 }
 
+func InitTurnState() TurnState {
+	return TurnState{
+		TurnNumber: 0,
+		TurnType:   OUT_OF_GAME,
+	}
+}
+
 // Returns the next action TurnType
 func (coord *TurnState) Transition(action TransitionType, fromPlayer uint8) error {
 	newState := ACTION_TRANSITION_MTX[I(coord.TurnType) | I(action)]
 	if newState != INVALID {
 		coord.TurnType = newState
+		if action == DRAW_TRANSITION {
+			coord.TurnNumber+=1
+		}
 		return nil
 	} else {
 		return BadStateTransition{}

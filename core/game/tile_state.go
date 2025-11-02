@@ -15,8 +15,9 @@ type TileState struct {
 	DiscardPile [4]DiscardPile
 }
 
-func (game *TileState) Create() {
+func CreateNewRound() (game TileState) {
 	game.newRound()
+	return game
 }
 
 func (game *TileState) newRound() {

@@ -11,11 +11,12 @@ type Ordering struct {
 	GameToArena [4]uint8
 }
 
-func (ordering *Ordering) InitRandom() {
+func InitRandomOrdering() (ordering Ordering) {
 	PermuteArray(ordering.ArenaToGame[:])
 	for arenaIdx, gameIdx := range ordering.ArenaToGame {
 		ordering.GameToArena[gameIdx] = uint8(arenaIdx)
 	}
+	return ordering
 }
 
 func (ordering Ordering) GameIdx(arenaIdx uint8) uint8 {

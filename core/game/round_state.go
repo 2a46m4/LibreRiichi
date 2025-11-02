@@ -11,10 +11,7 @@ type RoundState struct {
 
 func (roundState* RoundState) IncrementRound() {
 	roundState.RoundNumber += 1
-
-	if roundState.RoundWind == North {
-		roundState.RoundWind = East
-	} else {
+	if roundState.RoundNumber == 4 {
 		roundState.RoundWind += 1
 	}
 }

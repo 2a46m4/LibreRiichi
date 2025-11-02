@@ -15,8 +15,15 @@ type MahjongGame struct {
 	TurnState
 }
 
-func InitGame() {
-	
+func InitGame() MahjongGame {
+	return MahjongGame {
+		ScoringState: InitScoring(25000),
+		TileState:    CreateNewRound(),
+		RoundState:   RoundState{},
+		WindState:    0,
+		Ordering:     InitRandomOrdering(),
+		TurnState:    InitTurnState(),
+	}
 }
 
 func DriveGame(action Action) error {
