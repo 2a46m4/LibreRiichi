@@ -15,8 +15,8 @@ type MahjongGame struct {
 	TurnState
 }
 
-func InitGame() MahjongGame {
-	return MahjongGame {
+func (game *MahjongGame) InitGame() {
+	*game = MahjongGame {
 		ScoringState: InitScoring(25000),
 		TileState:    CreateNewRound(),
 		RoundState:   RoundState{},
@@ -26,9 +26,12 @@ func InitGame() MahjongGame {
 	}
 }
 
-func DriveGame(action Action) error {
+func (game *MahjongGame) StartGame() (MessageSendInfo, error) {
 	
-	return nil
+}
+
+func (game *MahjongGame) HandleEvent(action Action) (MessageSendInfo, error) {
+	return MessageSendInfo{}, nil
 }
 
 

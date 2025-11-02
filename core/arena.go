@@ -21,13 +21,19 @@ type Client interface {
 	IsAI() bool
 }
 
+type Game interface {
+	InitGame() 
+	StartGame() (MessageSendInfo, error)
+	HandleEvent(action Action) (MessageSendInfo, error)
+}
+
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
 	agents      []Client
 	spectators  []Client
 	gameStarted bool
-	game        MahjongGame
+	game        Game
 	// AwaitingInputs []??? that stores the list of agents that it is waiting on
 
 	DateCreated time.Time
