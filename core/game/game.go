@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
@@ -13,11 +14,7 @@ type MahjongGame struct {
 	RoundState
 	WindState
 	Ordering
-	TurnState
-}
-
-func InitGameState() *MahjongGame {
-	return &MahjongGame{}
+	GameState
 }
 
 func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
@@ -87,20 +84,31 @@ func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
 }
 
 func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
+	if game.GameState.TurnType != INVALID || game.GameState.TurnType != OUT_OF_GAME {
+		return nil, errors.New("Game already started")
+	}
+
 	game.ScoringState = InitScoring(25000)
 	game.TileState = CreateNewRound()
 	game.RoundState = RoundState{}
 	game.WindState = 0
 	game.Ordering = InitRandomOrdering()
-	game.TurnState = InitTurnState()
+	game.GameState = InitGameState()
 	setup := game.SendGameSetup()
-
+	game.GameState.Transition(GAME_START_TRANSITION, 0)
 	return setup, nil
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
+	if game.roundStarted {
+		return nil, errors.New("Round already started")
+	}
+	
+	game.TileState = CreateNewRound()
+
 	setup := game.SendRoundSetup()
-	return nil, nil
+	game.roundStarted = true
+	return setup, nil
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error) {

@@ -56,20 +56,20 @@ var ACTION_TRANSITION_MTX [128]TurnType = [128]TurnType{
 	I(NAKI_FINISHED)	| I(GAME_FINISHED_TRANSITION)		: OUT_OF_GAME,
 }
 
-type TurnState struct {
+type GameState struct {
 	TurnNumber uint8
 	TurnType   TurnType
 }
 
-func InitTurnState() TurnState {
-	return TurnState{
+func InitGameState() GameState {
+	return GameState{
 		TurnNumber: 0,
 		TurnType:   OUT_OF_GAME,
 	}
 }
 
 // Returns the next action TurnType
-func (coord *TurnState) Transition(action TransitionType, fromPlayer uint8) error {
+func (coord *GameState) Transition(action TransitionType, fromPlayer uint8) error {
 	newState := ACTION_TRANSITION_MTX[I(coord.TurnType) | I(action)]
 	if newState != INVALID {
 		coord.TurnType = newState
@@ -82,6 +82,6 @@ func (coord *TurnState) Transition(action TransitionType, fromPlayer uint8) erro
 	}
 }
 
-func (coord TurnState) GetPlayer() uint8 {
+func (coord GameState) GetPlayer() uint8 {
 	return coord.TurnNumber % 4
 }
