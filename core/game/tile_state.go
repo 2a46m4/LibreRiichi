@@ -34,6 +34,7 @@ func (game *TileState) newRound() {
 	// Fill the dead wall (14 tiles total) using Reset method
 	deadWallTiles := tiles[70:84]
 	game.DeadWall.Reset(deadWallTiles)
+	game.DeadWall.revealDora()
 }
 
 func (game *TileState) IncrementRound() {

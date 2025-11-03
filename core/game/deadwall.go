@@ -20,6 +20,10 @@ func (d *DoraDeadWall) revealDora() {
 	d.numberRevealed += 1
 }
 
+func (d *DoraDeadWall) getLastDoraTile() Tile {
+	return d.tiles[d.numberRevealed - 1]
+}
+
 type UradoraDeadWall DoraDeadWall
 
 type KanDeadWall struct {

@@ -109,7 +109,7 @@ func CreateArena(name string, uuid uuid.UUID) Arena {
 		agents:      make([]Client, 0),
 		spectators:  make([]Client, 0),
 		gameStarted: false,
-		game:        InitGame(),
+		game:        InitGameState(),
 		DateCreated: time.Now(),
 		Mutex:       sync.Mutex{},
 		Name:        name,

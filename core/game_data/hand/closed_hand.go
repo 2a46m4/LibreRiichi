@@ -32,3 +32,7 @@ func (closed *ClosedHand) RemoveTile(tiles ...Tile) {
 		}
 	}
 }
+
+func (closed *ClosedHand) GetHand() []Tile {
+	return closed.hand[:closed.index]
+}

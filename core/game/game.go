@@ -5,7 +5,6 @@ import (
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
 type MahjongGame struct {
@@ -17,22 +16,90 @@ type MahjongGame struct {
 	TurnState
 }
 
-func InitGame() *MahjongGame {
-	return &MahjongGame {
-		ScoringState: InitScoring(25000),
-		TileState:    CreateNewRound(),
-		RoundState:   RoundState{},
-		WindState:    0,
-		Ordering:     InitRandomOrdering(),
-		TurnState:    InitTurnState(),
+func InitGameState() *MahjongGame {
+	return &MahjongGame{}
+}
+
+func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
+
+	// Create setup data for each player
+	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
+		gameIdx := game.Ordering.GameIdx(arenaIdx)
+
+		setup := []Setup{
+			{
+				Type: DORA,
+				Data: game.DeadWall.DoraDeadWall.getLastDoraTile(),
+			},
+			{
+				Type: PLAYER_NUMBER,
+				Data: game.Ordering.GameIdx(arenaIdx),
+			},
+			{
+				Type: ROUND_NUMBER,
+				Data: uint8(0), // First round
+			},
+			{
+				Type: ROUND_WIND,
+				Data: game.WindState.GetPlayerWind(gameIdx), // Get player's seat wind
+			},
+			{
+				Type: STARTING_POINTS,
+				Data: [4]uint32{
+					game.ScoringState.Points[0],
+					game.ScoringState.Points[1],
+					game.ScoringState.Points[2],
+					game.ScoringState.Points[3],
+				},
+			},
+		}
+
+		sendInfos = append(sendInfos, MessageSendInfo{
+			Events: []BoardEvent{
+				GameSetupEvent{Setup: setup},
+			},
+			SendTo: arenaIdx,
+		})
 	}
+
+	return sendInfos
+}
+
+func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
+	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
+		gameIdx := game.Ordering.GameIdx(arenaIdx)
+		initialTiles := game.TileState.Hands[gameIdx].ClosedHand.GetHand()
+		setup := []Setup{
+			{
+				Type: INITIAL_TILES,
+				Data: initialTiles,
+			},
+		}
+		sendInfos = append(sendInfos, MessageSendInfo{
+			Events: []BoardEvent{
+				GameSetupEvent{Setup: setup},
+			},
+			SendTo: arenaIdx,
+		})
+	}
+
+	return sendInfos
 }
 
 func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
-	return nil, nil
+	game.ScoringState = InitScoring(25000)
+	game.TileState = CreateNewRound()
+	game.RoundState = RoundState{}
+	game.WindState = 0
+	game.Ordering = InitRandomOrdering()
+	game.TurnState = InitTurnState()
+	setup := game.SendGameSetup()
+
+	return setup, nil
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
+	setup := game.SendRoundSetup()
 	return nil, nil
 }
 
