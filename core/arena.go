@@ -212,6 +212,7 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 	}
 
 	arena.gameStarted = true
+	
 	return Unit, nil
 }
 

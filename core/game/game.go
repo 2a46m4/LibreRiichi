@@ -24,6 +24,21 @@ func NewMahjongGame() *MahjongGame {
 	}
 }
 
+func (game *MahjongGame) handleNewTurn() error {
+	index := game.TurnState.TurnNumber
+	err := game.GameState.TryTransition(DRAW_TRANSITION)
+	if err != nil {
+		return err
+	}
+	
+
+
+	// Draw, checking that we still have moves
+	// Check riichi, tsumo, kan
+
+	
+}
+
 func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
 
 	// Create setup data for each player
@@ -96,7 +111,6 @@ func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
 	}
 
 	game.ScoringState = InitScoring(25000)
-	game.TileState = CreateNewRound()
 	game.RoundState = RoundState{}
 	game.WindState = 0
 	game.Ordering = InitRandomOrdering()
@@ -113,7 +127,14 @@ func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
 	game.TileState = CreateNewRound()
 
 	setup := game.SendRoundSetup()
-	return setup, nil
+	firstArenaIdx := game.Ordering.GameToArena[0]
+	
+	game.TileState.Draw(0)
+
+	return append(setup, MessageSendInfo{
+		Events: []BoardEvent{},
+		SendTo: 0,
+	}), nil
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error) {
@@ -124,6 +145,7 @@ func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSe
 }
 
 func (game *MahjongGame) RoundEnd() error {
+	game.RoundState.IncrementRound()
 	return nil
 }
 

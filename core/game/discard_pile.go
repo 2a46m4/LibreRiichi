@@ -19,3 +19,7 @@ func (pile *DiscardPile) Remove() (tile Tile) {
 	pile.index -= 1
 	return tile
 }
+
+func (pile *DiscardPile) Reset() {
+	pile.index = 0;
+}

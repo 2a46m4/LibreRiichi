@@ -1,6 +1,12 @@
 package game
 
+import "fmt"
+
+//go:generate go run golang.org/x/tools/cmd/stringer -type=TurnType
+
 type TurnType uint8
+
+//go:generate go run golang.org/x/tools/cmd/stringer -type=TransitionType
 
 type TransitionType uint8
 
@@ -30,10 +36,13 @@ const (
 	TRANSITION_SHIFT       = 3
 )
 
-type BadStateTransition struct{}
+type BadStateTransition struct{
+	from TurnType
+	transition TransitionType
+}
 
-func (BadStateTransition) Error() string {
-	return "Bad state transition"
+func (err BadStateTransition) Error() string {
+	return fmt.Sprintf("Bad state transition: attempted to transition from %v with %v", err.from, err.transition)
 }
 
 type I uint8
@@ -67,6 +76,18 @@ func InitGameState() GameState {
 	}
 }
 
+func (coord *GameState) TryTransition(action TransitionType) error {
+	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
+	if newState != INVALID {
+		return nil
+	} else {
+		return BadStateTransition{
+			from:       coord.TurnType,
+			transition: action,
+		}
+	}
+}
+
 // Returns the next action TurnType
 func (coord *GameState) Transition(action TransitionType) error {
 	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
@@ -74,6 +95,9 @@ func (coord *GameState) Transition(action TransitionType) error {
 		coord.TurnType = newState
 		return nil
 	} else {
-		return BadStateTransition{}
+		return BadStateTransition{
+			from:       coord.TurnType,
+			transition: action,
+		}
 	}
 }
