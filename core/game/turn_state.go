@@ -1,88 +1,96 @@
 package game
 
-type TurnType uint8
+import (
+	"errors"
 
-type TransitionType uint8
-
-const (
-	INVALID TurnType = iota
-	OUT_OF_GAME
-	IN_GAME
-	AWAITING_DISCARD
-	DISCARDED
-	AWAITING_NAKI
-	NAKI_CALLED
-	NAKI_FINISHED
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
-const (
-	_                                    = iota
-	GAME_START_TRANSITION TransitionType = iota << 3
-	DRAW_TRANSITION
-	TOSS_TRANSITION
-	COMPUTE_NAKI_TRANSITION
-	NAKI_CALLED_TRANSITION
-	AWAITING_DISCARD_TRANSITION
-	NO_NAKI_TRANSITION
-	GAME_FINISHED_TRANSITION
-
-	TRANSITION_MASK  uint8 = 0b11111000
-	TRANSITION_SHIFT       = 3
-)
-
-type BadStateTransition struct{}
-
-func (BadStateTransition) Error() string {
-	return "Bad state transition"
-}
-
-type I uint8
-
-var ACTION_TRANSITION_MTX [128]TurnType = [128]TurnType{
-	I(OUT_OF_GAME) | I(GAME_START_TRANSITION): IN_GAME,
-
-	I(IN_GAME) | I(DRAW_TRANSITION): AWAITING_DISCARD,
-
-	I(AWAITING_DISCARD) | I(TOSS_TRANSITION): DISCARDED,
-
-	I(DISCARDED) | I(COMPUTE_NAKI_TRANSITION):  AWAITING_NAKI,
-	I(DISCARDED) | I(NO_NAKI_TRANSITION):       NAKI_FINISHED,
-	I(DISCARDED) | I(GAME_FINISHED_TRANSITION): OUT_OF_GAME,
-
-	I(AWAITING_NAKI) | I(NAKI_CALLED_TRANSITION): NAKI_CALLED,
-
-	I(NAKI_CALLED) | I(AWAITING_DISCARD_TRANSITION): AWAITING_DISCARD,
-
-	I(NAKI_FINISHED) | I(DRAW_TRANSITION):          AWAITING_DISCARD,
-	I(NAKI_FINISHED) | I(GAME_FINISHED_TRANSITION): OUT_OF_GAME,
-}
-
-type GameState struct {
+type TurnState struct {
+	// TurnNumber is the game index of the currently active player
+	// that is either discarding or has just discarded.
 	TurnNumber uint8
-	TurnType   TurnType
+	// TotalTurns is the number of draws that have elapsed since
+	// the start
+	TotalTurns uint8
 }
 
-func InitGameState() GameState {
-	return GameState{
-		TurnNumber: 0,
-		TurnType:   OUT_OF_GAME,
+func (turn *TurnState) PlayerDraw(playerIdx uint8) error {
+	expectedPlayer := (turn.TurnNumber + 1) % 4
+	if playerIdx != expectedPlayer {
+		return errors.New("invalid draw: not the next player's turn")
 	}
+
+	turn.TurnNumber = playerIdx
+	turn.TotalTurns++
+
+	return nil
 }
 
-// Returns the next action TurnType
-func (coord *GameState) Transition(action TransitionType, fromPlayer uint8) error {
-	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
-	if newState != INVALID {
-		coord.TurnType = newState
-		if action == DRAW_TRANSITION {
-			coord.TurnNumber += 1
-		}
+func (turn *TurnState) PlayerPon(playerIdx uint8) error {
+	if playerIdx == turn.TurnNumber {
+		return errors.New("invalid pon: cannot call pon on own discard")
+	}
+
+	turn.TurnNumber = playerIdx
+	return nil
+}
+
+func (turn *TurnState) PlayerKan(playerIdx uint8) error {
+	if playerIdx == turn.TurnNumber {
+		return errors.New("invalid kan: cannot call claimed kan on own discard")
+	}
+
+	turn.TurnNumber = playerIdx
+	return nil
+}
+
+func (turn *TurnState) PlayerClosedKan(playerIdx uint8) error {
+	if playerIdx != turn.TurnNumber {
+		return errors.New("invalid closed kan: only current player can call closed kan")
+	}
+	return nil
+}
+
+func (turn *TurnState) PlayerChii(playerIdx uint8) error {
+	expectedPlayer := (turn.TurnNumber + 1) % 4
+	if playerIdx != expectedPlayer {
+		return errors.New("invalid chii: only the next player can call chii")
+	}
+	turn.TurnNumber = playerIdx
+	return nil
+}
+
+func (turn *TurnState) GetCurrentPlayer() uint8 {
+	return turn.TurnNumber
+}
+
+func (turn *TurnState) GetTotalTurns() uint8 {
+	return turn.TotalTurns
+}
+
+// ProcessAction dispatches an action to the appropriate turn state method
+// Returns an error if the action is invalid for the current turn state
+func (turn *TurnState) ProcessAction(action Action, playerIdx uint8) error {
+	switch action.(type) {
+	case Draw:
+		return turn.PlayerDraw(playerIdx)
+	case Pon:
+		return turn.PlayerPon(playerIdx)
+	case Kan:
+		return turn.PlayerKan(playerIdx)
+	case Chii:
+		return turn.PlayerChii(playerIdx)
+	default:
 		return nil
-	} else {
-		return BadStateTransition{}
 	}
 }
 
-func (coord GameState) GetPlayer() uint8 {
-	return coord.TurnNumber % 4
+// ProcessKanAction handles kan actions with type distinction
+// isClosedKan should be true for closed kans (from hand only), false for claimed kans
+func (turn *TurnState) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan bool) error {
+	if isClosedKan {
+		return turn.PlayerClosedKan(playerIdx)
+	}
+	return turn.PlayerKan(playerIdx)
 }

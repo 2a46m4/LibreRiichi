@@ -25,16 +25,18 @@ func (game *TileState) newRound() {
 	tiles := GetTileList()
 	PermuteArray(tiles)
 
-	// Fill the live wall (70 tiles)
 	for i := range 70 {
 		game.LiveWall.tiles[i] = tiles[i]
 	}
 	game.LiveWall.index = 0
 
-	// Fill the dead wall (14 tiles total) using Reset method
 	deadWallTiles := tiles[70:84]
 	game.DeadWall.Reset(deadWallTiles)
 	game.DeadWall.revealDora()
+
+	for i := range 4 {
+		game.Hands[i].ClosedHand.Add(tiles[84+i*13:84+(i+1)*13]...)
+	}
 }
 
 func (game *TileState) IncrementRound() {

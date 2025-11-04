@@ -13,8 +13,15 @@ type MahjongGame struct {
 	TileState
 	RoundState
 	WindState
+	TurnState
 	Ordering
 	GameState
+}
+
+func NewMahjongGame() *MahjongGame {
+	return &MahjongGame{
+		GameState:    InitGameState(),
+	}
 }
 
 func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
@@ -84,7 +91,7 @@ func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
 }
 
 func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
-	if game.GameState.TurnType != INVALID || game.GameState.TurnType != OUT_OF_GAME {
+	if game.GameState.TurnType != OUT_OF_GAME {
 		return nil, errors.New("Game already started")
 	}
 
@@ -93,21 +100,19 @@ func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
 	game.RoundState = RoundState{}
 	game.WindState = 0
 	game.Ordering = InitRandomOrdering()
-	game.GameState = InitGameState()
 	setup := game.SendGameSetup()
-	game.GameState.Transition(GAME_START_TRANSITION, 0)
+	game.GameState.Transition(GAME_START_TRANSITION)
 	return setup, nil
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
-	if game.roundStarted {
+	if game.GameState.TurnType != OUT_OF_GAME {
 		return nil, errors.New("Round already started")
 	}
 	
 	game.TileState = CreateNewRound()
 
 	setup := game.SendRoundSetup()
-	game.roundStarted = true
 	return setup, nil
 }
 
@@ -118,8 +123,17 @@ func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSe
 	return nil, nil
 }
 
+func (game *MahjongGame) RoundEnd() error {
+	return nil
+}
+
 func (game *MahjongGame) RoundEnded() bool {
+	// Do the increment post-round
 	return false
+}
+
+func (game *MahjongGame) GameEnd() error {
+	return nil
 }
 
 func (game *MahjongGame) GameEnded() bool {

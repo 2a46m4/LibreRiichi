@@ -10,9 +10,11 @@ type ClosedHand struct {
 	index uint8
 }
 
-func (closed *ClosedHand) Add(tile Tile) {
-	closed.hand[closed.index] = tile
-	closed.index += 1
+func (closed *ClosedHand) Add(tiles ...Tile) {
+	for _, tile := range tiles {
+		closed.hand[closed.index] = tile
+		closed.index += 1
+	}
 }
 
 func (closed *ClosedHand) RemoveTile(tiles ...Tile) {

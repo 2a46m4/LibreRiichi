@@ -21,6 +21,11 @@ func (g GameActionHandler) HandleChii(action Chii, playerIdx uint8) (MessageSend
 	// TilesInHand contains the two tiles from player's hand that combine with the discarded tile
 	g.game.TileState.Chii(playerIdx, action.TilesInHand)
 
+	// Update turn state for chii action
+	if err := g.game.PlayerChii(playerIdx); err != nil {
+		return MessageSendInfo{}, err
+	}
+
 	// Create board event for the Chii call
 	event := PlayerActionEvent{
 		Action:     action,
@@ -37,6 +42,11 @@ func (g GameActionHandler) HandleChii(action Chii, playerIdx uint8) (MessageSend
 func (g GameActionHandler) HandleDraw(action Draw, playerIdx uint8) (MessageSendInfo, error) {
 	// Player draws a tile from the wall
 	g.game.TileState.Draw(playerIdx)
+
+	// Update turn state for draw action (increments both TurnNumber and TotalTurns)
+	if err := g.game.PlayerDraw(playerIdx); err != nil {
+		return MessageSendInfo{}, err
+	}
 
 	// Create board event for the draw
 	event := PlayerActionEvent{
@@ -60,6 +70,11 @@ func (g GameActionHandler) HandleKan(action Kan, playerIdx uint8) (MessageSendIn
 	// For now, implement as ShouminKan (from self)
 	g.game.TileState.ShouminKan(playerIdx, action.TileToKan)
 
+	// Update turn state for kan action
+	if err := g.game.PlayerKan(playerIdx); err != nil {
+		return MessageSendInfo{}, err
+	}
+
 	// Create board event for the Kan call
 	event := PlayerActionEvent{
 		Action:     action,
@@ -79,6 +94,11 @@ func (g GameActionHandler) HandlePon(action Pon, playerIdx uint8) (MessageSendIn
 	againstPlayer := (playerIdx + 3) % 4 // player who discarded the tile
 
 	g.game.TileState.Pon(playerIdx, againstPlayer)
+
+	// Update turn state for pon action
+	if err := g.game.PlayerPon(playerIdx); err != nil {
+		return MessageSendInfo{}, err
+	}
 
 	// Create board event for the Pon call
 	event := PlayerActionEvent{
@@ -147,6 +167,9 @@ func (g GameActionHandler) HandleSkip(action Skip, playerIdx uint8) (MessageSend
 func (g GameActionHandler) HandleToss(action Toss, playerIdx uint8) (MessageSendInfo, error) {
 	// Player discards a tile
 	g.game.TileState.Discard(playerIdx, action.TileToToss)
+
+	// Advance to next player's turn after discard
+	g.game.NextTurn()
 
 	// Create board event for the discard
 	event := PlayerActionEvent{

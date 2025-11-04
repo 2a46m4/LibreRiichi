@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -24,10 +23,11 @@ type Client interface {
 }
 
 type Game interface {
-	// Games implementing this must 
 	StartGame() ([]MessageSendInfo, error)
 	StartRound() ([]MessageSendInfo, error)
 	HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error)
+	RoundEnd() error
+	GameEnd() error
 	RoundEnded() bool
 	GameEnded() bool
 }
@@ -100,7 +100,7 @@ func (arena *Arena) getPlayerIdx(client Client) (uint8, error) {
 	return 0, errors.New("not found")
 }
 
-func CreateArena(name string, uuid uuid.UUID) Arena {
+func CreateArena(name string, uuid uuid.UUID, game Game) Arena {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelDebug,
@@ -109,12 +109,12 @@ func CreateArena(name string, uuid uuid.UUID) Arena {
 		agents:      make([]Client, 0),
 		spectators:  make([]Client, 0),
 		gameStarted: false,
-		game:        InitGameState(),
+		game:        game,
 		DateCreated: time.Now(),
 		Mutex:       sync.Mutex{},
 		Name:        name,
 		uuid:        uuid,
-		log:      logger,
+		log:         logger,
 	}
 }
 

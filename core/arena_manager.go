@@ -6,6 +6,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game"
 )
 
 // TODO: This can potentially use RCU
@@ -139,7 +141,9 @@ func CreateAndAddArena(name string) error {
 	newUUID := uuid.New()
 	GlobalArenaList.name[name] = newUUID
 
-	newArena := CreateArena(name, newUUID)
+	game := NewMahjongGame()
+
+	newArena := CreateArena(name, newUUID, game)
 	GlobalArenaList.arena[newUUID] = &newArena
 
 	fmt.Println("Created arena. Now arena map is:", GlobalArenaList.name)
