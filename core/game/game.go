@@ -20,23 +20,20 @@ type MahjongGame struct {
 
 func NewMahjongGame() *MahjongGame {
 	return &MahjongGame{
-		GameState:    InitGameState(),
+		GameState: InitGameState(),
 	}
 }
 
 func (game *MahjongGame) handleNewTurn() error {
-	index := game.TurnState.TurnNumber
-	err := game.GameState.TryTransition(DRAW_TRANSITION)
+	err := game.GameState.Transition(DRAW_TRANSITION)
 	if err != nil {
 		return err
 	}
-	
-
+	index := game.TurnState.PlayerDraw(0)
 
 	// Draw, checking that we still have moves
 	// Check riichi, tsumo, kan
 
-	
 }
 
 func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
@@ -123,12 +120,13 @@ func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
 	if game.GameState.TurnType != OUT_OF_GAME {
 		return nil, errors.New("Round already started")
 	}
-	
+
 	game.TileState = CreateNewRound()
 
 	setup := game.SendRoundSetup()
 	firstArenaIdx := game.Ordering.GameToArena[0]
-	
+
+	game.handleNewTurn()
 	game.TileState.Draw(0)
 
 	return append(setup, MessageSendInfo{

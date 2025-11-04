@@ -15,6 +15,13 @@ type TurnState struct {
 	TotalTurns uint8
 }
 
+func InitTurnState() *TurnState {
+	return &TurnState{
+		TurnNumber: 3, // For the first draw
+		TotalTurns: 0,
+	}
+}
+
 func (turn *TurnState) PlayerDraw(playerIdx uint8) error {
 	expectedPlayer := (turn.TurnNumber + 1) % 4
 	if playerIdx != expectedPlayer {
@@ -93,4 +100,30 @@ func (turn *TurnState) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan
 		return turn.PlayerClosedKan(playerIdx)
 	}
 	return turn.PlayerKan(playerIdx)
+}
+
+// Try tests if an action would succeed without modifying the turn state
+// Returns nil if the action would succeed, or an error if it would fail
+func (turn *TurnState) Try(action Action, playerIdx uint8, isClosedKan ...bool) error {
+	// Create a copy of the current turn state to test against
+	testTurn := TurnState{
+		TurnNumber: turn.TurnNumber,
+		TotalTurns: turn.TotalTurns,
+	}
+
+	switch a := action.(type) {
+	case Draw:
+		return testTurn.PlayerDraw(playerIdx)
+	case Pon:
+		return testTurn.PlayerPon(playerIdx)
+	case Kan:
+		if len(isClosedKan) > 0 {
+			return testTurn.ProcessKanAction(a, playerIdx, isClosedKan[0])
+		}
+		return testTurn.PlayerKan(playerIdx)
+	case Chii:
+		return testTurn.PlayerChii(playerIdx)
+	default:
+		return nil
+	}
 }
