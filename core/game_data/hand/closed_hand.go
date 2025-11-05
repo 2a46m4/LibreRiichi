@@ -38,3 +38,12 @@ func (closed *ClosedHand) RemoveTile(tiles ...Tile) {
 func (closed *ClosedHand) GetHand() []Tile {
 	return closed.hand[:closed.index]
 }
+
+func (closed *ClosedHand) HasTile(tile Tile) bool {
+	for i := uint8(0); i < closed.index; i++ {
+		if closed.hand[i] == tile {
+			return true
+		}
+	}
+	return false
+}

@@ -21,5 +21,9 @@ func (pile *DiscardPile) Remove() (tile Tile) {
 }
 
 func (pile *DiscardPile) Reset() {
-	pile.index = 0;
+	pile.index = 0
+}
+
+func (pile *DiscardPile) IsEmpty() bool {
+	return pile.index == 0
 }

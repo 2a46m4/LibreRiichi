@@ -10,4 +10,3 @@ func InitScoring(initial uint32) ScoringState {
 	}
 }
 
-

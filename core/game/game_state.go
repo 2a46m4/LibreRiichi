@@ -76,16 +76,9 @@ func InitGameState() GameState {
 	}
 }
 
-func (coord *GameState) TryTransition(action TransitionType) error {
-	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
-	if newState != INVALID {
-		return nil
-	} else {
-		return BadStateTransition{
-			from:       coord.TurnType,
-			transition: action,
-		}
-	}
+func (coord *GameState) Try(action TransitionType) error {
+	copy := *coord
+	return copy.Transition(action)
 }
 
 // Returns the next action TurnType

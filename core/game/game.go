@@ -10,12 +10,13 @@ import (
 
 type MahjongGame struct {
 	ScoringState
+	TileStateValidator
 	TileState
 	RoundState
 	WindState
 	TurnState
-	Ordering
 	GameState
+	Ordering
 }
 
 func NewMahjongGame() *MahjongGame {
@@ -24,12 +25,14 @@ func NewMahjongGame() *MahjongGame {
 	}
 }
 
-func (game *MahjongGame) handleNewTurn() error {
-	err := game.GameState.Transition(DRAW_TRANSITION)
+func (game *MahjongGame) handleNewTurn(playerIdx uint8) error {
+	err := game.GameState.Try(DRAW_TRANSITION)
 	if err != nil {
 		return err
 	}
-	index := game.TurnState.PlayerDraw(0)
+	err = game.TurnState.Try(Draw{}, playerIdx)
+
+	draw := game.TileState.Draw(playerIdx)
 
 	// Draw, checking that we still have moves
 	// Check riichi, tsumo, kan
@@ -126,8 +129,7 @@ func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
 	setup := game.SendRoundSetup()
 	firstArenaIdx := game.Ordering.GameToArena[0]
 
-	game.handleNewTurn()
-	game.TileState.Draw(0)
+	game.handleNewTurn(0)
 
 	return append(setup, MessageSendInfo{
 		Events: []BoardEvent{},

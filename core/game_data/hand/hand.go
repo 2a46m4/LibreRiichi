@@ -24,36 +24,40 @@ func (hand Hand) Discard(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile)
 }
 
-func (hand Hand) HasDrawn() bool {
+func (hand Hand) FullHand() bool {
 	numOpenTriplets := uint8(0)
 	numOpenTriplets += hand.Kans.count
 	numOpenTriplets += hand.Chiis.count
 	numOpenTriplets += hand.Pons.count
-	return (hand.ClosedHand.index + numOpenTriplets*3) == 14
+	// 13 since ClosedHand.index is 0-based
+	return (hand.ClosedHand.index + numOpenTriplets*3) == 13
 }
 
 
-func (hand *Hand) Pon(tile Tile) {
-	hand.ClosedHand.RemoveTile(tile, tile)
+func (hand *Hand) Pon(tile, discard Tile) {
+	hand.ClosedHand.RemoveTile(tile, tile, discard)
 	hand.Pons.Add(tile)
 }
 
-func (hand *Hand) DaiminKan(tile Tile) {
+func (hand *Hand) DaiminKan(tile, draw Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile)
+	hand.ClosedHand.Add(draw)
 	hand.Kans.Add(tile, DAIMINKAN)
 }
 
-func (hand *Hand) ShouminKan(tile Tile) {
+func (hand *Hand) ShouminKan(tile, draw Tile) {
 	hand.Pons.Remove(tile)
+	hand.ClosedHand.Add(draw)
 	hand.Kans.Add(tile, SHOUMINKAN)
 }
 
-func (hand *Hand) AnKan(tile Tile) {
+func (hand *Hand) AnKan(tile, draw Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile, tile)
+	hand.ClosedHand.Add(draw)
 	hand.Kans.Add(tile, ANKAN)
 }
 
-func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
+func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile, discard Tile) {
 	hand.ClosedHand.RemoveTile(tiles[:]...)
 	hand.Chiis.Add(firstTile)
 }
