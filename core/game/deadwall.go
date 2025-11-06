@@ -21,7 +21,7 @@ func (d *DoraDeadWall) revealDora() {
 }
 
 func (d *DoraDeadWall) getLastDoraTile() Tile {
-	return d.tiles[d.numberRevealed - 1]
+	return d.tiles[d.numberRevealed-1]
 }
 
 type UradoraDeadWall DoraDeadWall

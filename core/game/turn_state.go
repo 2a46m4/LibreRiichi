@@ -1,9 +1,9 @@
 package game
 
 import (
-	"errors"
-
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"errors"
+	"github.com/looplab/fsm"
 )
 
 type TurnState struct {
