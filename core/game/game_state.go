@@ -1,6 +1,10 @@
 package game
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/looplab/fsm"
+)
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=TurnType
 
@@ -36,8 +40,8 @@ const (
 	TRANSITION_SHIFT       = 3
 )
 
-type BadStateTransition struct{
-	from TurnType
+type BadStateTransition struct {
+	from       TurnType
 	transition TransitionType
 }
 
@@ -67,12 +71,17 @@ var ACTION_TRANSITION_MTX [128]TurnType = [128]TurnType{
 }
 
 type GameState struct {
-	TurnType   TurnType
+	currentState *fsm.FSM
+	// TurnType     TurnType
 }
 
 func InitGameState() GameState {
 	return GameState{
-		TurnType:   OUT_OF_GAME,
+		// TurnType: OUT_OF_GAME,
+		currentState: fsm.NewFSM(
+			"",
+			nil, make(map[string]fsm.Callback),
+		),
 	}
 }
 

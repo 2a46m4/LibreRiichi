@@ -6,6 +6,7 @@ import (
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	"github.com/looplab/fsm"
 )
 
 type MahjongGame struct {
