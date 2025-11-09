@@ -71,16 +71,23 @@ var ACTION_TRANSITION_MTX [128]TurnType = [128]TurnType{
 }
 
 type GameState struct {
-	currentState *fsm.FSM
-	// TurnType     TurnType
+	*fsm.FSM
 }
 
 func InitGameState() GameState {
 	return GameState{
-		// TurnType: OUT_OF_GAME,
-		currentState: fsm.NewFSM(
-			"",
-			nil, make(map[string]fsm.Callback),
+		fsm.NewFSM(
+			"OutOfGame",
+			fsm.Events{
+				{
+					Name: "exit-game",
+					Src:  []string{
+						"out-of-game",
+					},
+					Dst:  "",
+				},
+			},
+			make(map[string]fsm.Callback),
 		),
 	}
 }
