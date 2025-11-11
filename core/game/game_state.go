@@ -77,15 +77,51 @@ type GameState struct {
 func InitGameState() GameState {
 	return GameState{
 		fsm.NewFSM(
-			"OutOfGame",
+			"out-of-game",
 			fsm.Events{
-				{
-					Name: "exit-game",
+				fsm.EventDesc{
+					Name: "start-game",
+					Src: []string{
+						"out-of-game",
+					},
+					Dst: "in-game",
+				},
+				fsm.EventDesc{
+					Name: "enter-round",
 					Src: []string{
 						"in-game",
 					},
-					Dst: "out-of-game",
+					Dst: "in-round,pre-draw",
 				},
+				fsm.EventDesc{
+					Name: "draw-tile",
+					Src: []string{
+						"in-round,pre-draw",
+					},
+					Dst: "in-round,waiting-discard",
+				}
+				fsm.EventDesc{
+					Name: "discard-tile",
+					Src: []string{
+						"in-round,waiting-discard",
+					},
+					Dst: "in-round,waiting-naki",
+				},
+				fsm.EventDesc{
+					Name: "call-naki",
+					Src: []string{
+						"in-round,waiting-naki",
+					},
+					Dst: "in-round,naki-called",
+				},
+				fsm.EventDesc{
+					Name: "no-naki",
+					Src: []string{
+						"in-round,waiting-naki",
+					},
+					Dst: "in-round,naki-finished",
+				},
+				
 			},
 			fsm.Callbacks{},
 		),
@@ -93,20 +129,21 @@ func InitGameState() GameState {
 }
 
 func (coord *GameState) Try(action TransitionType) error {
-	copy := *coord
-	return copy.Transition(action)
+	return nil
+	// copy := *coord
+	// return copy.Transition(action)
 }
 
 // Returns the next action TurnType
-func (coord *GameState) Transition(action TransitionType) error {
-	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
-	if newState != INVALID {
-		coord.TurnType = newState
-		return nil
-	} else {
-		return BadStateTransition{
-			from:       coord.TurnType,
-			transition: action,
-		}
-	}
-}
+// func (coord *GameState) Transition(action TransitionType) error {
+// 	newState := ACTION_TRANSITION_MTX[I(coord.TurnType)|I(action)]
+// 	if newState != INVALID {
+// 		coord.TurnType = newState
+// 		return nil
+// 	} else {
+// 		return BadStateTransition{
+// 			from:       coord.TurnType,
+// 			transition: action,
+// 		}
+// 	}
+// }
