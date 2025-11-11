@@ -81,13 +81,13 @@ func InitGameState() GameState {
 			fsm.Events{
 				{
 					Name: "exit-game",
-					Src:  []string{
-						"out-of-game",
+					Src: []string{
+						"in-game",
 					},
-					Dst:  "",
+					Dst: "out-of-game",
 				},
 			},
-			make(map[string]fsm.Callback),
+			fsm.Callbacks{},
 		),
 	}
 }
