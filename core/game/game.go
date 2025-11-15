@@ -115,7 +115,7 @@ func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
 	}
 
 	game.ScoringState = InitScoring(25000)
-	game.RoundState = RoundState{}
+	game.RoundState = *InitRoundState()
 	game.WindState = 0
 	game.Ordering = InitRandomOrdering()
 	setup := game.SendGameSetup()
