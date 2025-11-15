@@ -8,6 +8,6 @@ import (
 )
 
 type MessageSendInfo struct {
-	Events     []BoardEvent
-	SendTo     uint8
+	Events []BoardEvent
+	SendTo uint8
 }

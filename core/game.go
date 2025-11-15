@@ -1,13 +1,12 @@
 package core
 
 import (
+	"errors"
 	"log"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
-
-	"errors"
 )
 
 type MahjongState uint8

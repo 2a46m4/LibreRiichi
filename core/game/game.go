@@ -1,23 +1,22 @@
 package game
 
 import (
-	"errors"
-	"fmt"
-
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
-	"github.com/looplab/fsm"
 )
 
 type MahjongGame struct {
 	ScoringState
-	TileStateValidator
+	GameState
+	MahjongRoundState
+	Ordering
+}
+
+type MahjongRoundState struct {
 	TileState
 	RoundState
 	WindState
 	TurnState
-	GameState
-	Ordering
 }
 
 func NewMahjongGame() *MahjongGame {
@@ -26,18 +25,22 @@ func NewMahjongGame() *MahjongGame {
 	}
 }
 
-func (game *MahjongGame) handleNewTurn(playerIdx uint8) error {
-	err := game.GameState.Try(DRAW_TRANSITION)
+func (game *MahjongGame) handleNewTurn(playerIdx uint8) ([]MessageSendInfo, error) {
+	err := game.GameState.Transition("draw-tile")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = game.TurnState.Try(Draw{}, playerIdx)
+	if err != nil {
+		return nil, err
+	}
 
 	draw := game.TileState.Draw(playerIdx)
+	_ = draw // Use the variable to avoid "declared and not used" error
 
 	// Draw, checking that we still have moves
 	// Check riichi, tsumo, kan
-
+	return nil, nil
 }
 
 func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
@@ -107,8 +110,8 @@ func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
 }
 
 func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
-	if game.GameState.TurnType != OUT_OF_GAME {
-		return nil, errors.New("Game already started")
+	if err := game.GameState.Transition("start-game"); err != nil {
+		return nil, err
 	}
 
 	game.ScoringState = InitScoring(25000)
@@ -116,33 +119,33 @@ func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
 	game.WindState = 0
 	game.Ordering = InitRandomOrdering()
 	setup := game.SendGameSetup()
-	game.GameState.Transition(GAME_START_TRANSITION)
 	return setup, nil
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
-	if game.GameState.TurnType != OUT_OF_GAME {
-		return nil, errors.New("Round already started")
+	if err := game.GameState.Transition("start-round"); err != nil {
+		return nil, err
 	}
 
 	game.TileState = CreateNewRound()
 
 	setup := game.SendRoundSetup()
-	firstArenaIdx := game.Ordering.GameToArena[0]
+	newTurnInfo, err := game.handleNewTurn(0)
+	if err != nil {
+		return nil, err
+	}
 
-	game.handleNewTurn(0)
-
-	return append(setup, MessageSendInfo{
-		Events: []BoardEvent{},
-		SendTo: 0,
-	}), nil
+	return append(setup, newTurnInfo...), nil
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error) {
 	gameIdx := game.Ordering.ArenaToGame[arenaIdx]
-	fmt.Println(gameIdx)
+	nextTurnInfo, err := game.handleNewTurn(gameIdx)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	return nextTurnInfo, nil
 }
 
 func (game *MahjongGame) RoundEnd() error {

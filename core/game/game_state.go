@@ -2,6 +2,8 @@ package game
 
 import (
 	"context"
+	"fmt"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	"github.com/looplab/fsm"
 )
@@ -83,8 +85,9 @@ func InitGameState() GameState {
 				},
 			},
 			fsm.Callbacks{
-				"in-game": func(context context.Context, event *fsm.Event) {
-					
+				"start-game": func(context context.Context, event *fsm.Event) {
+					tileState := event.Args[0].(*TileState)
+					fmt.Println(tileState)
 				},
 			},
 		),
@@ -92,13 +95,9 @@ func InitGameState() GameState {
 	}
 }
 
-func (gameState *GameState) Transition(event string, arguments... interface{}) error {
+func (gameState *GameState) Transition(event string, arguments ...any) error {
 	return gameState.FSM.Event(gameState.context, event, arguments...)
 }
-
-
-
-
 
 func (gameState *GameState) HandleEvent(
 	event Action,
@@ -108,7 +107,9 @@ func (gameState *GameState) HandleEvent(
 	windState *WindState,
 	turnState *TurnState,
 ) {
-	
+
 }
 
+func (gameState *GameState) HandleStartGame() {
 
+}

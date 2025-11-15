@@ -35,10 +35,9 @@ type Game interface {
 // A location where players gather. Controls the flow of the game,
 // directing messages to players, requesting input/ouput
 type Arena struct {
-	agents      []Client
-	spectators  []Client
-	gameStarted bool
-	game        Game
+	agents     []Client
+	spectators []Client
+	game       Game
 
 	DateCreated time.Time
 	Name        string
@@ -71,7 +70,7 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 		Success:     true,
 		Name:        arena.Name,
 		Agents:      agents,
-		GameStarted: arena.gameStarted,
+		GameStarted: !arena.game.GameEnded(),
 		DateCreated: arena.DateCreated,
 	}
 }
@@ -83,9 +82,7 @@ func (arena *Arena) Send(data ArenaEvent, sendTo uint8) {
 }
 
 func (arena *Arena) SendBoardEvent(data BoardEvent, sendTo uint8) {
-	arena.agents[sendTo].GetRecv() <- ServerArenaEvent{
-		ArenaMessage: ArenaBoardEvent{BoardEvent: data},
-	}
+	arena.Send(ArenaBoardEvent{BoardEvent: data}, sendTo)
 }
 
 func (arena *Arena) getPlayerIdx(client Client) (uint8, error) {
@@ -108,7 +105,6 @@ func CreateArena(name string, uuid uuid.UUID, game Game) Arena {
 	return Arena{
 		agents:      make([]Client, 0),
 		spectators:  make([]Client, 0),
-		gameStarted: false,
 		game:        game,
 		DateCreated: time.Now(),
 		Mutex:       sync.Mutex{},
@@ -135,7 +131,7 @@ func (arena *Arena) JoinArena(agent Client) error {
 		},
 	}
 
-	thisPlayer := len(arena.agents)-1
+	thisPlayer := len(arena.agents) - 1
 	for i := range len(arena.agents) {
 		if i == thisPlayer {
 			continue
@@ -159,12 +155,12 @@ func (arena *Arena) driveGame(action Action, fromPlayer uint8) error {
 			arena.FinishGameArena()
 			return nil
 		}
-		
+
 		sendInfos, err = arena.game.StartRound()
 	} else {
 		sendInfos, err = arena.game.HandleEvent(action, fromPlayer)
 	}
-	
+
 	if err != nil {
 		arena.log.Info("Error: ", err)
 		return err
@@ -186,7 +182,7 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 
 	arena.log.Info("Handle start game called")
 
-	if arena.gameStarted {
+	if !arena.game.GameEnded() {
 		return Unit, errors.New("Game already started")
 	}
 
@@ -211,8 +207,6 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 		}
 	}
 
-	arena.gameStarted = true
-	
 	return Unit, nil
 }
 
@@ -222,7 +216,8 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 
 	err := arena.driveGame(data.Action, fromPlayer)
 	if err != nil {
-		panic("TODO: Error handling")
+		return Unit, err
+		// panic("TODO: Error handling")
 	}
 
 	return Unit, err
@@ -231,7 +226,7 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
-	if arena.gameStarted {
+	if !arena.game.GameEnded() {
 		// TODO: Replace with AI
 	} else if len(arena.agents) == 1 {
 		// TODO: Cleanup
