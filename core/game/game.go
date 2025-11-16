@@ -10,6 +10,9 @@ type MahjongGame struct {
 	GameState
 	MahjongRoundState
 	Ordering
+
+	RoundWind   Wind
+	RoundNumber uint8
 }
 
 type MahjongRoundState struct {
@@ -19,9 +22,16 @@ type MahjongRoundState struct {
 	TurnState
 }
 
+type mahjongRoundData struct {
+	tileState TileState
+	windState WindState
+	turnState TurnState
+	roundState RoundState
+}
+
 func NewMahjongGame() *MahjongGame {
 	return &MahjongGame{
-		GameState: InitGameState(),
+		GameState: *InitGameState(),
 	}
 }
 
@@ -109,21 +119,16 @@ func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
 	return sendInfos
 }
 
-func (game *MahjongGame) StartGame() ([]MessageSendInfo, error) {
-	if err := game.GameState.Transition("start-game"); err != nil {
-		return nil, err
-	}
-
-	game.ScoringState = InitScoring(25000)
-	game.RoundState = *InitRoundState()
-	game.WindState = 0
-	game.Ordering = InitRandomOrdering()
-	setup := game.SendGameSetup()
-	return setup, nil
+func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
+	err = game.GameState.Transition("start-game", game, &messages)
+	return messages, err
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
-	if err := game.GameState.Transition("start-round"); err != nil {
+	if err := game.GameState.Transition(
+		"start-round",
+		
+	); err != nil {
 		return nil, err
 	}
 

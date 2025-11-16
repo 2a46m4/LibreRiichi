@@ -3,17 +3,14 @@ package game
 import (
 	"context"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	"github.com/looplab/fsm"
 )
 
 type RoundState struct {
-	RoundWind   Wind
-	RoundNumber uint8
-
 	RoundFSM *fsm.FSM
 	context  context.Context
 }
+
 
 func InitRoundState() *RoundState {
 	roundState := &RoundState{}
@@ -94,13 +91,14 @@ func (roundState *RoundState) IncrementRound() {
 }
 
 func (roundState *RoundState) Transition(event string, args ...any) error {
-	err := roundState.RoundFSM.Event(roundState.context, event, args...)
-	return err
+	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
 
 func (roundState *RoundState) StartRound(context context.Context, event *fsm.Event) {
-	// TODO: Initialize round start logic
-	// Set up initial round state, determine dealer, etc.
+	returnValues := event.Args[0].(*MahjongRoundState)
+
+	
+	
 }
 
 func (roundState *RoundState) DrawTile(context context.Context, event *fsm.Event) {
