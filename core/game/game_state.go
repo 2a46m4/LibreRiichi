@@ -63,8 +63,12 @@ func InitGameState() *GameState {
 		fsm.Callbacks{
 			"before_start-game": gameState.CheckStartGamePossible,
 			"start-game":        gameState.HandleStartGame,
+			"before_start-round": gameState.CheckStartRoundPossible,
 			"start-round":       gameState.HandleStartRound,
+			"before_handle-event":      gameState.CheckHandleEventPossible,
 			"handle-event":      gameState.HandleEvent,
+			"before_round-end": gameState.BeforeRoundEnd,
+			"round-end": gameState.RoundEnd,
 		},
 	)
 	return &gameState
@@ -75,7 +79,7 @@ func (gameState *GameState) Transition(event string, arguments ...any) error {
 }
 
 func getGameSetup(roundData MahjongRoundData,
-	ordering Ordering, scoringState ScoringState) (sendInfos []MessageSendInfo) {
+	ordering Ordering, scoringState Scoring) (sendInfos []MessageSendInfo) {
 
 	// Create setup data for each player
 	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
@@ -120,6 +124,26 @@ func getGameSetup(roundData MahjongRoundData,
 	return sendInfos
 }
 
+func handleNewTurn(playerIdx uint8) ([]MessageSendInfo, error) {
+	// err := gameState.Transition("draw-tile")
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = game.turnState.Try(Draw{}, playerIdx)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// draw := game.TileState.Draw(playerIdx)
+	// _ = draw // Use the variable to avoid "declared and not used" error
+
+	// // Draw, checking that we still have moves
+	// // Check riichi, tsumo, kan
+	// return nil, nil
+	return nil, nil
+}
+
+
 func (gameState *GameState) CheckStartGamePossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks that starting the game is possible
 	event.Cancel(errors.New("Hello"))
@@ -128,11 +152,11 @@ func (gameState *GameState) CheckStartGamePossible(context context.Context, even
 func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.Event) {
 	game := event.Args[0].(*MahjongGame)
 
-	game.scoringState = InitScoring(25000)
+	game.scoring = InitScoring(25000)
 	game.mahjongRound = InitMahjongRound(0)
 	game.ordering = InitRandomOrdering()
 
-	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.scoringState)
+	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.scoring)
 	gameState.SetMetadata("return", setup)
 }
 
@@ -141,7 +165,8 @@ func (gameState *GameState) CheckStartRoundPossible(context context.Context, eve
 
 	// Actually transition here, because we can signal a failure here
 	round := event.Args[0].(*MahjongRound)
-	err := round.roundState.Transition("start-round", round)
+	isFirstRound := event.Args[1].(bool)
+	err := round.roundState.Transition("start-round", isFirstRound)
 	if err != nil {
 		event.Cancel(err)
 		return
@@ -160,22 +185,50 @@ func (gameState *GameState) HandleStartRound(context context.Context, event *fsm
 	}
 }
 
+func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
+	
+}
+
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
 	round := event.Args[0].(*MahjongRound)
 	ordering := event.Args[1].(*Ordering)
 	action := event.Args[2].(Action)
 	arenaIdx := event.Args[3].(uint8)
-	returnValues := event.Args[4].(*[]MessageSendInfo)
-	var doContinue bool
 
-	round.roundState.Transition("handle-event")
+	msgInfo, err := round.roundState.HandleEvent(action, ordering.GameIdx(arenaIdx))
+	
 
-	nextTurnInfo, err := roundState.handleNewTurn(ordering.GameIdx(arenaIdx))
+	// nextTurnInfo, err := handleNewTurn(ordering.GameIdx(arenaIdx))
 	if err != nil {
-		return nil, err
+		
 	}
 
-	returnValues = nextTurnInfo
+
+	
+	err = event.FSM.Event(context, "round-end", round)
+	if err == nil { // Game has ended
+		endRoundInfo, ok := gameState.GetReturn()
+		if !ok {
+			panic("Can't get end round info")
+		}
+		
+		msgInfo = append(msgInfo, endRoundInfo.([]MessageSendInfo)...)
+	}
+	gameState.setReturn(msgInfo)
+}
+
+
+func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.Event) {
+	round := event.Args[0].(*MahjongRound)
+
+	if !round.roundState.RoundEnded() {
+		event.Cancel(errors.New("Round is still going"))
+	}
+}
+
+func (gameState *GameState) RoundEnd(context context.Context, event *fsm.Event) {
+	// Compute some ending results, etc.
+	
 }
 
 func (gameState *GameState) GetReturn() (data any, ok bool) {

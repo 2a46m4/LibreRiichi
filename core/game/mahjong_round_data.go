@@ -6,14 +6,15 @@ type MahjongRoundData struct {
 	turnState TurnState
 }
 
-func InitMahjongRoundData(roundIndex uint8) MahjongRoundData {
+func InitMahjongRoundData() MahjongRoundData {
 	return MahjongRoundData{
 		tileState: CreateNewRound(),
-		windState: WindState(roundIndex % 4),
+		windState: WindState(0),
 		turnState: InitTurnState(),
 	}
 }
 
+// TODO: Add this to a callback
 func (data *MahjongRoundData) IncrementRound() {
 	data.windState.IncrementWind()
 	data.tileState = CreateNewRound()

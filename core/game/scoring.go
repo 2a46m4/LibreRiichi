@@ -1,11 +1,11 @@
 package game
 
-type ScoringState struct {
+type Scoring struct {
 	Points [4]uint32
 }
 
-func InitScoring(initial uint32) ScoringState {
-	return ScoringState{
+func InitScoring(initial uint32) Scoring {
+	return Scoring{
 		Points: [4]uint32{initial, initial, initial, initial},
 	}
 }

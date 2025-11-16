@@ -11,4 +11,3 @@ func InitMahjongRound(roundNumber uint8) MahjongRound {
 		data:       InitMahjongRoundData(roundNumber),
 	}
 }
-

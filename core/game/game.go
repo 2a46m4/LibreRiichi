@@ -6,7 +6,7 @@ import (
 )
 
 type MahjongGame struct {
-	scoringState ScoringState
+	scoring Scoring
 	gameState    GameState
 	mahjongRound MahjongRound
 	ordering     Ordering
@@ -42,53 +42,22 @@ func (game *MahjongGame) handleNewTurn(playerIdx uint8) ([]MessageSendInfo, erro
 	return nil, nil
 }
 
-func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
-	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
-		gameIdx := game.Ordering.GameIdx(arenaIdx)
-		initialTiles := game.TileState.Hands[gameIdx].ClosedHand.GetHand()
-		setup := []Setup{
-			{
-				Type: INITIAL_TILES,
-				Data: initialTiles,
-			},
-		}
-		sendInfos = append(sendInfos, MessageSendInfo{
-			Events: []BoardEvent{
-				GameSetupEvent{Setup: setup},
-			},
-			SendTo: arenaIdx,
-		})
-	}
-
-	return sendInfos
-}
-
 func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-game", game, &messages)
-	return messages, err
+	err = game.gameState.Transition("start-game", game)
+	sendInfo, _ := game.gameState.GetReturn()
+	return sendInfo.([]MessageSendInfo), err
 }
 
-func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
-	if err := game.gameState.Transition(
-		"start-round",
-	); err != nil {
-		return nil, err
-	}
-
-	game.TileState = CreateNewRound()
-
-	setup := game.SendRoundSetup()
-	newTurnInfo, err := game.handleNewTurn(0)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(setup, newTurnInfo...), nil
+func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
+	err = game.gameState.Transition("start-round", &game.mahjongRound, game.firstRound)
+	sendInfo, _ := game.gameState.GetReturn()
+	return sendInfo.([]MessageSendInfo), err
 }
 
-func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error) {
-	gameIdx := game.Ordering.ArenaToGame[arenaIdx]
-	nextTurnInfo, err := game.handleNewTurn(gameIdx)
+func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
+	gameIdx := game.ordering.ArenaToGame[arenaIdx]
+	err = game.gameState.Transition("handle-event", game.mahjongRound, game.ordering, action, arenaIdx)
+
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +66,18 @@ func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) ([]MessageSe
 }
 
 func (game *MahjongGame) RoundEnd() error {
-	game.RoundState.IncrementRound()
+	// Do the increment post-round
+	game.mahjongRound.data.IncrementRound()
+		
+	if game.firstRound {
+		game.firstRound = false
+	}
+
 	return nil
 }
 
 func (game *MahjongGame) RoundEnded() bool {
-	// Do the increment post-round
-	return false
+	return game.gameState.Current() == "round-end"
 }
 
 func (game *MahjongGame) GameEnd() error {
@@ -111,5 +85,5 @@ func (game *MahjongGame) GameEnd() error {
 }
 
 func (game *MahjongGame) GameEnded() bool {
-	return false
+	return game.gameState.Current() == "game-end"
 }
