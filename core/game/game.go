@@ -6,41 +6,27 @@ import (
 )
 
 type MahjongGame struct {
-	ScoringState
-	GameState
-	MahjongRoundState
-	Ordering
+	scoringState ScoringState
+	gameState    GameState
+	mahjongRound MahjongRound
+	ordering     Ordering
 
-	RoundWind   Wind
-	RoundNumber uint8
-}
-
-type MahjongRoundState struct {
-	TileState
-	RoundState
-	WindState
-	TurnState
-}
-
-type mahjongRoundData struct {
-	tileState TileState
-	windState WindState
-	turnState TurnState
-	roundState RoundState
+	roundWind   Wind
+	roundNumber uint8
 }
 
 func NewMahjongGame() *MahjongGame {
 	return &MahjongGame{
-		GameState: *InitGameState(),
+		gameState: *InitGameState(),
 	}
 }
 
 func (game *MahjongGame) handleNewTurn(playerIdx uint8) ([]MessageSendInfo, error) {
-	err := game.GameState.Transition("draw-tile")
+	err := game.gameState.Transition("draw-tile")
 	if err != nil {
 		return nil, err
 	}
-	err = game.TurnState.Try(Draw{}, playerIdx)
+	err = game.turnState.Try(Draw{}, playerIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -51,51 +37,6 @@ func (game *MahjongGame) handleNewTurn(playerIdx uint8) ([]MessageSendInfo, erro
 	// Draw, checking that we still have moves
 	// Check riichi, tsumo, kan
 	return nil, nil
-}
-
-func (game *MahjongGame) SendGameSetup() (sendInfos []MessageSendInfo) {
-
-	// Create setup data for each player
-	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
-		gameIdx := game.Ordering.GameIdx(arenaIdx)
-
-		setup := []Setup{
-			{
-				Type: DORA,
-				Data: game.DeadWall.DoraDeadWall.getLastDoraTile(),
-			},
-			{
-				Type: PLAYER_NUMBER,
-				Data: game.Ordering.GameIdx(arenaIdx),
-			},
-			{
-				Type: ROUND_NUMBER,
-				Data: uint8(0), // First round
-			},
-			{
-				Type: ROUND_WIND,
-				Data: game.WindState.GetPlayerWind(gameIdx), // Get player's seat wind
-			},
-			{
-				Type: STARTING_POINTS,
-				Data: [4]uint32{
-					game.ScoringState.Points[0],
-					game.ScoringState.Points[1],
-					game.ScoringState.Points[2],
-					game.ScoringState.Points[3],
-				},
-			},
-		}
-
-		sendInfos = append(sendInfos, MessageSendInfo{
-			Events: []BoardEvent{
-				GameSetupEvent{Setup: setup},
-			},
-			SendTo: arenaIdx,
-		})
-	}
-
-	return sendInfos
 }
 
 func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
@@ -120,14 +61,13 @@ func (game *MahjongGame) SendRoundSetup() (sendInfos []MessageSendInfo) {
 }
 
 func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
-	err = game.GameState.Transition("start-game", game, &messages)
+	err = game.gameState.Transition("start-game", game, &messages)
 	return messages, err
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
 	if err := game.GameState.Transition(
 		"start-round",
-		
 	); err != nil {
 		return nil, err
 	}

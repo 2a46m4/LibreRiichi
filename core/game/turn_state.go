@@ -15,8 +15,8 @@ type TurnState struct {
 	TotalTurns uint8
 }
 
-func InitTurnState() *TurnState {
-	return &TurnState{
+func InitTurnState() TurnState {
+	return TurnState{
 		TurnNumber: 3, // For the first draw
 		TotalTurns: 0,
 	}
