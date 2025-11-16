@@ -14,7 +14,6 @@ func InitMahjongRoundData() MahjongRoundData {
 	}
 }
 
-// TODO: Add this to a callback
 func (data *MahjongRoundData) IncrementRound() {
 	data.windState.IncrementWind()
 	data.tileState = CreateNewRound()

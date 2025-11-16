@@ -61,14 +61,14 @@ func InitGameState() *GameState {
 			},
 		},
 		fsm.Callbacks{
-			"before_start-game": gameState.CheckStartGamePossible,
-			"start-game":        gameState.HandleStartGame,
-			"before_start-round": gameState.CheckStartRoundPossible,
-			"start-round":       gameState.HandleStartRound,
-			"before_handle-event":      gameState.CheckHandleEventPossible,
-			"handle-event":      gameState.HandleEvent,
-			"before_round-end": gameState.BeforeRoundEnd,
-			"round-end": gameState.RoundEnd,
+			"before_start-game":   gameState.CheckStartGamePossible,
+			"start-game":          gameState.HandleStartGame,
+			"before_start-round":  gameState.CheckStartRoundPossible,
+			"start-round":         gameState.HandleStartRound,
+			"before_handle-event": gameState.CheckHandleEventPossible,
+			"handle-event":        gameState.HandleEvent,
+			"before_round-end":    gameState.BeforeRoundEnd,
+			"round-end":           gameState.RoundEnd,
 		},
 	)
 	return &gameState
@@ -143,7 +143,6 @@ func handleNewTurn(playerIdx uint8) ([]MessageSendInfo, error) {
 	return nil, nil
 }
 
-
 func (gameState *GameState) CheckStartGamePossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks that starting the game is possible
 	event.Cancel(errors.New("Hello"))
@@ -157,7 +156,7 @@ func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.
 	game.ordering = InitRandomOrdering()
 
 	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.scoring)
-	gameState.SetMetadata("return", setup)
+	gameState.SetMetadata("return", convertToArenaIdx(setup, game.ordering))
 }
 
 func (gameState *GameState) CheckStartRoundPossible(context context.Context, event *fsm.Event) {
@@ -186,7 +185,7 @@ func (gameState *GameState) HandleStartRound(context context.Context, event *fsm
 }
 
 func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
-	
+
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
@@ -195,28 +194,25 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 	action := event.Args[2].(Action)
 	arenaIdx := event.Args[3].(uint8)
 
-	msgInfo, err := round.roundState.HandleEvent(action, ordering.GameIdx(arenaIdx))
-	
+	gameIdx := ordering.GameIdx(arenaIdx)
+	msgInfo, err := round.roundState.HandleEvent(action, gameIdx)
 
 	// nextTurnInfo, err := handleNewTurn(ordering.GameIdx(arenaIdx))
 	if err != nil {
-		
+
 	}
 
-
-	
 	err = event.FSM.Event(context, "round-end", round)
 	if err == nil { // Game has ended
 		endRoundInfo, ok := gameState.GetReturn()
 		if !ok {
 			panic("Can't get end round info")
 		}
-		
+
 		msgInfo = append(msgInfo, endRoundInfo.([]MessageSendInfo)...)
 	}
 	gameState.setReturn(msgInfo)
 }
-
 
 func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.Event) {
 	round := event.Args[0].(*MahjongRound)
@@ -228,7 +224,7 @@ func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.E
 
 func (gameState *GameState) RoundEnd(context context.Context, event *fsm.Event) {
 	// Compute some ending results, etc.
-	
+
 }
 
 func (gameState *GameState) GetReturn() (data any, ok bool) {
@@ -239,4 +235,15 @@ func (gameState *GameState) GetReturn() (data any, ok bool) {
 
 func (gameState *GameState) setReturn(data any) {
 	gameState.SetMetadata("return", data)
+}
+
+// Modifies the original array
+func convertToArenaIdx(msgs []MessageSendInfo, ordering Ordering) []MessageSendInfo {
+	for i, msg := range msgs {
+		msgs[i] = MessageSendInfo{
+			Events: msg.Events,
+			SendTo: ordering.ArenaIdx(msg.SendTo),
+		}
+	}
+	return msgs
 }

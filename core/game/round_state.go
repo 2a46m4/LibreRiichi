@@ -76,13 +76,14 @@ func InitRoundState() *RoundState {
 			},
 		},
 		fsm.Callbacks{
-			"start-round":  roundState.startRound,
-			"draw-tile":    roundState.drawTile,
-			"discard-tile": roundState.discardTile,
-			"call-naki":    roundState.callNaki,
-			"no-naki":      roundState.noNaki,
-			"round-draw":   roundState.roundDraw,
-			"round-win":    roundState.roundWin,
+			"start-round":      roundState.startRound,
+			"before_draw-tile": roundState.drawTileTest,
+			"draw-tile":        roundState.drawTile,
+			"discard-tile":     roundState.discardTile,
+			"call-naki":        roundState.callNaki,
+			"no-naki":          roundState.noNaki,
+			"round-draw":       roundState.roundDraw,
+			"round-win":        roundState.roundWin,
 		},
 	)
 	roundState.context = context.Background()
@@ -94,9 +95,8 @@ func InitRoundState() *RoundState {
 	return roundState
 }
 
-func (game *RoundState) SendRoundSetup(ordering Ordering, tileState TileState) (sendInfos []MessageSendInfo) {
-	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
-		gameIdx := ordering.GameIdx(arenaIdx)
+func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
+	for gameIdx := uint8(0); gameIdx < 4; gameIdx++ {
 		initialTiles := tileState.Hands[gameIdx].ClosedHand.GetHand()
 		setup := []Setup{
 			{
@@ -108,27 +108,28 @@ func (game *RoundState) SendRoundSetup(ordering Ordering, tileState TileState) (
 			Events: []BoardEvent{
 				GameSetupEvent{Setup: setup},
 			},
-			SendTo: arenaIdx,
+			SendTo: gameIdx,
 		})
 	}
 
 	return sendInfos
 }
 
-func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []MessageSendInfo, err error) {
+func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInfo ...any) (msg []MessageSendInfo, err error) {
+	args := append([]any{action, gameIdx}, extraInfo...)
 
 	switch action.(type) {
 	case Chii:
 	case Kan:
 	case Pon:
 	case Ron:
-		err = roundState.Transition("call-naki", action, gameIdx)
+		err = roundState.Transition("call-naki", args)
 	case Skip:
-		err = roundState.Transition("no-naki", action, gameIdx)
+		err = roundState.Transition("no-naki", args)
 	case Riichi:
 	case Toss:
 	case Tsumo:
-		err = roundState.Transition("discard-tile", action, gameIdx)
+		err = roundState.Transition("discard-tile", args)
 	case Draw:
 		roundState.log.Error("Wrong action: %#v", action)
 	default:
@@ -140,23 +141,24 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []M
 	return ret.([]MessageSendInfo), err
 }
 
-
 func (roundState *RoundState) Transition(event string, args ...any) error {
 	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
 
 func (roundState *RoundState) startRound(context context.Context, event *fsm.Event) {
-	messages := []MessageSendInfo{}
 	round := event.Args[0].(*MahjongRound)
 	isFirstRound := event.Args[1].(bool)
 
 	if isFirstRound {
 		round.data = InitMahjongRoundData()
 	} else {
-		round.data.IncrementRound()		
+		round.data.IncrementRound()
 	}
 
-	err := event.FSM.Event(context, "draw-tile", round)
+	messages := getRoundSetup(round.data.tileState)
+
+	err := event.FSM.Event(context, "pre-draw")
+	err = event.FSM.Event(context, "draw-tile", round)
 	if err != nil {
 		panic("Started round but couldn't draw tile")
 	}
@@ -168,9 +170,20 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 	roundState.setReturn(append(messages, tileMsgs.([]MessageSendInfo)...))
 }
 
+func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.Event) {
+	roundState.log.Info("Checking if draw tile can succeed")
+	round := event.Args[0].(*MahjongRound)
+	drawIdx := event.Args[1].(uint8)
+
+	if drawIdx != round.data.turnState.TurnNumber {
+		event.Cancel()
+		return
+	}
+}
+
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
-	// TODO: Handle tile drawing logic
-	// Process player drawing a tile from the wall
+	round := event.Args[0].(*MahjongRound)
+
 }
 
 func (roundState *RoundState) discardTile(context context.Context, event *fsm.Event) {
@@ -179,7 +192,6 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
-
 
 	// TODO: Handle naki (call) logic
 	// Process player making a call (chi, pon, kan)
