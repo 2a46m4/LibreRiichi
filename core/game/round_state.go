@@ -2,15 +2,20 @@ package game
 
 import (
 	"context"
+	"log/slog"
+	"os"
 
 	"github.com/looplab/fsm"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
 type RoundState struct {
 	RoundFSM *fsm.FSM
 	context  context.Context
-}
 
+	log *slog.Logger
+}
 
 func InitRoundState() *RoundState {
 	roundState := &RoundState{}
@@ -79,6 +84,10 @@ func InitRoundState() *RoundState {
 		},
 	)
 	roundState.context = context.Background()
+	roundState.log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	}))
 
 	return roundState
 }
@@ -90,6 +99,24 @@ func (roundState *RoundState) IncrementRound() {
 	}
 }
 
+func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) {
+	switch action.(type) {
+	case Chii:
+	roundState.Transition("call-naki", action, gameIdx)
+	case Draw:
+	case Kan:
+	case Player:
+	case Pon:
+	case Riichi:
+	case Ron:
+	case Skip:
+	case Toss:
+	case Tsumo:
+	default:
+		panic(fmt.Sprintf("unexpected core.Action: %#v", action))
+	}
+}
+
 func (roundState *RoundState) Transition(event string, args ...any) error {
 	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
@@ -97,8 +124,6 @@ func (roundState *RoundState) Transition(event string, args ...any) error {
 func (roundState *RoundState) StartRound(context context.Context, event *fsm.Event) {
 	returnValues := event.Args[0].(*MahjongRoundState)
 
-	
-	
 }
 
 func (roundState *RoundState) DrawTile(context context.Context, event *fsm.Event) {
@@ -129,4 +154,14 @@ func (roundState *RoundState) RoundDraw(context context.Context, event *fsm.Even
 func (roundState *RoundState) RoundWin(context context.Context, event *fsm.Event) {
 	// TODO: Handle round win logic
 	// Process player winning the round (tsumo/ron)
+}
+
+func (roundState *RoundState) GetReturn() (ret any, ok bool) {
+	ret, ok = roundState.RoundFSM.Metadata("return")
+	roundState.RoundFSM.DeleteMetadata("return")
+	return ret, ok
+}
+
+func (roundState *RoundState) setReturn(data any) {
+	roundState.RoundFSM.SetMetadata("return", data)
 }

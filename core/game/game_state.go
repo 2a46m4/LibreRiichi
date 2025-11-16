@@ -137,7 +137,9 @@ func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.
 }
 
 func (gameState *GameState) CheckStartRoundPossible(context context.Context, event *fsm.Event) {
-	// Do some checks
+	// TODO: Do some checks
+
+	// Actually transition here, because we can signal a failure here
 	round := event.Args[0].(*MahjongRound)
 	err := round.roundState.Transition("start-round", round)
 	if err != nil {
@@ -147,16 +149,15 @@ func (gameState *GameState) CheckStartRoundPossible(context context.Context, eve
 }
 
 func (gameState *GameState) HandleStartRound(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound).roundState.RoundFSM
-	if round.Current() != "pre-draw" {
+	round := event.Args[0].(*MahjongRound).roundState
+	if round.RoundFSM.Current() != "pre-draw" {
 		panic("Should have already transitioned")
 	} else {
-		data, hasData := round.Metadata("return")
+		data, hasData := round.GetReturn()
 		if hasData {
-			gameState.SetMetadata("return", data)
+			gameState.setReturn(data)
 		}
 	}
-
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
@@ -177,10 +178,12 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 	returnValues = nextTurnInfo
 }
 
-func (gameState *GameState) GetReturn() {
-
+func (gameState *GameState) GetReturn() (data any, ok bool) {
+	data, ok = gameState.Metadata("return")
+	gameState.DeleteMetadata("return")
+	return data, ok
 }
 
-func (gameState *GameState) setReturn() {
-
+func (gameState *GameState) setReturn(data any) {
+	gameState.SetMetadata("return", data)
 }

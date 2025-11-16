@@ -12,8 +12,3 @@ func InitMahjongRound(roundNumber uint8) MahjongRound {
 	}
 }
 
-func (round *MahjongRound) GetReturn() (ret any, ok bool) {
-	ret, ok = round.roundState.RoundFSM.Metadata("return")
-	round.roundState.RoundFSM.DeleteMetadata("return")
-	return ret, ok
-}

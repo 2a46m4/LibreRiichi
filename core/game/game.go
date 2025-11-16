@@ -13,11 +13,14 @@ type MahjongGame struct {
 
 	roundWind   Wind
 	roundNumber uint8
+
+	firstRound bool
 }
 
 func NewMahjongGame() *MahjongGame {
 	return &MahjongGame{
 		gameState: *InitGameState(),
+		firstRound: true,
 	}
 }
 
@@ -66,7 +69,7 @@ func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
 }
 
 func (game *MahjongGame) StartRound() ([]MessageSendInfo, error) {
-	if err := game.GameState.Transition(
+	if err := game.gameState.Transition(
 		"start-round",
 	); err != nil {
 		return nil, err
