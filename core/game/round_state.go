@@ -202,7 +202,10 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 		return
 	}
 
-	if round.data.tileState.Hands[playerIdx]
+	if !round.data.tileState.Hands[playerIdx].TestDiscard(action.TileToToss) {
+		event.Cancel()
+		return
+	}
 
 	round.data.tileState.Discard()
 

@@ -102,37 +102,3 @@ func (game *TileState) Tsumo(playerIdx uint8, tile Tile) Tsumo {
 	return Tsumo{TileToTsumo: tile}
 }
 
-func (game *TileState) Try(action Action, playerIdx uint8, againstPlayer uint8, isClosedKan ...bool) error {
-	switch a := action.(type) {
-	case Draw:
-		if game.LiveWall.End() {
-			return errors.New("No more tiles to draw")
-		}
-	case Toss:
-		if !game.Hands[playerIdx].FullHand() {
-			return errors.New("Can't discard when the hand is not full")
-		}
-	case Pon:
-		game.Pon(playerIdx, againstPlayer)
-	case Kan:
-		if len(isClosedKan) > 0 && isClosedKan[0] {
-			game.AnKan(playerIdx, a.TileToKan)
-		} else if len(isClosedKan) > 0 && !isClosedKan[0] {
-			game.ShouminKan(playerIdx, a.TileToKan)
-		} else {
-			game.DaiminKan(playerIdx, againstPlayer)
-		}
-	case Chii:
-		game.Chii(playerIdx, a.TilesInHand)
-	case Riichi:
-		game.Riichi(playerIdx, a.TileToRiichi)
-	case Tsumo:
-		game.Tsumo(playerIdx, a.TileToTsumo)
-	case Ron:
-		game.Ron(playerIdx, a.TileToRon)
-	case Skip:
-		// Skip action doesn't modify the game state
-	default:
-		return nil
-	}
-}
