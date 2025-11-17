@@ -74,7 +74,7 @@ func (hand *Hand) ShouminKan(tile, draw Tile) {
 	hand.Kans.Add(tile, SHOUMINKAN)
 }
 
-func (hand Hand) TestAnKan(tile, draw Tile) bool {
+func (hand Hand) TestAnKan(tile Tile) bool {
 	return !hand.InRiichi && hand.FullHand() && (hand.ClosedHand.HasTileN(tile) == 4)
 }
 
@@ -126,3 +126,4 @@ func (hand Hand) TestTsumo(tile Tile) bool {
 func (hand *Hand) Tsumo(tile Tile) {
 	hand.ClosedHand.Add(tile)
 }
+

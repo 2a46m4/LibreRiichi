@@ -1,8 +1,5 @@
 package core
 
-// TODO: Consider generating this by parsing from a file instead
-// Indexing from a map seems like a bad idea performance-wise, we
-// should really be generating this code at compile-time instead
 type YakuType uint64
 
 const (
@@ -268,13 +265,4 @@ func (yaku YakuType) HanLossOnOpen() int {
 	})
 
 	return totalHanLoss
-}
-
-func (yaku *YakuType) Set() {
-
-}
-
-// TODO: Do Yaku calculations
-func GetYaku(hand Hand, winTile Tile) YakuType {
-	return NO_YAKU
 }

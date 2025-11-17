@@ -188,6 +188,40 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	playerIdx := event.Args[1].(uint8)
 	round := event.Args[2].(*MahjongRound)
 	action := round.data.tileState.Draw(playerIdx)
+
+	ret := make([]MessageSendInfo, 0, 4)
+	for i := range 4 {
+		ret = append(ret, MessageSendInfo{
+			Events: []BoardEvent{
+				PlayerActionEvent{
+					Action:     action,
+					FromPlayer: playerIdx,
+				},
+			},
+			SendTo: uint8(i),
+		})
+	}
+
+	potentialActions := PotentialActionEvent{}
+	playerHand := &round.data.tileState.Hands[playerIdx]
+
+	// Check for Ankan, Riichi, Tsumo potential options
+	if playerHand.TestAnKan(action.DrawnTile) {
+		potentialActions.Actions = append(potentialActions.Actions, Kan{
+			TileToKan: action.DrawnTile,
+		})
+	}
+
+	if playerHand.TestRiichi(action.DrawnTile) { // And need to test that the hand has a yaku
+		potentialActions.Actions = append(potentialActions.Actions, Riichi{
+			TileToRiichi: action.DrawnTile,
+		})
+	}
+
+	if len(potentialActions.Actions) > 0 {
+		ret[playerIdx].Events = append(ret[playerIdx].Events, potentialActions)
+	}
+
 	roundState.setReturn(action)
 }
 
@@ -206,17 +240,20 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 		event.Cancel()
 		return
 	}
-
-	round.data.tileState.Discard()
-
-	// if action.TileToToss
 }
 
 func (roundState *RoundState) discardTile(context context.Context, event *fsm.Event) {
-	
+	action := event.Args[0].(Toss)
+	playerIdx := event.Args[1].(uint8)
+	round := event.Args[2].(*MahjongRound)
+	round.data.tileState.Discard(playerIdx, action.TileToToss)
+
+	// Check for any calls
+
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
+	
 
 	// TODO: Handle naki (call) logic
 	// Process player making a call (chi, pon, kan)
