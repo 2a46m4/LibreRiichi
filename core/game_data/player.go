@@ -80,15 +80,6 @@ func (player Player) IsPlayerTurn() bool {
 	return player.ExtraTileInHand()
 }
 
-func (player *Player) Draw(drawn Tile) error {
-	if player.ExtraTileInHand() {
-		return TooManyTilesErr{}
-	}
-
-	player.ClosedHand = append(player.ClosedHand, drawn)
-	return nil
-}
-
 func (player *Player) Toss(discarded Tile) error {
 	if !player.ExtraTileInHand() {
 		return TooLittleTilesErr{}

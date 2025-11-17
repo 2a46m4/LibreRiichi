@@ -124,25 +124,6 @@ func getGameSetup(roundData MahjongRoundData,
 	return sendInfos
 }
 
-func handleNewTurn(playerIdx uint8) ([]MessageSendInfo, error) {
-	// err := gameState.Transition("draw-tile")
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = game.turnState.Try(Draw{}, playerIdx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// draw := game.TileState.Draw(playerIdx)
-	// _ = draw // Use the variable to avoid "declared and not used" error
-
-	// // Draw, checking that we still have moves
-	// // Check riichi, tsumo, kan
-	// return nil, nil
-	return nil, nil
-}
-
 func (gameState *GameState) CheckStartGamePossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks that starting the game is possible
 	event.Cancel(errors.New("Hello"))
@@ -152,7 +133,7 @@ func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.
 	game := event.Args[0].(*MahjongGame)
 
 	game.scoring = InitScoring(25000)
-	game.mahjongRound = InitMahjongRound(0)
+	game.mahjongRound = InitMahjongRound()
 	game.ordering = InitRandomOrdering()
 
 	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.scoring)
@@ -162,7 +143,7 @@ func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.
 func (gameState *GameState) CheckStartRoundPossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks
 
-	// Actually transition here, because we can signal a failure here
+	// Transition the round, because we can signal a failure here and cancel the transition
 	round := event.Args[0].(*MahjongRound)
 	isFirstRound := event.Args[1].(bool)
 	err := round.roundState.Transition("start-round", isFirstRound)
@@ -185,7 +166,7 @@ func (gameState *GameState) HandleStartRound(context context.Context, event *fsm
 }
 
 func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
-
+	
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
@@ -196,10 +177,8 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 
 	gameIdx := ordering.GameIdx(arenaIdx)
 	msgInfo, err := round.roundState.HandleEvent(action, gameIdx)
-
-	// nextTurnInfo, err := handleNewTurn(ordering.GameIdx(arenaIdx))
 	if err != nil {
-
+		panic("Unable to continue")
 	}
 
 	err = event.FSM.Event(context, "round-end", round)
@@ -212,6 +191,10 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 		msgInfo = append(msgInfo, endRoundInfo.([]MessageSendInfo)...)
 	}
 	gameState.setReturn(msgInfo)
+}
+
+func (gameState *GameState) GenerateGraphs() (string, error) {
+	return fsm.VisualizeForMermaidWithGraphType(gameState.FSM, fsm.StateDiagram)
 }
 
 func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.Event) {

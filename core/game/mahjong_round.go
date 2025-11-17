@@ -5,9 +5,9 @@ type MahjongRound struct {
 	data       MahjongRoundData
 }
 
-func InitMahjongRound(roundNumber uint8) MahjongRound {
+func InitMahjongRound() MahjongRound {
 	return MahjongRound{
 		roundState: *InitRoundState(),
-		data:       InitMahjongRoundData(roundNumber),
+		data:       InitMahjongRoundData(),
 	}
 }

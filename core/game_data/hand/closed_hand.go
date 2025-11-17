@@ -1,6 +1,8 @@
 package core
 
 import (
+	"slices"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
@@ -40,10 +42,9 @@ func (closed *ClosedHand) GetHand() []Tile {
 }
 
 func (closed *ClosedHand) HasTile(tile Tile) bool {
-	for i := uint8(0); i < closed.index; i++ {
-		if closed.hand[i] == tile {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(closed.hand[:closed.index], tile)
+}
+
+func (closed *ClosedHand) HasTileN(tile Tile) (count int) {
+	return Count(closed.hand[:closed.index], tile)
 }

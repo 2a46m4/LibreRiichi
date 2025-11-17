@@ -35,6 +35,7 @@ func InitRoundState() *RoundState {
 				Name: "draw-tile",
 				Src: []string{
 					"pre-draw",
+					"no-naki-state",
 				},
 				Dst: "waiting-discard",
 			},
@@ -57,12 +58,12 @@ func InitRoundState() *RoundState {
 				Src: []string{
 					"waiting-naki",
 				},
-				Dst: "pre-draw",
+				Dst: "no-naki-state",
 			},
 			fsm.EventDesc{
 				Name: "round-draw",
 				Src: []string{
-					"naki-finished",
+					"no-naki-state",
 				},
 				Dst: "out-of-round",
 			},
@@ -170,25 +171,46 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 	roundState.setReturn(append(messages, tileMsgs.([]MessageSendInfo)...))
 }
 
+// The FSM should guarantee that we are in the correct state so we
+// only need to check that the person drawing the tile is correct
 func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.Event) {
 	roundState.log.Info("Checking if draw tile can succeed")
-	round := event.Args[0].(*MahjongRound)
-	drawIdx := event.Args[1].(uint8)
+	playerIdx := event.Args[1].(uint8)
+	round := event.Args[2].(*MahjongRound)
 
-	if drawIdx != round.data.turnState.TurnNumber {
+	if playerIdx != round.data.turnState.TurnNumber {
 		event.Cancel()
 		return
 	}
 }
 
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound)
+	playerIdx := event.Args[1].(uint8)
+	round := event.Args[2].(*MahjongRound)
+	action := round.data.tileState.Draw(playerIdx)
+	roundState.setReturn(action)
+}
 
+func (roundState *RoundState) discardTileTest(context context.Context, event *fsm.Event) {
+	roundState.log.Info("Checking if discard tile can succeed")
+	action := event.Args[0].(Toss)
+	playerIdx := event.Args[1].(uint8)
+	round := event.Args[2].(*MahjongRound)
+
+	if playerIdx != round.data.turnState.TurnNumber {
+		event.Cancel()
+		return
+	}
+
+	if round.data.tileState.Hands[playerIdx]
+
+	round.data.tileState.Discard()
+
+	// if action.TileToToss
 }
 
 func (roundState *RoundState) discardTile(context context.Context, event *fsm.Event) {
-	// TODO: Handle tile discard logic
-	// Process player discarding a tile
+	
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
@@ -198,8 +220,8 @@ func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event
 }
 
 func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
-	// TODO: Handle no-naki logic
-	// Process when no players make a call
+	// TODO: After players make a discard and there are no naki calls
+	// left, transition to here which should transition directly to another draw
 }
 
 func (roundState *RoundState) roundDraw(context context.Context, event *fsm.Event) {

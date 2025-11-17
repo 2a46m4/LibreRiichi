@@ -1,5 +1,7 @@
 package core
 
+import "slices"
+
 import "math/rand"
 
 // Creates a random permutation of the array
@@ -57,6 +59,6 @@ func Count[T comparable](array []T, find T) (count int) {
 			count += 1
 		}
 	}
+
 	return count
 }
-

@@ -1,6 +1,8 @@
 package core
 
 import (
+	"slices"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
@@ -10,7 +12,7 @@ type OpenCalls struct {
 	count uint8
 }
 
-func (call OpenCalls) Add(tile Tile) {
+func (call *OpenCalls) Add(tile Tile) {
 	call.tiles[call.count] = tile
 	call.count += 1
 }
@@ -19,7 +21,7 @@ func (call OpenCalls) IsEmpty() bool {
 	return call.count == 0
 }
 
-func (call OpenCalls) Remove(tiles ...Tile) {
+func (call *OpenCalls) Remove(tiles ...Tile) {
 	for _, tile := range tiles {
 		found := false
 		for idx, callTile := range call.tiles {
@@ -35,6 +37,10 @@ func (call OpenCalls) Remove(tiles ...Tile) {
 			panic("Couldn't find tile")
 		}
 	}
+}
+
+func (call OpenCalls) Has(tile Tile) bool {
+	return slices.Contains(call.tiles[:call.count], tile)
 }
 
 type KanType uint8

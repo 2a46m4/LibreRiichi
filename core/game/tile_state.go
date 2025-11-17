@@ -44,6 +44,7 @@ func (game *TileState) IncrementRound() {
 	game.newRound()
 }
 
+// Modifies the tile state and returns the tile drawn
 func (game *TileState) Draw(playerIdx uint8) Draw {
 	tile := game.GetLiveTile()
 	game.Hands[playerIdx].Draw(tile)

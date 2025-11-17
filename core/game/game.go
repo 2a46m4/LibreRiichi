@@ -2,7 +2,6 @@ package game
 
 import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
 type MahjongGame struct {
