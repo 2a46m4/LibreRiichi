@@ -28,23 +28,42 @@ func (data *MahjongRoundData) IncrementRound() {
 
 // A quick check to see if the hand can win
 func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, extraTile ...Tile) bool {
+
+	// Check four melds and a pair win
+
+	// Check Kokushi Musou
+
+	// Check Chiitoitsu
+
 	return false
 }
 
 // Checks if the hand currently has yaku if it is a full hand, or if it will with an extra tile
-func GetHandYaku(playerIdx uint8, data *MahjongRoundData, extraTile ...Tile) YakuType {
+func GetHandYaku(
+	playerIdx uint8,
+	data *MahjongRoundData,
+	isSelfDrawn bool,
+	hasCalledRiichi bool,
+	isIppatsu bool,
+	isLastTileDrawnOrDiscarded bool,
+	isDeadWallCall bool,
+	isFromOpponentKanCall bool,
+	isDoubleRiichi bool,
+	isTenhou bool,
+	isChiihou bool,
+	extraTile ...Tile,
+) YakuType {
 	if len(extraTile) == 0 {
 		if !data.tileState.Hands[playerIdx].FullHand() {
 			panic("Wrong use of get hand yaku function")
-		} 
+		}
 
 		validYakus := CheckYaku(playerIdx, data, extraTile...)
 		fmt.Println(validYakus)
-		
-	
+
 	} else if len(extraTile) == 1 {
 		data.tileState.Hands[playerIdx].ClosedHand.Add(extraTile...)
-		
+
 		validYakus := CheckYaku(playerIdx, data, extraTile...)
 		fmt.Println(validYakus)
 
@@ -61,7 +80,6 @@ func CheckHandWaits(playerIdx uint8, data *MahjongRoundData) []Tile {
 	if data.tileState.Hands[playerIdx].FullHand() {
 		panic("Wrong use of check hand waits function")
 	}
-	
-	// 
-}
 
+	return nil
+}

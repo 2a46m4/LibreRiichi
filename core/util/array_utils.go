@@ -1,7 +1,5 @@
 package core
 
-import "slices"
-
 import "math/rand"
 
 // Creates a random permutation of the array
