@@ -1,6 +1,8 @@
 package core
 
 import (
+	"slices"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
@@ -9,7 +11,9 @@ type Hand struct {
 	Kans       KanCalls
 	Pons       OpenCalls
 	Chiis      OpenCalls // Chiis are the start of the sequence
+
 	InRiichi   bool
+	WaitingFor []Tile
 }
 
 func (hand Hand) Open() bool {
@@ -93,17 +97,30 @@ func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
 	hand.Chiis.Add(firstTile)
 }
 
-func (hand Hand) TestRiichi(tile Tile) {
-	
+// Also need to test that the hand has a yaku
+func (hand Hand) TestRiichi(tile Tile) bool {
+	return !hand.InRiichi && hand.FullHand() && hand.ClosedHand.HasTile(tile)
 }
 
 func (hand *Hand) Riichi(tile Tile) {
+	// Calculate the tiles that the user is waiting for
+
 	hand.InRiichi = true
 	hand.ClosedHand.RemoveTile(tile)
 }
 
+// Also need to test that the hand has a yaku
+func (hand Hand) TestRon(tile Tile) bool {
+	return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile) 
+}
+
 func (hand *Hand) Ron(tile Tile) {
 	hand.ClosedHand.Add(tile)
+}
+
+// Also need to test that the hand has a yaku
+func (hand Hand) TestTsumo(tile Tile) bool {
+	return hand.FullHand() && slices.Contains(hand.WaitingFor, tile) 
 }
 
 func (hand *Hand) Tsumo(tile Tile) {
