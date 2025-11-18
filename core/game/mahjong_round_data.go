@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
@@ -97,7 +98,7 @@ func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action 
 		tileType := discardedTile & TileMask
 
 		// Check if player has the next two tiles in sequence
-		if tileNum <= 7 { // Need room for two tiles after
+		if tileNum <= 6 { // Need room for two tiles after
 			nextTile1 := tileType | Tile(tileNum+1)
 			nextTile2 := tileType | Tile(tileNum+2)
 			if playerHand.HasTile(nextTile1) && playerHand.HasTile(nextTile2) {
@@ -109,7 +110,7 @@ func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action 
 		}
 
 		// Check if player has tile before and after (discarded tile is middle)
-		if tileNum >= 2 && tileNum <= 8 {
+		if tileNum >= 1 && tileNum <= 7 {
 			prevTile := tileType | Tile(tileNum-1)
 			nextTile := tileType | Tile(tileNum+1)
 			if playerHand.HasTile(prevTile) && playerHand.HasTile(nextTile) {
@@ -121,7 +122,7 @@ func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action 
 		}
 
 		// Check if player has the two previous tiles (discarded tile is last)
-		if tileNum >= 3 { // Need room for two tiles before
+		if tileNum >= 2 { // Need room for two tiles before
 			prevTile1 := tileType | Tile(tileNum-2)
 			prevTile2 := tileType | Tile(tileNum-1)
 			if playerHand.HasTile(prevTile1) && playerHand.HasTile(prevTile2) {
@@ -167,9 +168,38 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 }
 
 // A quick check to see if the hand can win
-func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile ...Tile) YakuType {
+func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) YakuType {
+
+	hand := data.tileState.Hands[playerIdx]
 
 	// Check Kokushi Musou
+	if hand.Closed() {
+		typeList := []Tile{Manzu, Pinzu, Souzu}
+		numberList := []uint8{1, 9}
+		tileList := []Tile{}
+		for _, t := range typeList {
+			for _, n := range numberList {
+				tileList = append(tileList, MakeNumberTile(t, n))
+			}
+		}
+
+		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile){
+			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU
+		}
+
+		hand.ClosedHand.Add(extraTile)
+		totalValid := 0
+		for _, tile := range tileList {
+			count := hand.ClosedHand.HasTileN(tile)
+			if count == 1 || count == 2 {
+				totalValid += count
+			}
+		}
+		if totalValid == 14 {
+			return KOKUSHI_MUSOU_YAKU
+		}
+		hand.ClosedHand.Pop(1)
+	}
 
 	// Check Chiitoitsu
 

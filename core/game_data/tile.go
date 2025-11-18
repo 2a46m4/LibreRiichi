@@ -34,6 +34,11 @@ const (
 	SpecialMask      = 0b11 << 6
 )
 
+// number is one-indexed
+func MakeNumberTile(tileType Tile, number uint8) Tile {
+	return tileType + Tile(number - 1)
+}
+
 func (s Tile) ClearRedOrDora() Tile {
 	return s & ^(DoraTile | RedTile)
 }

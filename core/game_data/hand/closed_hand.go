@@ -20,6 +20,10 @@ func (closed *ClosedHand) Add(tiles ...Tile) {
 	}
 }
 
+func (closed *ClosedHand) Pop(n uint8) {
+	closed.index -= n
+}
+
 func (closed *ClosedHand) RemoveTile(tiles ...Tile) {
 	for _, tile := range tiles {
 		found := false
@@ -42,8 +46,13 @@ func (closed *ClosedHand) GetHand() []Tile {
 	return closed.hand[:closed.index]
 }
 
-func (closed *ClosedHand) HasTile(tile Tile) bool {
-	return slices.Contains(closed.hand[:closed.index], tile)
+func (closed *ClosedHand) HasTile(tiles ...Tile) bool {
+	res := true
+	for _, tile := range tiles {
+		res = res && slices.Contains(closed.hand[:closed.index], tile)
+	}
+
+	return res
 }
 
 func (closed *ClosedHand) HasTileN(tile Tile) (count int) {
