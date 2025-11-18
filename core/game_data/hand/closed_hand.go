@@ -66,3 +66,21 @@ func (closed *ClosedHand) Last() (tile Tile, err error) {
 
 	return closed.hand[closed.index-1], nil
 }
+
+func (closed *ClosedHand) Hand() []Tile {
+	return closed.hand[:closed.index]
+}
+
+func (closed ClosedHand) UniqueTiles() ([]Tile, []uint8) {
+	unique := make([]Tile, 0)
+	count := make([]uint8, 0)
+	for _, tile := range closed.Hand() {
+		if uniqueIdx := slices.Index(unique, tile); uniqueIdx != -1 {
+			count[uniqueIdx]+=1
+		} else {
+			unique = append(unique, tile)
+			count = append(count, 1)
+		}
+	}
+	return unique, count
+}

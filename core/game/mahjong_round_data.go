@@ -174,7 +174,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	return nil
 }
 
-// A quick check to see if the hand can win
+// Check that the hand can win, and any yaku if the hand can win
 func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) YakuType {
 
 	hand := data.tileState.Hands[playerIdx]
@@ -209,8 +209,21 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 	}
 
 	// Check Chiitoitsu
+	if hand.Closed() {
+		unique, count := hand.ClosedHand.UniqueTiles()
+		success := true
+		for i := range count {
+			if count[i] != 2 {
+				success = false
+			}
+		}
+		if len(unique) == 7 && success {
+			return CHIITOITSU_YAKU
+		}
+	}
 
 	// Check four melds and a pair win
+	
 
 	// If yes, check Yakus
 

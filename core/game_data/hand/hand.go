@@ -136,7 +136,7 @@ func (hand *Hand) Riichi(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile)
 }
 
-// Also need to test that the hand has a yaku
+// TODO: Also need to test that the hand has a yaku
 func (hand Hand) TestRon(tile Tile) bool {
 	return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile) 
 }
