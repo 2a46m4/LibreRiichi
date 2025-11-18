@@ -5,7 +5,6 @@ import (
 )
 
 type MahjongGame struct {
-	scoring      Scoring
 	gameState    GameState
 	mahjongRound MahjongRound
 	ordering     Ordering

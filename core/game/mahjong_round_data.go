@@ -7,6 +7,7 @@ import (
 )
 
 type MahjongRoundData struct {
+	scoring      Scoring
 	tileState TileState
 	windState WindState
 	turnState TurnState
@@ -42,15 +43,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, extraTile ...Tile)
 func GetHandYaku(
 	playerIdx uint8,
 	data *MahjongRoundData,
-	isSelfDrawn bool,
-	hasCalledRiichi bool,
-	isIppatsu bool,
-	isLastTileDrawnOrDiscarded bool,
-	isDeadWallCall bool,
-	isFromOpponentKanCall bool,
-	isDoubleRiichi bool,
-	isTenhou bool,
-	isChiihou bool,
+	yakuContext yakuContext,
 	extraTile ...Tile,
 ) YakuType {
 	if len(extraTile) == 0 {

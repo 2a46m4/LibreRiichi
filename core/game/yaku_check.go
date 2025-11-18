@@ -24,7 +24,6 @@ type YakuChecker func(
 ) bool
 
 var YakuCheckerMap = map[YakuType]YakuChecker{
-	NO_YAKU:                           CheckNoYaku,
 	MENZEN_TSUMO_YAKU:                 CheckMenzenTsumoYaku,
 	RIICHI_YAKU:                       CheckRiichi,
 	IPPATSU_YAKU:                      CheckIppatsu,
@@ -96,13 +95,8 @@ func CheckMenzenTsumoYaku(playerIdx uint8,
 	return true
 }
 
-// Stub functions for all yaku checkers
-func CheckNoYaku(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
-	return false
-}
-
 func CheckRiichi(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
-	return false
+	return data.tileState.Hands[playerIdx].InRiichi
 }
 
 func CheckIppatsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
