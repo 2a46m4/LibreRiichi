@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
@@ -13,11 +14,19 @@ type Hand struct {
 	Chiis      OpenCalls // Chiis are the start of the sequence
 
 	InRiichi   bool
-	WaitingFor []Tile
+	WaitingFor []Tile // Only used when the hand is in riichi
 }
 
 func (hand Hand) Open() bool {
 	return hand.Chiis.IsEmpty() && hand.Kans.IsEmpty() && hand.Pons.IsEmpty()
+}
+
+func (hand Hand) Closed() bool {
+	return !hand.Open()
+}
+
+func (hand Hand) InTenpai() bool {
+	return false
 }
 
 func (hand Hand) FullHand() bool {
@@ -29,6 +38,14 @@ func (hand Hand) FullHand() bool {
 	return (hand.ClosedHand.index + numOpenTriplets*3) == 13
 }
 
+func (hand Hand) TileJustReceived() (tile Tile, err error) {
+	if hand.FullHand() {
+		return hand.ClosedHand.hand[hand.ClosedHand.index-1], nil
+	} else {
+		return tile, errors.New("Not full hand, don't have an extra tile")
+	}
+}
+
 func (hand Hand) TestDraw() bool {
 	return !hand.FullHand()
 }
@@ -38,7 +55,17 @@ func (hand *Hand) Draw(tile Tile) {
 }
 
 func (hand Hand) TestDiscard(tile Tile) bool {
-	return hand.FullHand() && hand.ClosedHand.HasTile(tile)
+	if !hand.FullHand() {
+		return false
+	}
+
+	if hand.InRiichi {
+		handTile, _ := hand.ClosedHand.Last()
+		return handTile == tile
+	} else {
+		return hand.ClosedHand.HasTile(tile)
+	}
+
 }
 
 func (hand *Hand) Discard(tile Tile) {

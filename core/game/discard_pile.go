@@ -27,3 +27,11 @@ func (pile *DiscardPile) Reset() {
 func (pile *DiscardPile) IsEmpty() bool {
 	return pile.index == 0
 }
+
+func (pile DiscardPile) Last() Tile {
+	if pile.index == 0 {
+		panic("Bad state: No tiles have been discarded yet")
+	} else {
+		return pile.Discards[pile.index - 1]
+	}
+}

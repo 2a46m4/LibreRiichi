@@ -99,15 +99,14 @@ func InitRoundState() *RoundState {
 func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
 	for gameIdx := uint8(0); gameIdx < 4; gameIdx++ {
 		initialTiles := tileState.Hands[gameIdx].ClosedHand.GetHand()
-		setup := []Setup{
-			{
-				Type: INITIAL_TILES,
-				Data: initialTiles,
-			},
-		}
 		sendInfos = append(sendInfos, MessageSendInfo{
 			Events: []BoardEvent{
-				GameSetupEvent{Setup: setup},
+				GameSetupEvent{Setup: []Setup{
+					{
+						Type: INITIAL_TILES,
+						Data: initialTiles,
+					},
+				}},
 			},
 			SendTo: gameIdx,
 		})
@@ -184,6 +183,10 @@ func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.E
 	}
 }
 
+// Transition to a await toss state
+//
+// The player either draws the tile and can discard any tile in their
+// closed hand, or must discard the most recently tossed tile if they are in Riichi
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
 	playerIdx := event.Args[1].(uint8)
 	round := event.Args[2].(*MahjongRound)
@@ -206,13 +209,24 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	playerHand := &round.data.tileState.Hands[playerIdx]
 
 	// Check for Ankan, Riichi, Tsumo potential options
+	if  playerHand.InRiichi {
+		tile, err := playerHand.ClosedHand.Last()
+		if err != nil {
+			panic("Bad state")
+		}
+
+		potentialActions.Actions = append(potentialActions.Actions, Toss{
+			TileToToss: tile,
+		})
+	}
+
 	if playerHand.TestAnKan(action.DrawnTile) {
 		potentialActions.Actions = append(potentialActions.Actions, Kan{
 			TileToKan: action.DrawnTile,
 		})
 	}
 
-	if playerHand.TestRiichi(action.DrawnTile) { // And need to test that the hand has a yaku
+	if playerHand.TestRiichi(action.DrawnTile) { 
 		potentialActions.Actions = append(potentialActions.Actions, Riichi{
 			TileToRiichi: action.DrawnTile,
 		})
@@ -222,7 +236,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 		ret[playerIdx].Events = append(ret[playerIdx].Events, potentialActions)
 	}
 
-	roundState.setReturn(action)
+	roundState.setReturn(ret)
 }
 
 func (roundState *RoundState) discardTileTest(context context.Context, event *fsm.Event) {
@@ -234,6 +248,19 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	if playerIdx != round.data.turnState.TurnNumber {
 		event.Cancel()
 		return
+	}
+
+	hand := &round.data.tileState.Hands[playerIdx]
+	lastTile, err := hand.TileJustReceived()
+	if err != nil {
+		event.Cancel()
+		return
+	}
+
+	// Riichi must toss the last tile
+	if hand.InRiichi && (lastTile != action.TileToToss) {
+		event.Cancel()
+		return		
 	}
 
 	if !round.data.tileState.Hands[playerIdx].TestDiscard(action.TileToToss) {
@@ -249,7 +276,7 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 	round.data.tileState.Discard(playerIdx, action.TileToToss)
 
 	// Check for any calls
-
+	round.data
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {

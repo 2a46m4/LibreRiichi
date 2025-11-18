@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
@@ -47,4 +48,12 @@ func (closed *ClosedHand) HasTile(tile Tile) bool {
 
 func (closed *ClosedHand) HasTileN(tile Tile) (count int) {
 	return Count(closed.hand[:closed.index], tile)
+}
+
+func (closed *ClosedHand) Last() (tile Tile, err error) {
+	if closed.index == 0 {
+		return tile, errors.New("out of bounds")
+	}
+
+	return closed.hand[closed.index-1], nil
 }
