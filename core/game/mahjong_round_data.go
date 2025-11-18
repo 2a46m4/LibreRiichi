@@ -11,12 +11,17 @@ import (
 type MahjongRoundData struct {
 	scoring   Scoring
 	tileState TileState
+	// Player direction
 	windState WindState
 	turnState TurnState
+	// Round direction
+	roundWind   Wind
+	roundNumber uint8
 }
 
 func InitMahjongRoundData() MahjongRoundData {
 	return MahjongRoundData{
+		scoring:   InitScoring(25000),
 		tileState: CreateNewRound(),
 		windState: WindState(0),
 		turnState: InitTurnState(),
@@ -27,6 +32,8 @@ func (data *MahjongRoundData) IncrementRound() {
 	data.windState.IncrementWind()
 	data.tileState = CreateNewRound()
 	data.turnState = InitTurnState()
+	data.roundNumber += 1
+	// TODO: Implement switching round winds
 }
 
 func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo) {
@@ -61,7 +68,7 @@ func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo
 		}
 
 		info = append(info, MessageSendInfo{
-			Events: []BoardEvent{ actions },
+			Events: []BoardEvent{actions},
 			SendTo: i,
 		})
 	}
@@ -82,7 +89,7 @@ func CheckKan(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
 }
 
 func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
-	if (discardedPlayerIdx + 1) % 4 != playerIdx {
+	if (discardedPlayerIdx+1)%4 != playerIdx {
 		return nil
 	}
 
@@ -183,7 +190,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 			}
 		}
 
-		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile){
+		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile) {
 			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU
 		}
 

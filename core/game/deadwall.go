@@ -45,8 +45,8 @@ func (d *KanDeadWall) drawKan() (tile Tile) {
 }
 
 type DeadWall struct {
-	UradoraDeadWall
-	DoraDeadWall
+	dora    DoraDeadWall
+	uradora DoraDeadWall
 	KanDeadWall
 }
 
@@ -54,7 +54,7 @@ func (d *DeadWall) Reset(tiles []Tile) {
 	// First 4 tiles go to KanDeadWall
 	d.KanDeadWall.Reset(tiles[0:4])
 	// Next 5 tiles go to DoraDeadWall
-	d.DoraDeadWall.Reset(tiles[4:9])
+	d.dora.Reset(tiles[4:9])
 	// Last 5 tiles go to UradoraDeadWall
-	d.UradoraDeadWall.Reset(tiles[9:14])
+	d.uradora.Reset(tiles[9:14])
 }

@@ -11,3 +11,8 @@ func InitMahjongRound() MahjongRound {
 		data:       InitMahjongRoundData(),
 	}
 }
+
+func (round *MahjongRound) ContinueMahjongRound() {
+	round.data.IncrementRound()
+	round.roundState.Transition("start-round", round)
+}

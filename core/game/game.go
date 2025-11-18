@@ -8,11 +8,7 @@ type MahjongGame struct {
 	gameState    GameState
 	mahjongRound MahjongRound
 	ordering     Ordering
-
-	roundWind   Wind
-	roundNumber uint8
-
-	firstRound bool
+	firstRound   bool
 }
 
 func NewMahjongGame() *MahjongGame {

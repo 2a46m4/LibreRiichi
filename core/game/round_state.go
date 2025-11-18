@@ -209,7 +209,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	playerHand := &round.data.tileState.Hands[playerIdx]
 
 	// Check for Ankan, Riichi, Tsumo potential options
-	if  playerHand.InRiichi {
+	if playerHand.InRiichi {
 		tile, err := playerHand.ClosedHand.Last()
 		if err != nil {
 			panic("Bad state")
@@ -226,7 +226,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 		})
 	}
 
-	if playerHand.TestRiichi(action.DrawnTile) { 
+	if playerHand.TestRiichi(action.DrawnTile) {
 		potentialActions.Actions = append(potentialActions.Actions, Riichi{
 			TileToRiichi: action.DrawnTile,
 		})
@@ -260,7 +260,7 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	// Riichi must toss the last tile
 	if hand.InRiichi && (lastTile != action.TileToToss) {
 		event.Cancel()
-		return		
+		return
 	}
 
 	if !round.data.tileState.Hands[playerIdx].TestDiscard(action.TileToToss) {
@@ -280,7 +280,6 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
-	
 
 	// TODO: Handle naki (call) logic
 	// Process player making a call (chi, pon, kan)

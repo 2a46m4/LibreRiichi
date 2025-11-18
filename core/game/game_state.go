@@ -88,7 +88,7 @@ func getGameSetup(roundData MahjongRoundData,
 		setup := []Setup{
 			{
 				Type: DORA,
-				Data: roundData.tileState.DeadWall.getLastDoraTile(),
+				Data: roundData.tileState.DeadWall.dora.getLastDoraTile(),
 			},
 			{
 				Type: PLAYER_NUMBER,
@@ -131,12 +131,16 @@ func (gameState *GameState) CheckStartGamePossible(context context.Context, even
 
 func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.Event) {
 	game := event.Args[0].(*MahjongGame)
+	firstRound := event.Args[1].(bool)
 
-	game.scoring = InitScoring(25000)
-	game.mahjongRound = InitMahjongRound()
-	game.ordering = InitRandomOrdering()
+	if firstRound {
+		game.mahjongRound = InitMahjongRound()
+		game.ordering = InitRandomOrdering()
+	} else {
+		game.mahjongRound.ContinueMahjongRound() // TODO: Get return value
+	}
 
-	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.scoring)
+	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.mahjongRound.data.scoring)
 	gameState.SetMetadata("return", convertToArenaIdx(setup, game.ordering))
 }
 
@@ -166,7 +170,7 @@ func (gameState *GameState) HandleStartRound(context context.Context, event *fsm
 }
 
 func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
-	
+
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
