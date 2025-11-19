@@ -1,0 +1,80 @@
+package score
+
+import (
+	"codeberg.org/ijnakashiar/LibreRiichi/core/util"
+)
+
+type Points struct {
+	han uint16
+	fu uint16
+}
+
+// Represents the amount of points that each role has to pay. In the
+// case where the winner is the dealer and he wins by tsumo,
+// DealerTsumo is invalid.
+type PointValue struct {
+	NonDealerTsumo uint
+	DealerTsumo uint
+	Ron uint
+}
+
+func ComputePoints(
+	points Points,
+	isDealer bool,
+) (value PointValue) {
+	
+
+	roundUp := func(score uint) uint {
+		return score + (100 - (score % 100))
+	}
+
+	// Tsumo, how much non/dealers pay
+	var nonDealerMultiplier uint
+	var dealerMultiplier uint
+	// Ron, how much everyone pays
+	var ronMultiplier uint
+
+	if isDealer {
+		nonDealerMultiplier = 2
+		dealerMultiplier = 0 // Invalid since the winner is the dealer
+		ronMultiplier = 6
+	} else {
+		nonDealerMultiplier = 1
+		dealerMultiplier = 2
+		ronMultiplier = 4
+	}
+
+	var multiplyBy float32
+	var manganScore uint = 2000
+	baseScore := uint(points.fu) * (core.IntPow(uint(2), uint(2 + points.han)))
+	if points.han <= 4 && roundUp(baseScore * ronMultiplier) < manganScore * ronMultiplier {
+		value.NonDealerTsumo = roundUp(baseScore * nonDealerMultiplier)
+		value.DealerTsumo = roundUp(baseScore * dealerMultiplier)
+		value.Ron = roundUp(baseScore * ronMultiplier)
+		return value
+	} else {
+		baseScore = manganScore
+	}
+
+	switch points.han {
+	case 5:
+		multiplyBy = 1
+	case 6, 7: 
+		multiplyBy = 1.5
+	case 8, 9, 10: 
+		multiplyBy = 2
+	case 11, 12: 
+		multiplyBy = 3
+	case 13: 
+		multiplyBy = 4
+	default:
+		multiplyBy = float32(points.han / 13)
+	}
+
+	value.NonDealerTsumo = uint(baseScore * nonDealerMultiplier * uint(multiplyBy))
+	value.DealerTsumo = uint(baseScore * dealerMultiplier * uint(multiplyBy))
+	value.Ron = uint(baseScore * ronMultiplier * uint(multiplyBy))	
+
+	return value
+}
+
