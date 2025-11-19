@@ -2,6 +2,10 @@ package core
 
 type YakuType uint64
 
+type Yakus struct {
+	value YakuType
+}
+
 const (
 	NO_YAKU YakuType = 1 << iota
 	MENZEN_TSUMO_YAKU
