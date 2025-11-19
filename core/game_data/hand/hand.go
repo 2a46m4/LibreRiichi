@@ -46,6 +46,10 @@ func (hand Hand) TileJustReceived() (tile Tile, err error) {
 	}
 }
 
+func (hand Hand) OpenMelds() uint8 {
+	return hand.Kans.count + hand.Pons.count + hand.Chiis.count
+}
+
 func (hand Hand) TestDraw() bool {
 	return !hand.FullHand()
 }

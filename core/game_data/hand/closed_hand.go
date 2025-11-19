@@ -84,3 +84,8 @@ func (closed ClosedHand) UniqueTiles() ([]Tile, []uint8) {
 	}
 	return unique, count
 }
+
+func (closed *ClosedHand) SortInplace() {
+	slices.Sort(closed.Hand())
+}
+

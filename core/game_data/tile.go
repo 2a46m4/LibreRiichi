@@ -71,6 +71,10 @@ func (s Tile) IsPinzu() bool {
 	return s&(TileMask) == PinzuBit
 }
 
+func (s Tile) IsNumberTile() bool {
+	return s < Kazehai
+}
+
 func (s Tile) GetTileNumber() uint8 {
 	return uint8(s & NumberMask)
 }
