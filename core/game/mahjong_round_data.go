@@ -6,6 +6,7 @@ import (
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	"codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 )
 
 type MahjongRoundData struct {
@@ -163,7 +164,8 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	yakuContext := yakuContext{}
 
 	// Check if adding the discarded tile would complete a winning hand
-	if CheckHandCanWin(playerIdx, data, yakuContext, discardedTile) != NO_YAKU {
+	yaku, score := CheckHandCanWin(playerIdx, data, yakuContext, discardedTile)
+	if yaku != NO_YAKU {
 		// TODO: Calculate actual WinResult with yaku and scores
 		return Ron{
 			TileToRon: discardedTile,
@@ -174,8 +176,10 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	return nil
 }
 
-// Check that the hand can win, and any yaku if the hand can win
-func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) YakuType {
+// Check that the hand can win, and the score and yaku
+//
+// TODO: Compute score
+func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) (YakuType, int) {
 
 	hand := data.tileState.Hands[playerIdx]
 
@@ -191,7 +195,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 		}
 
 		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile) {
-			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU
+			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU, 0
 		}
 
 		hand.ClosedHand.Add(extraTile)
@@ -203,7 +207,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 			}
 		}
 		if totalValid == 14 {
-			return KOKUSHI_MUSOU_YAKU
+			return KOKUSHI_MUSOU_YAKU, 0
 		}
 		hand.ClosedHand.Pop(1)
 	}
@@ -218,16 +222,19 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 			}
 		}
 		if len(unique) == 7 && success {
-			return CHIITOITSU_YAKU
+			return CHIITOITSU_YAKU, 0
 		}
 	}
 
-	// Check four melds and a pair win
-	
+	// Check four melds and a pair wins
+	combos := meldfinder.FindMelds(hand.ClosedHand.Hand(), int(hand.OpenMeldCount()))
+	maxScore := 0
+	yaku := NO_YAKU
+	for _, combo := range combos {
+		// Compute score
+	}
 
-	// If yes, check Yakus
-
-	return NO_YAKU
+	return yaku, 0
 }
 
 // Checks if the hand currently has yaku if it is a full hand, or if it will with an extra tile
@@ -267,3 +274,5 @@ func CheckHandWaits(playerIdx uint8, data *MahjongRoundData) []Tile {
 
 	return nil
 }
+
+
