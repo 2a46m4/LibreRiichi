@@ -9,20 +9,17 @@ import (
 
 type Hand struct {
 	ClosedHand ClosedHand
-	Kans       KanCalls
-	Pons       OpenCalls
-	Chiis      OpenCalls // Chiis are the start of the sequence
-
+	OpenMelds OpenMelds
 	InRiichi   bool
 	WaitingFor []Tile // Only used when the hand is in riichi
 }
 
 func (hand Hand) Open() bool {
-	return hand.Chiis.IsEmpty() && hand.Kans.IsEmpty() && hand.Pons.IsEmpty()
+	return !hand.Closed()
 }
 
 func (hand Hand) Closed() bool {
-	return !hand.Open()
+	return hand.OpenMelds.IsEmpty()
 }
 
 func (hand Hand) InTenpai() bool {
@@ -30,12 +27,8 @@ func (hand Hand) InTenpai() bool {
 }
 
 func (hand Hand) FullHand() bool {
-	numOpenTriplets := uint8(0)
-	numOpenTriplets += hand.Kans.count
-	numOpenTriplets += hand.Chiis.count
-	numOpenTriplets += hand.Pons.count
 	// 13 since ClosedHand.index is 0-based
-	return (hand.ClosedHand.index + numOpenTriplets*3) == 13
+	return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 13
 }
 
 func (hand Hand) TileJustReceived() (tile Tile, err error) {
@@ -46,8 +39,8 @@ func (hand Hand) TileJustReceived() (tile Tile, err error) {
 	}
 }
 
-func (hand Hand) OpenMelds() uint8 {
-	return hand.Kans.count + hand.Pons.count + hand.Chiis.count
+func (hand Hand) OpenMeldCount() uint8 {
+	return hand.OpenMelds.count
 }
 
 func (hand Hand) TestDraw() bool {
@@ -82,7 +75,10 @@ func (hand Hand) TestPon(tile Tile) bool {
 
 func (hand *Hand) Pon(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile)
-	hand.Pons.Add(tile)
+	hand.OpenMelds.Add(OpenMeld{
+		Type:      PON_MELD,
+		FirstTile: tile,
+	})
 }
 
 func (hand Hand) TestDaiminKan(tile, draw Tile) bool {
@@ -92,17 +88,29 @@ func (hand Hand) TestDaiminKan(tile, draw Tile) bool {
 func (hand *Hand) DaiminKan(tile, draw Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile)
 	hand.ClosedHand.Add(draw)
-	hand.Kans.Add(tile, DAIMINKAN)
+	hand.OpenMelds.Add(OpenMeld{
+		Type:      DAIMINKAN_MELD,
+		FirstTile: tile,
+	})
 }
 
 func (hand Hand) TestShouminkan(tile, draw Tile) bool {
-	return !hand.InRiichi && !hand.FullHand() && hand.Pons.Has(tile)
+	return !hand.InRiichi && !hand.FullHand() && hand.OpenMelds.Has(OpenMeld{
+		Type:      PON_MELD,
+		FirstTile: tile,
+	})
 }
 
 func (hand *Hand) ShouminKan(tile, draw Tile) {
-	hand.Pons.Remove(tile)
+	hand.OpenMelds.Remove(OpenMeld{
+		Type:      PON_MELD,
+		FirstTile: tile,
+	})
 	hand.ClosedHand.Add(draw)
-	hand.Kans.Add(tile, SHOUMINKAN)
+	hand.OpenMelds.Add(OpenMeld{
+		Type:      SHOUMINKAN_MELD,
+		FirstTile: tile,
+	})
 }
 
 func (hand Hand) TestAnKan(tile Tile) bool {
@@ -112,7 +120,10 @@ func (hand Hand) TestAnKan(tile Tile) bool {
 func (hand *Hand) AnKan(tile, draw Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile, tile)
 	hand.ClosedHand.Add(draw)
-	hand.Kans.Add(tile, ANKAN)
+	hand.OpenMelds.Add(OpenMeld{
+		Type:      ANKAN_MELD,
+		FirstTile: tile,
+	})
 }
 
 func (hand Hand) TestChii(firstTile Tile, tiles [2]Tile) bool {
@@ -125,7 +136,10 @@ func (hand Hand) TestChii(firstTile Tile, tiles [2]Tile) bool {
 // tiles are tiles in the closed hand that need to be removed.
 func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
 	hand.ClosedHand.RemoveTile(tiles[:]...)
-	hand.Chiis.Add(firstTile)
+	hand.OpenMelds.Add(OpenMeld{
+		Type:      CHII_MELD,
+		FirstTile: firstTile,
+	})
 }
 
 // Also need to test that the hand has a yaku

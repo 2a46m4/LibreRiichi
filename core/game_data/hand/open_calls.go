@@ -7,26 +7,45 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
-type OpenCalls struct {
-	tiles [4]Tile
+type OpenMeldType uint8
+
+const (
+	ANKAN_MELD OpenMeldType = iota
+	DAIMINKAN_MELD
+	SHOUMINKAN_MELD
+	PON_MELD
+	CHII_MELD
+)
+
+type OpenMeld struct {
+	Type OpenMeldType
+	FirstTile Tile
+}
+
+func (meld OpenMeld) Eq(other OpenMeld) bool {
+	return meld.FirstTile == other.FirstTile && meld.Type == other.Type
+}
+
+type OpenMelds struct {
+	melds [4]OpenMeld
 	count uint8
 }
 
-func (call *OpenCalls) Add(tile Tile) {
-	call.tiles[call.count] = tile
+func (call *OpenMelds) Add(meld OpenMeld) {
+	call.melds[call.count] = meld
 	call.count += 1
 }
 
-func (call OpenCalls) IsEmpty() bool {
+func (call OpenMelds) IsEmpty() bool {
 	return call.count == 0
 }
 
-func (call *OpenCalls) Remove(tiles ...Tile) {
-	for _, tile := range tiles {
+func (call *OpenMelds) Remove(melds ...OpenMeld) {
+	for _, meld := range melds {
 		found := false
-		for idx, callTile := range call.tiles {
-			if tile == callTile {
-				Swap(call.tiles[:], uint(idx), uint(call.count-1))
+		for idx, ourMelds := range call.melds {
+			if meld.Eq(ourMelds) {
+				Swap(call.melds[:], uint(idx), uint(call.count-1))
 				call.count -= 1
 				found = true
 				break
@@ -39,25 +58,7 @@ func (call *OpenCalls) Remove(tiles ...Tile) {
 	}
 }
 
-func (call OpenCalls) Has(tile Tile) bool {
-	return slices.Contains(call.tiles[:call.count], tile)
+func (call OpenMelds) Has(meld OpenMeld) bool {
+	return slices.ContainsFunc(call.melds[:call.count], meld.Eq)
 }
 
-type KanType uint8
-
-const (
-	ANKAN KanType = iota
-	DAIMINKAN
-	SHOUMINKAN
-)
-
-type KanCalls struct {
-	OpenCalls
-	kanType [4]KanType
-}
-
-func (call KanCalls) Add(tile Tile, kanType KanType) {
-	call.tiles[call.count] = tile
-	call.kanType[call.count] = kanType
-	call.count += 1
-}
