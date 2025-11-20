@@ -2,8 +2,17 @@ package score
 
 import (
 	"codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	game "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	MeldFinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 )
 
+type WinMethodValue int
+const (
+	WinByClosedRon WinMethodValue = 10
+	WinByTsumo WinMethodValue = 2
+)
+
+// Represents the scoring system
 type Points struct {
 	han uint16
 	fu uint16
@@ -22,7 +31,6 @@ func ComputePoints(
 	points Points,
 	isDealer bool,
 ) (value PointValue) {
-	
 
 	roundUp := func(score uint) uint {
 		return score + (100 - (score % 100))
@@ -71,10 +79,27 @@ func ComputePoints(
 		multiplyBy = float32(points.han / 13)
 	}
 
-	value.NonDealerTsumo = uint(baseScore * nonDealerMultiplier * uint(multiplyBy))
-	value.DealerTsumo = uint(baseScore * dealerMultiplier * uint(multiplyBy))
-	value.Ron = uint(baseScore * ronMultiplier * uint(multiplyBy))	
+	value.NonDealerTsumo = uint(float32(baseScore) * float32(nonDealerMultiplier) * multiplyBy)
+	value.DealerTsumo = uint(float32(baseScore) * float32(dealerMultiplier) * multiplyBy)
+	value.Ron = uint(float32(baseScore) * float32(ronMultiplier) * multiplyBy)	
 
 	return value
 }
 
+// TODO
+func ComputeFu(
+	winningCombination MeldFinder.WinningCombination,
+	waitsAtTenpai []game.Tile,
+	winMethod WinMethodValue,
+	playerWind game.Wind,
+	roundWind game.Wind,
+) uint16 {
+	return 0
+}
+
+// TODO
+func ComputeHan(
+	tiles []game.Tile,
+) uint16 {
+	return 0
+}

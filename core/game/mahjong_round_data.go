@@ -232,6 +232,8 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 	yaku := NO_YAKU
 	for _, combo := range combos {
 		// Compute score
+		
+		// maxScore = max(maxScore, )
 	}
 
 	return yaku, 0
