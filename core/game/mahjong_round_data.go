@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"slices"
 
+	meldfinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	core "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/hand"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
-	"codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 )
 
 type MahjongRoundData struct {
@@ -176,10 +177,63 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	return nil
 }
 
+func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) bool {
+
+	hand := data.tileState.Hands[playerIdx]
+
+	// Check Kokushi Musou
+	if hand.Closed() {
+		typeList := []Tile{Manzu, Pinzu, Souzu}
+		numberList := []uint8{1, 9}
+		tileList := []Tile{}
+		for _, t := range typeList {
+			for _, n := range numberList {
+				tileList = append(tileList, MakeNumberTile(t, n))
+			}
+		}
+
+		// Thirteen waits
+		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile) {
+			return true
+		}
+
+		hand.ClosedHand.Add(extraTile)
+		totalValid := 0
+		for _, tile := range tileList {
+			count := hand.ClosedHand.HasTileN(tile)
+			if count == 1 || count == 2 {
+				totalValid += count
+			}
+		}
+		// Regular kokushi
+		if totalValid == 14 {
+			return true
+		}
+		hand.ClosedHand.Pop(1)
+	}
+
+	// Check Chiitoitsu
+	if hand.Closed() {
+		unique, count := hand.ClosedHand.UniqueTiles()
+		success := true
+		for i := range count {
+			if count[i] != 2 {
+				success = false
+			}
+		}
+		if len(unique) == 7 && success {
+			return true
+		}
+	}
+
+	// Check four melds and a pair wins
+	return meldfinder.HasWinningCombination(hand.ClosedHand.Hand(), int(hand.OpenMeldCount()))
+}
+
 // Check that the hand can win, and the score and yaku
 //
 // TODO: Compute score
-func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) (YakuType, int) {
+func CheckHandScore(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) (YakuType, int) {
 
 	hand := data.tileState.Hands[playerIdx]
 
@@ -232,7 +286,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 	yaku := NO_YAKU
 	for _, combo := range combos {
 		// Compute score
-		
+
 		// maxScore = max(maxScore, )
 	}
 
@@ -277,4 +331,32 @@ func CheckHandWaits(playerIdx uint8, data *MahjongRoundData) []Tile {
 	return nil
 }
 
+func CheckKokushiMusou(hand core.Hand) YakuType {
+	if hand.Closed() {
+		typeList := []Tile{Manzu, Pinzu, Souzu}
+		numberList := []uint8{1, 9}
+		tileList := []Tile{}
+		for _, t := range typeList {
+			for _, n := range numberList {
+				tileList = append(tileList, MakeNumberTile(t, n))
+			}
+		}
 
+		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile) {
+			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU, 0
+		}
+
+		hand.ClosedHand.Add(extraTile)
+		totalValid := 0
+		for _, tile := range tileList {
+			count := hand.ClosedHand.HasTileN(tile)
+			if count == 1 || count == 2 {
+				totalValid += count
+			}
+		}
+		if totalValid == 14 {
+			return KOKUSHI_MUSOU_YAKU, 0
+		}
+		hand.ClosedHand.Pop(1)
+	}
+}

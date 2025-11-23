@@ -1,9 +1,15 @@
-package core
+package yaku
+
+import "errors"
+
+// TODO: Make this a non shitty class
 
 type YakuType uint64
 
 type Yakus struct {
-	value YakuType
+	yakuType YakuType
+	HandOpen bool
+	isKazoe  bool
 }
 
 const (
@@ -58,70 +64,101 @@ const (
 	NAGASHI_MANGAN_YAKU
 )
 
-func iterateYaku(yakus YakuType, operate func(singleYaku YakuType)) {
-	for itr := 0; itr != 64; itr += 1 {
-		if (yakus>>itr)&1 == 1 {
-			operate(yakus & (1 << itr))
-		}
-	}
+var yakuHan = map[YakuType]int{
+	NO_YAKU:           0,
+	MENZEN_TSUMO_YAKU: 1,
+	RIICHI_YAKU:       1,
+	IPPATSU_YAKU:      1,
+	PINFU_YAKU:        1,
+	IIPEIKOU_YAKU:     1,
+
+	HAITEI_YAOYUE_YAKU:  1,
+	HOUTEI_RAOYUI_YAKU:  1,
+	RINSHAN_KAIHOU_YAKU: 1,
+	CHANKAN_YAKU:        1,
+	TANYAO_YAKU:         1,
+	YAKUHAI_YAKU:        1,
+
+	DOUBLE_RIICHI_YAKU:   2,
+	CHANTAIYAO_YAKU:      2,
+	SANSHOKU_DOUJUN_YAKU: 2,
+	ITTSU_YAKU:           2,
+	TOITOI_YAKU:          2,
+	SANANKOU_YAKU:        2,
+	SANSHOKU_DOUKOU_YAKU: 2,
+	SANKANTSU_YAKU:       2,
+	CHIITOITSU_YAKU:      2,
+	HONROUTOU_YAKU:       2,
+	SHOUSANGEN_YAKU:      2,
+
+	HONITSU_YAKU:    3,
+	JUNCHAN_YAKU:    3,
+	RYANPEIKOU_YAKU: 3,
+
+	CHINITSU_YAKU: 6,
+
+	KAZOE_YAKUMAN_YAKU:                13,
+	KOKUSHI_MUSOU_YAKU:                13,
+	KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU: 26,
+	SUUANKOU_YAKU:                     13,
+	DAISANGEN_YAKU:                    13,
+	SHOUSUUSHII_YAKU:                  13,
+	DAISUUSHII_YAKU:                   26,
+	TSUUIISOU_YAKU:                    13,
+	CHINROUTOU_YAKU:                   13,
+	RYUUIISOU_YAKU:                    13,
+	CHUUREN_POUTOU_YAKU:               13,
+	SUUKANTSU_YAKU:                    13,
+
+	TENHOU_YAKU:  13,
+	CHIIHOU_YAKU: 13,
+
+	NAGASHI_MANGAN_YAKU: 3,
 }
 
-func (yaku YakuType) Han() int {
-
-	yakuHan := map[YakuType]int{
-		NO_YAKU:           0,
-		MENZEN_TSUMO_YAKU: 1,
-		RIICHI_YAKU:       1,
-		IPPATSU_YAKU:      1,
-		PINFU_YAKU:        1,
-		IIPEIKOU_YAKU:     1,
-
-		HAITEI_YAOYUE_YAKU:  1,
-		HOUTEI_RAOYUI_YAKU:  1,
-		RINSHAN_KAIHOU_YAKU: 1,
-		CHANKAN_YAKU:        1,
-		TANYAO_YAKU:         1,
-		YAKUHAI_YAKU:        1,
-
-		DOUBLE_RIICHI_YAKU:   2,
-		CHANTAIYAO_YAKU:      2,
-		SANSHOKU_DOUJUN_YAKU: 2,
-		ITTSU_YAKU:           2,
-		TOITOI_YAKU:          2,
-		SANANKOU_YAKU:        2,
-		SANSHOKU_DOUKOU_YAKU: 2,
-		SANKANTSU_YAKU:       2,
-		CHIITOITSU_YAKU:      2,
-		HONROUTOU_YAKU:       2,
-		SHOUSANGEN_YAKU:      2,
-
-		HONITSU_YAKU:    3,
-		JUNCHAN_YAKU:    3,
-		RYANPEIKOU_YAKU: 3,
-
-		CHINITSU_YAKU: 6,
-
-		KAZOE_YAKUMAN_YAKU:                13,
-		KOKUSHI_MUSOU_YAKU:                13,
-		KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU: 26,
-		SUUANKOU_YAKU:                     13,
-		DAISANGEN_YAKU:                    13,
-		SHOUSUUSHII_YAKU:                  13,
-		DAISUUSHII_YAKU:                   26,
-		TSUUIISOU_YAKU:                    13,
-		CHINROUTOU_YAKU:                   13,
-		RYUUIISOU_YAKU:                    13,
-		CHUUREN_POUTOU_YAKU:               13,
-		SUUKANTSU_YAKU:                    13,
-
-		TENHOU_YAKU:  13,
-		CHIIHOU_YAKU: 13,
-
-		NAGASHI_MANGAN_YAKU: 3,
+func iterateYaku(yakus YakuType, fn func(singleYaku YakuType) bool) func(YakuType) bool {
+	return func(singleYaku YakuType) bool {
+		for itr := 0; itr != 64; itr += 1 {
+			if (yakus>>itr)&1 == 1 {
+				fn(yakus & (1 << itr))
+			}
+		}
+		return false
 	}
 
+}
+
+func (yaku Yakus) Han() int {
+	// Check if there is yakuman which overrides other yaku
+
+	// Check for kazoe yakuman
+
+}
+
+func (yaku Yakus) AddYaku(added YakuType) error {
+	if yaku.yakuType == NO_YAKU {
+		return errors.New("Can't add no yaku")
+	}
+
+	if yaku.yakuType == KAZOE_YAKUMAN_YAKU {
+		return errors.New("Can't add Kazoe Yakuman directly")
+	}
+
+	yaku.yakuType = yaku.yakuType&(^NO_YAKU) | added
+	return nil
+}
+
+func (yaku Yakus) String() string {
+	panic("TODO")
+}
+
+func (yaku Yakus) NoYaku() bool {
+	return yaku.yakuType == NO_YAKU
+}
+
+func (yaku Yakus) TotalHan() int {
 	totalHan := 0
-	iterateYaku(yaku, func(singleYaku YakuType) {
+	iterateYaku(yaku.value, func(singleYaku YakuType) {
 		totalHan += yakuHan[singleYaku]
 	})
 
