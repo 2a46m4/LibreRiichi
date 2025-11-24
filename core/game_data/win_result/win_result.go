@@ -6,8 +6,14 @@ import (
 )
 
 type WinResult struct {
-	Yakus       YakuType
-	// WinningHand Hand
-	WinningTile Tile
-	WonByRon    bool
+	Yakus          YakuList
+	WinningTile    Tile
+	WonByRon       bool
+	PointsTransfer []PointsTransfer
+}
+
+type PointsTransfer struct {
+	To     uint8
+	From   uint8
+	Amount uint
 }

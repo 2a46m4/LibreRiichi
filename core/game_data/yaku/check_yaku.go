@@ -23,9 +23,9 @@ type YakuContext struct {
 	IsChiihou                  bool
 	IsHandOpen                 bool
 	HandInRiichi               bool
-	RoundWind core.Wind
-	PlayerWind core.Wind
-	IsDealer bool
+	RoundWind                  core.Wind
+	PlayerWind                 core.Wind
+	IsDealer                   bool
 }
 
 // Checks whether the current yaku is valid for the given hand
@@ -39,42 +39,42 @@ type YakuChecker func(
 //
 // No kazoe yakuman, nor chiitoitsu and kokushi musou
 var YakuCheckerMap = map[YakuType]YakuChecker{
-	MENZEN_TSUMO_YAKU:                 CheckMenzenTsumoYaku,
-	RIICHI_YAKU:                       CheckRiichi,
-	IPPATSU_YAKU:                      CheckIppatsu,
-	PINFU_YAKU:                        CheckPinfu,
-	IIPEIKOU_YAKU:                     CheckIipeikou,
-	HAITEI_YAOYUE_YAKU:                CheckHaiteiYaoyue,
-	HOUTEI_RAOYUI_YAKU:                CheckHouteiRaoyui,
-	RINSHAN_KAIHOU_YAKU:               CheckRinshanKaihou,
-	CHANKAN_YAKU:                      CheckChankan,
-	TANYAO_YAKU:                       CheckTanyao,
-	YAKUHAI_YAKU:                      CheckYakuhai,
-	DOUBLE_RIICHI_YAKU:                CheckDoubleRiichi,
-	CHANTAIYAO_YAKU:                   CheckChantaiyao,
-	SANSHOKU_DOUJUN_YAKU:              CheckSanshokuDoujun,
-	ITTSU_YAKU:                        CheckIttsu,
-	TOITOI_YAKU:                       CheckToitoi,
-	SANANKOU_YAKU:                     CheckSanankou,
-	SANSHOKU_DOUKOU_YAKU:              CheckSanshokuDoukou,
-	SANKANTSU_YAKU:                    CheckSankantsu,
-	HONROUTOU_YAKU:                    CheckHonroutou,
-	SHOUSANGEN_YAKU:                   CheckShousangen,
-	HONITSU_YAKU:                      CheckHonitsu,
-	JUNCHAN_YAKU:                      CheckJunchan,
-	RYANPEIKOU_YAKU:                   CheckRyanpeikou,
-	CHINITSU_YAKU:                     CheckChinitsu,
-	SUUANKOU_YAKU:                     CheckSuuankou,
-	DAISANGEN_YAKU:                    CheckDaisangen,
-	SHOUSUUSHII_YAKU:                  CheckShousuushii,
-	DAISUUSHII_YAKU:                   CheckDaisuushii,
-	TSUUIISOU_YAKU:                    CheckTsuuiisou,
-	CHINROUTOU_YAKU:                   CheckChinroutou,
-	RYUUIISOU_YAKU:                    CheckRyuuiisou,
-	CHUUREN_POUTOU_YAKU:               CheckChuurenPoutou,
-	SUUKANTSU_YAKU:                    CheckSuukantsu,
-	TENHOU_YAKU:                       CheckTenhou,
-	CHIIHOU_YAKU:                      CheckChiihou,
+	MENZEN_TSUMO_YAKU:    CheckMenzenTsumoYaku,
+	RIICHI_YAKU:          CheckRiichi,
+	IPPATSU_YAKU:         CheckIppatsu,
+	PINFU_YAKU:           CheckPinfu,
+	IIPEIKOU_YAKU:        CheckIipeikou,
+	HAITEI_YAOYUE_YAKU:   CheckHaiteiYaoyue,
+	HOUTEI_RAOYUI_YAKU:   CheckHouteiRaoyui,
+	RINSHAN_KAIHOU_YAKU:  CheckRinshanKaihou,
+	CHANKAN_YAKU:         CheckChankan,
+	TANYAO_YAKU:          CheckTanyao,
+	YAKUHAI_YAKU:         CheckYakuhai,
+	DOUBLE_RIICHI_YAKU:   CheckDoubleRiichi,
+	CHANTAIYAO_YAKU:      CheckChantaiyao,
+	SANSHOKU_DOUJUN_YAKU: CheckSanshokuDoujun,
+	ITTSU_YAKU:           CheckIttsu,
+	TOITOI_YAKU:          CheckToitoi,
+	SANANKOU_YAKU:        CheckSanankou,
+	SANSHOKU_DOUKOU_YAKU: CheckSanshokuDoukou,
+	SANKANTSU_YAKU:       CheckSankantsu,
+	HONROUTOU_YAKU:       CheckHonroutou,
+	SHOUSANGEN_YAKU:      CheckShousangen,
+	HONITSU_YAKU:         CheckHonitsu,
+	JUNCHAN_YAKU:         CheckJunchan,
+	RYANPEIKOU_YAKU:      CheckRyanpeikou,
+	CHINITSU_YAKU:        CheckChinitsu,
+	SUUANKOU_YAKU:        CheckSuuankou,
+	DAISANGEN_YAKU:       CheckDaisangen,
+	SHOUSUUSHII_YAKU:     CheckShousuushii,
+	DAISUUSHII_YAKU:      CheckDaisuushii,
+	TSUUIISOU_YAKU:       CheckTsuuiisou,
+	CHINROUTOU_YAKU:      CheckChinroutou,
+	RYUUIISOU_YAKU:       CheckRyuuiisou,
+	CHUUREN_POUTOU_YAKU:  CheckChuurenPoutou,
+	SUUKANTSU_YAKU:       CheckSuukantsu,
+	TENHOU_YAKU:          CheckTenhou,
+	CHIIHOU_YAKU:         CheckChiihou,
 }
 
 func CheckHandCanWin(hand *Hand, yakuContext YakuContext, winningTile Tile) bool {
@@ -96,7 +96,7 @@ func CheckHandCanWin(hand *Hand, yakuContext YakuContext, winningTile Tile) bool
 }
 
 // Returns yaku and score of a given hand
-func CheckYakuAndScore(hand *Hand, winningTile Tile, yakuContext YakuContext) (YakuList, score.PointValue, error) {
+func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (YakuList, score.PointValue, error) {
 	yakuBuilder := NewYakuBuilder(yakuContext.IsHandOpen)
 
 	if CheckKokushiMusouThirteenWaits(hand, yakuContext, winningTile) {
@@ -135,7 +135,7 @@ func CheckYakuAndScore(hand *Hand, winningTile Tile, yakuContext YakuContext) (Y
 			Han: uint16(list.Han()),
 			Fu:  25, // Chiitoitsu always has 25 fu
 		}, yakuContext.IsDealer)
-		return list, currentScore, nil		
+		return list, currentScore, nil
 	}
 
 	// Check four melds and a pair wins
@@ -145,7 +145,7 @@ func CheckYakuAndScore(hand *Hand, winningTile Tile, yakuContext YakuContext) (Y
 	var yakuList YakuList
 	foundValidYaku := false
 
-	RANGE_OVER_COMBOS:
+RANGE_OVER_COMBOS:
 	for _, combo := range combos {
 		yakuBuilder.Reset()
 
