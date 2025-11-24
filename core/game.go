@@ -187,9 +187,7 @@ func (game *MahjongGameOld) HandleChii(chiiData Chii, fromPlayer uint8) (infos I
 	if err != nil {
 		return nil, BadActionError{}
 	}
-
 	game.CurrentTurnOrder = fromPlayer
-
 	return *infos.AddGlobalMessage(
 		ArenaBoardEvent{BoardEvent: PlayerActionEvent{
 			Action: Chii{
@@ -491,12 +489,3 @@ func (game *MahjongGameOld) getPostTossActions() ([]PendingAction, error) {
 	return moves, nil
 }
 
-// Return the game results
-func (MahjongGameOld) GetGameResults() (GameResult, error) {
-	return GameResult{}, nil
-}
-
-// Returns the maximum amount of players
-func (MahjongGameOld) GetMaxPlayers() int {
-	return 4
-}
