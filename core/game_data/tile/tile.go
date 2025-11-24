@@ -1,4 +1,4 @@
-package core
+package tile
 
 type Tile uint8
 
