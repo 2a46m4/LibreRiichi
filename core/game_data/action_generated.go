@@ -2,161 +2,163 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
-    . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
+	"encoding/json"
+	"fmt"
+
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/win_result"
 )
 
 type ActionType uint8
 
 type ActionUnpacker struct {
-    Action
+	Action
 }
 
 const (
-	RON ActionType = iota
-	TSUMO ActionType = iota
+	RON    ActionType = iota
+	TSUMO  ActionType = iota
 	RIICHI ActionType = iota
-	TOSS ActionType = iota
-	SKIP ActionType = iota
-	PON ActionType = iota
-	KAN ActionType = iota
-	CHII ActionType = iota
-	DRAW ActionType = iota
+	TOSS   ActionType = iota
+	SKIP   ActionType = iota
+	PON    ActionType = iota
+	KAN    ActionType = iota
+	CHII   ActionType = iota
+	DRAW   ActionType = iota
 )
+
 func (Ron) Data() {}
 func (obj Ron) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        TileToRon Tile `json:"tile_to_ron"`
-        WinResult WinResult `json:"win_result"`
+		TileToRon  Tile       `json:"tile_to_ron"`
+		WinResult  WinResult  `json:"win_result"`
 	}
 
-    raw.ActionType = RON
-    raw.TileToRon = obj.TileToRon
-    raw.WinResult = obj.WinResult
+	raw.ActionType = RON
+	raw.TileToRon = obj.TileToRon
+	raw.WinResult = obj.WinResult
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Tsumo) Data() {}
 func (obj Tsumo) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ActionType ActionType `json:"action_type"`
-        TileToTsumo Tile `json:"tile_to_tsumo"`
+	var raw struct {
+		ActionType  ActionType `json:"action_type"`
+		TileToTsumo Tile       `json:"tile_to_tsumo"`
 	}
 
-    raw.ActionType = TSUMO
-    raw.TileToTsumo = obj.TileToTsumo
+	raw.ActionType = TSUMO
+	raw.TileToTsumo = obj.TileToTsumo
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Riichi) Data() {}
 func (obj Riichi) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ActionType ActionType `json:"action_type"`
-        TileToRiichi Tile `json:"tile_to_riichi"`
+	var raw struct {
+		ActionType   ActionType `json:"action_type"`
+		TileToRiichi Tile       `json:"tile_to_riichi"`
 	}
 
-    raw.ActionType = RIICHI
-    raw.TileToRiichi = obj.TileToRiichi
+	raw.ActionType = RIICHI
+	raw.TileToRiichi = obj.TileToRiichi
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Toss) Data() {}
 func (obj Toss) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        TileToToss Tile `json:"tile_to_toss"`
+		TileToToss Tile       `json:"tile_to_toss"`
 	}
 
-    raw.ActionType = TOSS
-    raw.TileToToss = obj.TileToToss
+	raw.ActionType = TOSS
+	raw.TileToToss = obj.TileToToss
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Skip) Data() {}
 func (obj Skip) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ActionType ActionType `json:"action_type"`
-        ActionToSkip Action `json:"action_to_skip"`
+	var raw struct {
+		ActionType   ActionType `json:"action_type"`
+		ActionToSkip Action     `json:"action_to_skip"`
 	}
 
-    raw.ActionType = SKIP
-    raw.ActionToSkip = obj.ActionToSkip
+	raw.ActionType = SKIP
+	raw.ActionToSkip = obj.ActionToSkip
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj *Skip) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ActionType ActionType `json:"action_type"`
-        ActionToSkip ActionUnpacker `json:"action_to_skip"`
+	var raw struct {
+		ActionType   ActionType     `json:"action_type"`
+		ActionToSkip ActionUnpacker `json:"action_to_skip"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
-    obj.ActionToSkip = raw.ActionToSkip.Action
+	obj.ActionToSkip = raw.ActionToSkip.Action
 
-    return err
+	return err
 }
 
 func (Pon) Data() {}
 func (obj Pon) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        TileToPon Tile `json:"tile_to_pon"`
+		TileToPon  Tile       `json:"tile_to_pon"`
 	}
 
-    raw.ActionType = PON
-    raw.TileToPon = obj.TileToPon
+	raw.ActionType = PON
+	raw.TileToPon = obj.TileToPon
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Kan) Data() {}
 func (obj Kan) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        TileToKan Tile `json:"tile_to_kan"`
+		TileToKan  Tile       `json:"tile_to_kan"`
 	}
 
-    raw.ActionType = KAN
-    raw.TileToKan = obj.TileToKan
+	raw.ActionType = KAN
+	raw.TileToKan = obj.TileToKan
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Chii) Data() {}
 func (obj Chii) MarshalJSON() ([]byte, error) {
-    var raw struct {
-		ActionType ActionType `json:"action_type"`
-        TileToChii Tile `json:"tile_to_chii"`
-        TilesInHand [2]Tile `json:"tiles_in_hand"`
+	var raw struct {
+		ActionType  ActionType `json:"action_type"`
+		TileToChii  Tile       `json:"tile_to_chii"`
+		TilesInHand [2]Tile    `json:"tiles_in_hand"`
 	}
 
-    raw.ActionType = CHII
-    raw.TileToChii = obj.TileToChii
-    raw.TilesInHand = obj.TilesInHand
+	raw.ActionType = CHII
+	raw.TileToChii = obj.TileToChii
+	raw.TilesInHand = obj.TilesInHand
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (Draw) Data() {}
 func (obj Draw) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ActionType ActionType `json:"action_type"`
-        DrawnTile Tile `json:"drawn_tile"`
+		DrawnTile  Tile       `json:"drawn_tile"`
 	}
 
-    raw.ActionType = DRAW
-    raw.DrawnTile = obj.DrawnTile
+	raw.ActionType = DRAW
+	raw.DrawnTile = obj.DrawnTile
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
-
 
 func (msg *ActionUnpacker) Uncover() Action {
 	return msg.Action
@@ -242,37 +244,37 @@ func (msg *ActionUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type ActionHandler[T any, E any] interface {
-    HandleRon(Ron, E) (T, error)
-    HandleTsumo(Tsumo, E) (T, error)
-    HandleRiichi(Riichi, E) (T, error)
-    HandleToss(Toss, E) (T, error)
-    HandleSkip(Skip, E) (T, error)
-    HandlePon(Pon, E) (T, error)
-    HandleKan(Kan, E) (T, error)
-    HandleChii(Chii, E) (T, error)
-    HandleDraw(Draw, E) (T, error)
+	HandleRon(Ron, E) (T, error)
+	HandleTsumo(Tsumo, E) (T, error)
+	HandleRiichi(Riichi, E) (T, error)
+	HandleToss(Toss, E) (T, error)
+	HandleSkip(Skip, E) (T, error)
+	HandlePon(Pon, E) (T, error)
+	HandleKan(Kan, E) (T, error)
+	HandleChii(Chii, E) (T, error)
+	HandleDraw(Draw, E) (T, error)
 }
 
 func ActionDecode[T any, E any](handler ActionHandler[T, E], data Action, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case Ron:
-        return handler.HandleRon(v, extraData)
-    case Tsumo:
-        return handler.HandleTsumo(v, extraData)
-    case Riichi:
-        return handler.HandleRiichi(v, extraData)
-    case Toss:
-        return handler.HandleToss(v, extraData)
-    case Skip:
-        return handler.HandleSkip(v, extraData)
-    case Pon:
-        return handler.HandlePon(v, extraData)
-    case Kan:
-        return handler.HandleKan(v, extraData)
-    case Chii:
-        return handler.HandleChii(v, extraData)
-    case Draw:
-        return handler.HandleDraw(v, extraData)
+	case Ron:
+		return handler.HandleRon(v, extraData)
+	case Tsumo:
+		return handler.HandleTsumo(v, extraData)
+	case Riichi:
+		return handler.HandleRiichi(v, extraData)
+	case Toss:
+		return handler.HandleToss(v, extraData)
+	case Skip:
+		return handler.HandleSkip(v, extraData)
+	case Pon:
+		return handler.HandlePon(v, extraData)
+	case Kan:
+		return handler.HandleKan(v, extraData)
+	case Chii:
+		return handler.HandleChii(v, extraData)
+	case Draw:
+		return handler.HandleDraw(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

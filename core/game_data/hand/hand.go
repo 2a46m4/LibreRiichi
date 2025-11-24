@@ -9,7 +9,7 @@ import (
 
 type Hand struct {
 	ClosedHand ClosedHand
-	OpenMelds OpenMelds
+	OpenMelds  OpenMelds
 	InRiichi   bool
 	WaitingFor []Tile // Only used when the hand is in riichi
 }
@@ -85,28 +85,26 @@ func (hand Hand) TestDaiminKan(tile, draw Tile) bool {
 	return !hand.InRiichi && !hand.FullHand() && (hand.ClosedHand.HasTileN(tile) == 3)
 }
 
-func (hand *Hand) DaiminKan(tile, draw Tile) {
+func (hand *Hand) DaiminKan(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile)
-	hand.ClosedHand.Add(draw)
 	hand.OpenMelds.Add(OpenMeld{
 		Type:      DAIMINKAN_MELD,
 		FirstTile: tile,
 	})
 }
 
-func (hand Hand) TestShouminkan(tile, draw Tile) bool {
+func (hand Hand) TestShouminkan(tile Tile) bool {
 	return !hand.InRiichi && !hand.FullHand() && hand.OpenMelds.Has(OpenMeld{
 		Type:      PON_MELD,
 		FirstTile: tile,
 	})
 }
 
-func (hand *Hand) ShouminKan(tile, draw Tile) {
+func (hand *Hand) ShouminKan(tile Tile) {
 	hand.OpenMelds.Remove(OpenMeld{
 		Type:      PON_MELD,
 		FirstTile: tile,
 	})
-	hand.ClosedHand.Add(draw)
 	hand.OpenMelds.Add(OpenMeld{
 		Type:      SHOUMINKAN_MELD,
 		FirstTile: tile,
@@ -117,9 +115,8 @@ func (hand Hand) TestAnKan(tile Tile) bool {
 	return !hand.InRiichi && hand.FullHand() && (hand.ClosedHand.HasTileN(tile) == 4)
 }
 
-func (hand *Hand) AnKan(tile, draw Tile) {
+func (hand *Hand) AnKan(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile, tile)
-	hand.ClosedHand.Add(draw)
 	hand.OpenMelds.Add(OpenMeld{
 		Type:      ANKAN_MELD,
 		FirstTile: tile,
@@ -132,7 +129,7 @@ func (hand Hand) TestChii(firstTile Tile, tiles [2]Tile) bool {
 
 // firstTile is the first tile of the sequence and can be in the
 // closed hand or from the discard pile.
-// 
+//
 // tiles are tiles in the closed hand that need to be removed.
 func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
 	hand.ClosedHand.RemoveTile(tiles[:]...)
@@ -156,7 +153,7 @@ func (hand *Hand) Riichi(tile Tile) {
 
 // TODO: Also need to test that the hand has a yaku
 func (hand Hand) TestRon(tile Tile) bool {
-	return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile) 
+	return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
 }
 
 func (hand *Hand) Ron(tile Tile) {
@@ -165,10 +162,9 @@ func (hand *Hand) Ron(tile Tile) {
 
 // Also need to test that the hand has a yaku
 func (hand Hand) TestTsumo(tile Tile) bool {
-	return hand.FullHand() && slices.Contains(hand.WaitingFor, tile) 
+	return hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
 }
 
 func (hand *Hand) Tsumo(tile Tile) {
 	hand.ClosedHand.Add(tile)
 }
-

@@ -1,12 +1,11 @@
 package game
 
 import (
-	"errors"
 	"slices"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/hand"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
@@ -34,10 +33,10 @@ func (game *TileState) newRound() {
 
 	deadWallTiles := tiles[70:84]
 	game.DeadWall.Reset(deadWallTiles)
-	game.DeadWall.revealDora()
+	game.DeadWall.dora.revealDora()
 
 	for i := range 4 {
-		game.Hands[i].ClosedHand.Add(tiles[84+i*13:84+(i+1)*13]...)
+		game.Hands[i].ClosedHand.Add(tiles[84+i*13 : 84+(i+1)*13]...)
 	}
 }
 
@@ -102,4 +101,3 @@ func (game *TileState) Tsumo(playerIdx uint8, tile Tile) Tsumo {
 	// TODO: Implement Tsumo logic
 	return Tsumo{TileToTsumo: tile}
 }
-

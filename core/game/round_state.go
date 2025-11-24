@@ -276,7 +276,7 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 	round.data.tileState.Discard(playerIdx, action.TileToToss)
 
 	// Check for any calls
-	round.data
+	// round.data
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {

@@ -4,6 +4,7 @@ package core
 
 import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/win_result"
 )
 
 type Action interface {
