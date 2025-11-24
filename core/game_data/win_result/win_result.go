@@ -1,4 +1,4 @@
-package core
+package winresult
 
 import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"

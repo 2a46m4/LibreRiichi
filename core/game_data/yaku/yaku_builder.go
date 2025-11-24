@@ -72,6 +72,11 @@ func (yaku *YakuBuilder) AddYaku(added YakuType) error {
 	return nil
 }
 
+func (yaku *YakuBuilder) Reset() {
+	yaku.isKazoe = false
+	yaku.value = NO_YAKU
+}
+
 // Without counting kazoe yakuman
 func (yakuBuilder YakuBuilder) han() (totalHan int) {
 	if yakuBuilder.value == NO_YAKU {

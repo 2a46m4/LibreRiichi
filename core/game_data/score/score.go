@@ -3,6 +3,7 @@ package score
 import (
 	"codeberg.org/ijnakashiar/LibreRiichi/core/util"
 	game "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	tile "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	MeldFinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 )
 
@@ -14,8 +15,8 @@ const (
 
 // Represents the scoring system
 type Points struct {
-	han uint16
-	fu uint16
+	Han uint16
+	Fu uint16
 }
 
 // Represents the amount of points that each role has to pay. In the
@@ -54,8 +55,8 @@ func ComputePoints(
 
 	var multiplyBy float32
 	var manganScore uint = 2000
-	baseScore := uint(points.fu) * (core.IntPow(uint(2), uint(2 + points.han)))
-	if points.han <= 4 && roundUp(baseScore * ronMultiplier) < manganScore * ronMultiplier {
+	baseScore := uint(points.Fu) * (core.IntPow(uint(2), uint(2 + points.Han)))
+	if points.Han <= 4 && roundUp(baseScore * ronMultiplier) < manganScore * ronMultiplier {
 		value.NonDealerTsumo = roundUp(baseScore * nonDealerMultiplier)
 		value.DealerTsumo = roundUp(baseScore * dealerMultiplier)
 		value.Ron = roundUp(baseScore * ronMultiplier)
@@ -64,7 +65,7 @@ func ComputePoints(
 		baseScore = manganScore
 	}
 
-	switch points.han {
+	switch points.Han {
 	case 5:
 		multiplyBy = 1
 	case 6, 7: 
@@ -76,7 +77,7 @@ func ComputePoints(
 	case 13: 
 		multiplyBy = 4
 	default:
-		multiplyBy = float32(points.han / 13)
+		multiplyBy = float32(points.Han / 13)
 	}
 
 	value.NonDealerTsumo = uint(float32(baseScore) * float32(nonDealerMultiplier) * multiplyBy)
@@ -89,17 +90,10 @@ func ComputePoints(
 // TODO
 func ComputeFu(
 	winningCombination MeldFinder.WinningCombination,
-	waitsAtTenpai []game.Tile,
+	waitsAtTenpai []tile.Tile,
 	winMethod WinMethodValue,
 	playerWind game.Wind,
 	roundWind game.Wind,
-) uint16 {
-	return 0
-}
-
-// TODO
-func ComputeHan(
-	tiles []game.Tile,
 ) uint16 {
 	return 0
 }
