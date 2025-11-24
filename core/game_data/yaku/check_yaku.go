@@ -1,26 +1,32 @@
-package game
+package yaku
 
 import (
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"slices"
+
+	meldfinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/hand"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 )
 
-type yakuContext struct {
-	isSelfDrawn                bool
-	hasCalledRiichi            bool
-	isIppatsu                  bool
-	isLastTileDrawnOrDiscarded bool
-	isDeadWallCall             bool
-	isFromOpponentKanCall      bool
-	isDoubleRiichi             bool
-	isTenhou                   bool
-	isChiihou                  bool
+type YakuContext struct {
+	IsSelfDrawn                bool
+	HasCalledRiichi            bool
+	IsIppatsu                  bool
+	IsLastTileDrawnOrDiscarded bool
+	IsDeadWallCall             bool
+	IsFromOpponentKanCall      bool
+	IsDoubleRiichi             bool
+	IsTenhou                   bool
+	IsChiihou                  bool
+	IsHandOpen                 bool
+	HandInRiichi               bool
 }
 
+// Checks whether the current yaku is valid for the given hand
 type YakuChecker func(
-	playerIdx uint8,
-	data *MahjongRoundData,
-	context yakuContext,
-	extraTile ...Tile,
+	hand []Tile,
+	context YakuContext,
+	winningTile Tile,
 ) bool
 
 var YakuCheckerMap = map[YakuType]YakuChecker{
@@ -67,190 +73,235 @@ var YakuCheckerMap = map[YakuType]YakuChecker{
 	NAGASHI_MANGAN_YAKU:               CheckNagashiMangan,
 }
 
-func CheckYaku(playerIdx uint8, data *MahjongRoundData, extraTile ...Tile) map[YakuType]bool {
+func CheckHandCanWin(hand Hand, winningTile Tile, yakuContext YakuContext) bool {
+	// Check Kokushi Musou
+	if !yakuContext.IsHandOpen {
+		typeList := []Tile{Manzu, Pinzu, Souzu}
+		numberList := []uint8{1, 9}
+		tileList := []Tile{}
+		for _, t := range typeList {
+			for _, n := range numberList {
+				tileList = append(tileList, MakeNumberTile(t, n))
+			}
+		}
 
+		// Thirteen waits
+		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, winningTile) {
+			return true
+		}
+
+		hand.ClosedHand.Add(winningTile)
+		totalValid := 0
+		for _, tile := range tileList {
+			count := hand.ClosedHand.HasTileN(tile)
+			if count == 1 || count == 2 {
+				totalValid += count
+			}
+		}
+		// Regular kokushi
+		if totalValid == 14 {
+			return true
+		}
+		hand.ClosedHand.Pop(1)
+	}
+
+	// Check Chiitoitsu
+	if !yakuContext.IsHandOpen {
+		unique, count := hand.ClosedHand.UniqueTiles()
+		success := true
+		for i := range count {
+			if count[i] != 2 {
+				success = false
+			}
+		}
+		if len(unique) == 7 && success {
+			return true
+		}
+	}
+
+	// Check four melds and a pair wins
+	return meldfinder.HasWinningCombination(hand.ClosedHand.GetHand(), int(hand.OpenMeldCount()))
+}
+
+func CheckAllYaku(hand Hand, winningTile Tile, yakuContext YakuContext) map[YakuType]bool {
 	return nil
 }
 
-func CheckMenzenTsumoYaku(playerIdx uint8,
-	data *MahjongRoundData,
-	context yakuContext,
-	extraTile ...Tile) bool {
+// Menzen Tsumo Yaku requires:
+// 1. The hand must be self-drawn
+// 2. The hand must be closed/concealed (no open calls)
+func CheckMenzenTsumoYaku(hand []Tile,
+	context YakuContext,
+	winningTile Tile,
+) bool {
 
-	// Menzen Tsumo Yaku requires:
-	// 1. The hand must be self-drawn
-	// 2. The hand must be closed/concealed (no open calls)
-
-	// Check if the hand is self-drawn
-	if !context.isSelfDrawn {
+	if !context.IsSelfDrawn {
 		return false
 	}
 
-	// Check if the hand is closed (no open calls: chi, pon, kan from opponents)
-	// The Open() method returns true when there are no open calls
-	if !data.tileState.Hands[playerIdx].Open() {
+	if context.IsHandOpen {
 		return false
 	}
 
 	return true
 }
 
-func CheckRiichi(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
-	return data.tileState.Hands[playerIdx].InRiichi
-}
-
-func CheckIppatsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckRiichi(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckPinfu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckIppatsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckIipeikou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckPinfu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckHaiteiYaoyue(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckIipeikou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckHouteiRaoyui(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckHaiteiYaoyue(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckRinshanKaihou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckHouteiRaoyui(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChankan(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckRinshanKaihou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckTanyao(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChankan(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckYakuhai(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckTanyao(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckDoubleRiichi(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckYakuhai(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChantaiyao(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckDoubleRiichi(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSanshokuDoujun(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChantaiyao(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckIttsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSanshokuDoujun(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckToitoi(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckIttsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSanankou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckToitoi(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSanshokuDoukou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSanankou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSankantsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSanshokuDoukou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChiitoitsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSankantsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckHonroutou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChiitoitsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckShousangen(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckHonroutou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckHonitsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckShousangen(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckJunchan(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckHonitsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckRyanpeikou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckJunchan(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChinitsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckRyanpeikou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckKazoeYakuman(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChinitsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckKokushiMusou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckKazoeYakuman(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckKokushiMusouThirteenWaits(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckKokushiMusou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSuuankou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckKokushiMusouThirteenWaits(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckDaisangen(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSuuankou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckShousuushii(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckDaisangen(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckDaisuushii(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckShousuushii(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckTsuuiisou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckDaisuushii(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChinroutou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckTsuuiisou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckRyuuiisou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChinroutou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChuurenPoutou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckRyuuiisou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckSuukantsu(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChuurenPoutou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckTenhou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckSuukantsu(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckChiihou(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckTenhou(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }
 
-func CheckNagashiMangan(playerIdx uint8, data *MahjongRoundData, context yakuContext, extraTile ...Tile) bool {
+func CheckChiihou(hand []Tile, context YakuContext, winningTile Tile) bool {
+	return false
+}
+
+func CheckNagashiMangan(hand []Tile, context YakuContext, winningTile Tile) bool {
 	return false
 }

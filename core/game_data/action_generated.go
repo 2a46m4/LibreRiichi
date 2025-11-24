@@ -4,6 +4,7 @@ package core
 import (
     "encoding/json"
     "fmt"
+    . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 )
 
 type ActionType uint8

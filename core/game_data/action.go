@@ -2,6 +2,10 @@ package core
 
 //go:generate go run ../generate_message.go -- Action
 
+import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
+)
+
 type Action interface {
 	Data()
 }

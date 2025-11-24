@@ -5,9 +5,11 @@ import (
 	"slices"
 
 	meldfinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	core "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/hand"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/yaku"
 )
 
 type MahjongRoundData struct {
@@ -63,7 +65,6 @@ func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo
 			actions.Actions = append(actions.Actions, chiiResult)
 		}
 
-		// Check for Ron (winning)
 		ronResult := CheckRon(playerIdx, i, data)
 		if ronResult != nil {
 			actions.Actions = append(actions.Actions, ronResult)
@@ -162,12 +163,27 @@ func CheckPon(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
 func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Action {
 	discardedTile := data.tileState.DiscardPile[discardedPlayerIdx].Last()
 
-	yakuContext := yakuContext{}
+	yakuContext := YakuContext{
+		IsSelfDrawn:                false,
+		HasCalledRiichi:            false,
+		IsIppatsu:                  false,
+		IsLastTileDrawnOrDiscarded: false,
+		IsDeadWallCall:             false,
+		IsFromOpponentKanCall:      false,
+		IsDoubleRiichi:             false,
+		IsTenhou:                   false,
+		IsChiihou:                  false,
+		IsHandOpen:                 false,
+		HandInRiichi:               false,
+	}
 
 	// Check if adding the discarded tile would complete a winning hand
-	yaku, score := CheckHandCanWin(playerIdx, data, yakuContext, discardedTile)
-	if yaku != NO_YAKU {
+	canWin := CheckHandCanWin(playerIdx, data, yakuContext, discardedTile)
+	if canWin {
 		// TODO: Calculate actual WinResult with yaku and scores
+		// Iterate over each yaku, checking which we can get
+		
+		
 		return Ron{
 			TileToRon: discardedTile,
 			WinResult: WinResult{}, // TODO
@@ -177,7 +193,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	return nil
 }
 
-func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) bool {
+func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext YakuContext, extraTile Tile) bool {
 
 	hand := data.tileState.Hands[playerIdx]
 
@@ -233,7 +249,7 @@ func CheckHandCanWin(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCo
 // Check that the hand can win, and the score and yaku
 //
 // TODO: Compute score
-func CheckHandScore(playerIdx uint8, data *MahjongRoundData, yakuContext yakuContext, extraTile Tile) (YakuType, int) {
+func CheckHandScore(playerIdx uint8, data *MahjongRoundData, yakuContext YakuContext, extraTile Tile) (YakuType, int) {
 
 	hand := data.tileState.Hands[playerIdx]
 
@@ -297,7 +313,7 @@ func CheckHandScore(playerIdx uint8, data *MahjongRoundData, yakuContext yakuCon
 func GetHandYaku(
 	playerIdx uint8,
 	data *MahjongRoundData,
-	yakuContext yakuContext,
+	yakuContext YakuContext,
 	extraTile ...Tile,
 ) YakuType {
 	if len(extraTile) == 0 {
@@ -341,11 +357,9 @@ func CheckKokushiMusou(hand core.Hand) YakuType {
 				tileList = append(tileList, MakeNumberTile(t, n))
 			}
 		}
-
 		if hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, extraTile) {
 			return KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU, 0
 		}
-
 		hand.ClosedHand.Add(extraTile)
 		totalValid := 0
 		for _, tile := range tileList {

@@ -1,9 +1,9 @@
-package core
+package hand
 
 import (
 	"slices"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 

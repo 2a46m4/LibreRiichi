@@ -5,14 +5,14 @@ import (
 )
 
 type YakuBuilder struct {
-	value YakuType
+	value    YakuType
 	HandOpen bool
 	isKazoe  bool // Always checked when adding han
 }
 
 func NewYakuBuilder(isOpen bool) YakuBuilder {
 	return YakuBuilder{
-		value: 0,
+		value:    0,
 		HandOpen: false,
 		isKazoe:  false,
 	}

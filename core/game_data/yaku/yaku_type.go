@@ -13,7 +13,7 @@ func (yaku YakuType) canBeOpen() bool {
 }
 
 func isNonKazoeYakuman(yaku YakuType) bool {
-	return yaku & yakumanBitset != 0
+	return yaku&yakumanBitset != 0
 }
 
 func iterateYaku(yakus YakuType) func(func(YakuType) bool) {
@@ -22,7 +22,7 @@ func iterateYaku(yakus YakuType) func(func(YakuType) bool) {
 			if (yakus>>itr)&1 == 0 {
 				continue
 			}
-			
+
 			if !yield(yakus & (1 << itr)) {
 				return
 			}

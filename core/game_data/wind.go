@@ -1,5 +1,7 @@
 package core
 
+import . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
+
 type Wind Tile
 
 const (

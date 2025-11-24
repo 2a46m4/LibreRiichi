@@ -1,7 +1,7 @@
 package meldfinder
 
 import (
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 

@@ -1,10 +1,10 @@
-package core
+package hand
 
 import (
 	"errors"
 	"slices"
 
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 )
 
 type Hand struct {
