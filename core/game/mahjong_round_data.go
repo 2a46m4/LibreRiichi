@@ -178,9 +178,17 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	hand := &data.tileState.Hands[playerIdx]
 	canWin := CheckHandCanWin(hand, yakuContext, discardedTile)
 	if canWin {
-		yaku, points, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
+		list, points, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
 		if err != nil {
 			panic("Shouldn't get here")
+		}
+
+		yaku := []winresult.Yaku{}
+		for _, y := range list.Yakus {
+			yaku = append(yaku, winresult.Yaku{
+				Name: y.YakuName,
+				Han:  y.HanValue,
+			})
 		}
 
 		return Ron{
