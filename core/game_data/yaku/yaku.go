@@ -116,14 +116,15 @@ var yakuHan = map[YakuType]int{
 	NAGASHI_MANGAN_YAKU: 3,
 }
 
-func iterateYaku(yakus YakuType, fn func(singleYaku YakuType) bool) func(YakuType) bool {
-	return func(singleYaku YakuType) bool {
+func iterateYaku(yakus YakuType) func(func(YakuType) bool) {
+	return func(yield func(YakuType) bool) {
 		for itr := 0; itr != 64; itr += 1 {
 			if (yakus>>itr)&1 == 1 {
-				fn(yakus & (1 << itr))
+				if !yield(yakus & (1 << itr)) {
+					return
+				}
 			}
 		}
-		return false
 	}
 
 }
