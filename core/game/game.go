@@ -20,20 +20,26 @@ func NewMahjongGame() *MahjongGame {
 
 func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
 	err = game.gameState.Transition("start-game", game)
-	sendInfo, _ := game.gameState.GetReturn()
-	return sendInfo.([]MessageSendInfo), err
+	sendInfoRaw, _ := game.gameState.GetReturn()
+	sendInfo := sendInfoRaw.([]MessageSendInfo)
+	ChangeToArenaIdx(sendInfo, game.ordering)
+	return sendInfo, err
 }
 
 func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
 	err = game.gameState.Transition("start-round", &game.mahjongRound, game.firstRound)
-	sendInfo, _ := game.gameState.GetReturn()
-	return sendInfo.([]MessageSendInfo), err
+	sendInfoRaw, _ := game.gameState.GetReturn()
+	sendInfo := sendInfoRaw.([]MessageSendInfo)
+	ChangeToArenaIdx(sendInfo, game.ordering)
+	return sendInfo, err
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
 	err = game.gameState.Transition("handle-event", game.mahjongRound, game.ordering, action, arenaIdx)
-	sendInfo, _ := game.gameState.GetReturn()
-	return sendInfo.([]MessageSendInfo), err
+	sendInfoRaw, _ := game.gameState.GetReturn()
+	sendInfo := sendInfoRaw.([]MessageSendInfo)
+	ChangeToArenaIdx(sendInfo, game.ordering)
+	return sendInfo, err
 }
 
 func (game *MahjongGame) RoundEnd() error {

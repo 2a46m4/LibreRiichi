@@ -1,5 +1,6 @@
 package game
 
+// Stores data of a round
 type MahjongRound struct {
 	roundState RoundState
 	data       MahjongRoundData

@@ -82,7 +82,7 @@ func getGameSetup(roundData MahjongRoundData,
 	ordering Ordering, scoringState Scoring) (sendInfos []MessageSendInfo) {
 
 	// Create setup data for each player
-	for arenaIdx := uint8(0); arenaIdx < 4; arenaIdx++ {
+	for arenaIdx := range uint8(4) {
 		gameIdx := ordering.GameIdx(arenaIdx)
 
 		setup := []Setup{

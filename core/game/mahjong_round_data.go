@@ -45,13 +45,11 @@ func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo
 
 		actions := PotentialActionEvent{}
 
-		// Check for Kan
 		kanResult := CheckKan(playerIdx, i, data.tileState)
 		if kanResult != nil {
 			actions.Actions = append(actions.Actions, kanResult)
 		}
 
-		// Check for Pon
 		ponResult := CheckPon(playerIdx, i, data.tileState)
 		if ponResult != nil {
 			actions.Actions = append(actions.Actions, ponResult)
@@ -198,7 +196,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 				WinningTile: discardedTile,
 				WonByRon:    true,
 				PointsTransfer: []winresult.PointsTransfer{
-					winresult.PointsTransfer{
+					{
 						To:     playerIdx,
 						From:   discardedPlayerIdx,
 						Amount: points.Ron,

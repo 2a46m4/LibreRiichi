@@ -5,6 +5,7 @@ import (
     "encoding/json"
     "fmt"
     . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+    . "codeberg.org/ijnakashiar/LibreRiichi/core/game/game_result"
 )
 
 type BoardEventType uint8

@@ -162,7 +162,7 @@ func (arena *Arena) driveGame(action Action, fromPlayer uint8) error {
 	}
 
 	if err != nil {
-		arena.log.Info("Error: ", err)
+		arena.log.Info("Error: ", "Msg", err.Error())
 		return err
 	}
 

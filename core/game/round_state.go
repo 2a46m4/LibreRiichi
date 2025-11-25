@@ -12,6 +12,7 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
+// Manages the state of the round and validates that turn transitions are correct
 type RoundState struct {
 	RoundFSM *fsm.FSM
 	context  context.Context
@@ -115,6 +116,7 @@ func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
 	return sendInfos
 }
 
+// Handles an event and returns an error if there is an invalid transition
 func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInfo ...any) (msg []MessageSendInfo, err error) {
 	args := append([]any{action, gameIdx}, extraInfo...)
 
