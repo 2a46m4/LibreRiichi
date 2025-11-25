@@ -1,6 +1,7 @@
 package game
 
 import (
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
@@ -54,7 +55,7 @@ func (game *MahjongGame) RoundEnd() error {
 }
 
 func (game *MahjongGame) RoundEnded() bool {
-	return game.gameState.Current() == "round-end"
+	return game.gameState.Current() == "in-game"
 }
 
 func (game *MahjongGame) GameEnd() error {
@@ -62,5 +63,5 @@ func (game *MahjongGame) GameEnd() error {
 }
 
 func (game *MahjongGame) GameEnded() bool {
-	return game.gameState.Current() == "game-end"
+	return game.gameState.Current() == "finished-game"
 }

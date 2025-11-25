@@ -3,11 +3,14 @@ package core
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"sync"
 
 	"github.com/google/uuid"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game"
+	core "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
 // TODO: This can potentially use RCU
@@ -15,6 +18,7 @@ import (
 type ArenaList struct {
 	arena map[uuid.UUID]*Arena
 	name  map[string]uuid.UUID
+	logger *slog.Logger
 
 	sync.RWMutex
 }
@@ -32,9 +36,28 @@ type SameNameError struct {
 }
 
 func InitializeMap() {
-	log.Println("Initializing map")
+	GlobalArenaList.logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	}))
+	GlobalArenaList.logger.Info("Initializing map")
 	GlobalArenaList.arena = make(map[uuid.UUID]*Arena)
 	GlobalArenaList.name = make(map[string]uuid.UUID)
+	// Debug initial room
+	// TODO: Remove
+	err := CreateAndAddArena("a")
+	if err != nil {
+		panic("Couldn't create debug arena")
+	}
+	
+	arena, err := GetArenaFromName("a")
+	if err != nil {
+		panic("Couldn't find arena from name")
+	}
+	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
+	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
+	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
+	
 }
 
 func (e EmptyNameError) Error() string {
@@ -57,7 +80,7 @@ func ListArenas() []string {
 	for name := range GlobalArenaList.name {
 		result = append(result, name)
 	}
-	log.Println("Listing arenas: ", GlobalArenaList.name, result)
+	GlobalArenaList.logger.Info("Listing arenas: ", "names", GlobalArenaList.name, "data", result)
 
 	return result
 }

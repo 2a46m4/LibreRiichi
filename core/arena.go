@@ -182,10 +182,6 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 
 	arena.log.Info("Handle start game called")
 
-	if !arena.game.GameEnded() {
-		return Unit, errors.New("Game already started")
-	}
-
 	if len(arena.agents) != 4 {
 		return Unit, errors.New("Not enough agents")
 	}
@@ -206,6 +202,8 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 			arena.SendBoardEvent(event, info.SendTo)
 		}
 	}
+
+	arena.log.Info("Finish start game handle")
 
 	return Unit, nil
 }

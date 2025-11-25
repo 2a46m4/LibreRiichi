@@ -3,6 +3,8 @@ package game
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"os"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
@@ -12,13 +14,20 @@ import (
 // Stores the state of the current game (in game, in round, etc.)
 type GameState struct {
 	*fsm.FSM
+	// We can probably use this for timeout events when waiting
+	// for the user to return some input
 	context context.Context
+	*slog.Logger
 }
 
 func InitGameState() *GameState {
 	gameState := GameState{
 		FSM:     &fsm.FSM{},
-		context: nil,
+		context: context.Background(),
+		Logger: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+		})),
 	}
 
 	gameState.FSM = fsm.NewFSM(
@@ -57,7 +66,7 @@ func InitGameState() *GameState {
 				Src: []string{
 					"in-game",
 				},
-				Dst: "out-of-game",
+				Dst: "finished-game",
 			},
 		},
 		fsm.Callbacks{
@@ -126,13 +135,14 @@ func getGameSetup(roundData MahjongRoundData,
 
 func (gameState *GameState) CheckStartGamePossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks that starting the game is possible
-	event.Cancel(errors.New("Hello"))
+	// event.Cancel(errors.New("Hello"))
 }
 
 func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.Event) {
 	game := event.Args[0].(*MahjongGame)
 	firstRound := event.Args[1].(bool)
 
+	gameState.Info("Handling start game")
 	if firstRound {
 		game.mahjongRound = InitMahjongRound()
 		game.ordering = InitRandomOrdering()

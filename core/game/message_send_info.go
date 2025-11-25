@@ -14,16 +14,16 @@ type MessageSendInfo struct {
 }
 
 // Changes the message from game to arena index
-func ChangeToArenaIdx(infos []MessageSendInfo, ordering Ordering) {
+func ChangeToArenaIdx(infos []MessageSendInfo, orderingOrdering) {
 	for infoI, info := range infos {
-		infos[infoI].SendTo = ordering.GameToArena[infos[infoI].SendTo]
+		infos[infoI].SendTo = ordering.ArenaIdx(infos[infoI].SendTo)
 		for eventI, event := range info.Events {
 			switch event := event.(type) {
 			case GameEndEvent: // TODO
 			case GameSetupEvent:
 				handleSetup(event.Setup)
 			case PlayerActionEvent:
-				event.FromPlayer = ordering.GameToArena[event.FromPlayer]
+				event.FromPlayer = ordering.ArenaIdx(event.FromPlayer)
 				info.Events[eventI] = event
 			}
 		}
