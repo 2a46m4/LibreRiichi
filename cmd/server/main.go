@@ -1,14 +1,14 @@
 package main
 
 import (
-    _ "net/http/pprof"
+	core "codeberg.org/ijnakashiar/LibreRiichi/core"
+	web "codeberg.org/ijnakashiar/LibreRiichi/core/web"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
-	"net/http"
-	core "codeberg.org/ijnakashiar/LibreRiichi/core"
-	web "codeberg.org/ijnakashiar/LibreRiichi/core/web"
 )
 
 func main() {

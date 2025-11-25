@@ -6,7 +6,7 @@ import (
 
 type DiscardPile struct {
 	Discards [26]Tile
-	index uint8
+	index    uint8
 }
 
 func (pile *DiscardPile) Add(tile Tile) {
@@ -32,6 +32,6 @@ func (pile DiscardPile) Last() Tile {
 	if pile.index == 0 {
 		panic("Bad state: No tiles have been discarded yet")
 	} else {
-		return pile.Discards[pile.index - 1]
+		return pile.Discards[pile.index-1]
 	}
 }

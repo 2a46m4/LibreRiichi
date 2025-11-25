@@ -76,7 +76,7 @@ func (closed ClosedHand) UniqueTiles() ([]Tile, []uint8) {
 	count := make([]uint8, 0)
 	for _, tile := range closed.Hand() {
 		if uniqueIdx := slices.Index(unique, tile); uniqueIdx != -1 {
-			count[uniqueIdx]+=1
+			count[uniqueIdx] += 1
 		} else {
 			unique = append(unique, tile)
 			count = append(count, 1)
@@ -88,4 +88,3 @@ func (closed ClosedHand) UniqueTiles() ([]Tile, []uint8) {
 func (closed *ClosedHand) SortInplace() {
 	slices.Sort(closed.Hand())
 }
-

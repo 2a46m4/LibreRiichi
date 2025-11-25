@@ -9,16 +9,16 @@ type MeldType uint8
 
 const (
 	Shuntsu MeldType = iota // Sequence
-	Koutsu // Triplet
+	Koutsu                  // Triplet
 )
 
 type WinningCombination struct {
 	Melds [4]Meld
-	Pair Tile
+	Pair  Tile
 }
 
 type Meld struct {
-	Type MeldType
+	Type      MeldType
 	FirstTile Tile
 }
 
@@ -82,9 +82,9 @@ func hasWinningCombination(tileSet MultiSet[Tile], alreadyCompleted int) bool {
 	}
 
 	tileCopy := NewMultiSet(tileSet.ToSlice()...)
-	hasWinningCombo := func (tile1, tile2, tile3 Tile) bool {
+	hasWinningCombo := func(tile1, tile2, tile3 Tile) bool {
 		tileCopy.Remove(tile1, tile2, tile3)
-		hasCombo := hasWinningCombination(tileCopy, alreadyCompleted + 1)
+		hasCombo := hasWinningCombination(tileCopy, alreadyCompleted+1)
 		tileCopy.Add(tile1, tile2, tile3)
 		return hasCombo
 	}
@@ -93,8 +93,8 @@ func hasWinningCombination(tileSet MultiSet[Tile], alreadyCompleted int) bool {
 		// Shuntsu
 		if tile.IsNumberTile() {
 			count1 := tileCopy.Count(tile)
-			count2 := tileCopy.Count(tile+1)
-			count3 := tileCopy.Count(tile+2)
+			count2 := tileCopy.Count(tile + 1)
+			count3 := tileCopy.Count(tile + 2)
 
 			if count1 >= 1 && count2 >= 1 && count3 >= 1 {
 				if hasWinningCombo(tile, tile+1, tile+2) {
@@ -121,9 +121,9 @@ func findMelds(tileSet MultiSet[Tile], alreadyCompleted int) (result [][]Meld) {
 	// Make a copy, since we don't want to modify the map while
 	// iterating over it
 	tileCopy := NewMultiSet(tileSet.ToSlice()...)
-	removeAndFindMelds := func (tile1, tile2, tile3 Tile) [][]Meld {
+	removeAndFindMelds := func(tile1, tile2, tile3 Tile) [][]Meld {
 		tileCopy.Remove(tile1, tile2, tile3)
-		meldsList := findMelds(tileCopy, alreadyCompleted + 1)
+		meldsList := findMelds(tileCopy, alreadyCompleted+1)
 		tileCopy.Add(tile1, tile2, tile3)
 		return meldsList
 	}
@@ -132,8 +132,8 @@ func findMelds(tileSet MultiSet[Tile], alreadyCompleted int) (result [][]Meld) {
 		// Shuntsu
 		if tile.IsNumberTile() {
 			count1 := tileCopy.Count(tile)
-			count2 := tileCopy.Count(tile+1)
-			count3 := tileCopy.Count(tile+2)
+			count2 := tileCopy.Count(tile + 1)
+			count3 := tileCopy.Count(tile + 2)
 
 			if count1 >= 1 && count2 >= 1 && count3 >= 1 {
 				currentMeld := Meld{
@@ -163,7 +163,7 @@ func findMelds(tileSet MultiSet[Tile], alreadyCompleted int) (result [][]Meld) {
 				result = append(result, melds)
 			}
 		}
-		
+
 	}
 
 	return result

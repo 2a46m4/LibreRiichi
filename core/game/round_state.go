@@ -86,7 +86,7 @@ func InitRoundState() *RoundState {
 			"no-naki":          roundState.noNaki,
 			"round-draw":       roundState.roundDraw,
 			"round-win":        roundState.roundWin,
-			"before_event": roundState.infoTransition,
+			"before_event":     roundState.infoTransition,
 		},
 	)
 	roundState.context = context.Background()
@@ -101,7 +101,6 @@ func InitRoundState() *RoundState {
 func (roundState *RoundState) infoTransition(context context.Context, event *fsm.Event) {
 	roundState.log.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
-
 
 func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
 	for gameIdx := range uint8(4) {

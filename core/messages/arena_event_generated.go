@@ -2,84 +2,84 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
+	"encoding/json"
+	"fmt"
 )
 
 type ArenaEventType uint8
 
 type ArenaEventUnpacker struct {
-    ArenaEvent
+	ArenaEvent
 }
 
 const (
 	PLAYERJOINEDEVENT ArenaEventType = iota
-	PLAYERQUITEVENT ArenaEventType = iota
-	GAMESTARTEDEVENT ArenaEventType = iota
-	ARENABOARDEVENT ArenaEventType = iota
+	PLAYERQUITEVENT   ArenaEventType = iota
+	GAMESTARTEDEVENT  ArenaEventType = iota
+	ARENABOARDEVENT   ArenaEventType = iota
 )
+
 func (PlayerJoinedEvent) ArenaEventImpl() {}
 func (obj PlayerJoinedEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaEventType ArenaEventType `json:"arenaevent_type"`
-        AgentInfo AgentInfo `json:"agent_info"`
+		AgentInfo      AgentInfo      `json:"agent_info"`
 	}
 
-    raw.ArenaEventType = PLAYERJOINEDEVENT
-    raw.AgentInfo = obj.AgentInfo
+	raw.ArenaEventType = PLAYERJOINEDEVENT
+	raw.AgentInfo = obj.AgentInfo
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (PlayerQuitEvent) ArenaEventImpl() {}
 func (obj PlayerQuitEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaEventType ArenaEventType `json:"arenaevent_type"`
-        Name string `json:"name"`
+		Name           string         `json:"name"`
 	}
 
-    raw.ArenaEventType = PLAYERQUITEVENT
-    raw.Name = obj.Name
+	raw.ArenaEventType = PLAYERQUITEVENT
+	raw.Name = obj.Name
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (GameStartedEvent) ArenaEventImpl() {}
 func (obj GameStartedEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaEventType ArenaEventType `json:"arenaevent_type"`
 	}
 
-    raw.ArenaEventType = GAMESTARTEDEVENT
+	raw.ArenaEventType = GAMESTARTEDEVENT
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ArenaBoardEvent) ArenaEventImpl() {}
 func (obj ArenaBoardEvent) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ArenaEventType ArenaEventType `json:"arenaevent_type"`
-        BoardEvent BoardEvent `json:"board_event"`
+		BoardEvent     BoardEvent     `json:"board_event"`
 	}
 
-    raw.ArenaEventType = ARENABOARDEVENT
-    raw.BoardEvent = obj.BoardEvent
+	raw.ArenaEventType = ARENABOARDEVENT
+	raw.BoardEvent = obj.BoardEvent
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (obj *ArenaBoardEvent) UnmarshalJSON(rawData []byte) error {
-    var raw struct {
-        ArenaEventType ArenaEventType `json:"arenaevent_type"`
-        BoardEvent BoardEventUnpacker `json:"board_event"`
+	var raw struct {
+		ArenaEventType ArenaEventType     `json:"arenaevent_type"`
+		BoardEvent     BoardEventUnpacker `json:"board_event"`
 	}
 
 	err := json.Unmarshal(rawData, &raw)
-    obj.BoardEvent = raw.BoardEvent.BoardEvent
+	obj.BoardEvent = raw.BoardEvent.BoardEvent
 
-    return err
+	return err
 }
-
 
 func (msg *ArenaEventUnpacker) Uncover() ArenaEvent {
 	return msg.ArenaEvent
@@ -130,22 +130,22 @@ func (msg *ArenaEventUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type ArenaEventHandler[T any, E any] interface {
-    HandlePlayerJoinedEvent(PlayerJoinedEvent, E) (T, error)
-    HandlePlayerQuitEvent(PlayerQuitEvent, E) (T, error)
-    HandleGameStartedEvent(GameStartedEvent, E) (T, error)
-    HandleArenaBoardEvent(ArenaBoardEvent, E) (T, error)
+	HandlePlayerJoinedEvent(PlayerJoinedEvent, E) (T, error)
+	HandlePlayerQuitEvent(PlayerQuitEvent, E) (T, error)
+	HandleGameStartedEvent(GameStartedEvent, E) (T, error)
+	HandleArenaBoardEvent(ArenaBoardEvent, E) (T, error)
 }
 
 func ArenaEventDecode[T any, E any](handler ArenaEventHandler[T, E], data ArenaEvent, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case PlayerJoinedEvent:
-        return handler.HandlePlayerJoinedEvent(v, extraData)
-    case PlayerQuitEvent:
-        return handler.HandlePlayerQuitEvent(v, extraData)
-    case GameStartedEvent:
-        return handler.HandleGameStartedEvent(v, extraData)
-    case ArenaBoardEvent:
-        return handler.HandleArenaBoardEvent(v, extraData)
+	case PlayerJoinedEvent:
+		return handler.HandlePlayerJoinedEvent(v, extraData)
+	case PlayerQuitEvent:
+		return handler.HandlePlayerQuitEvent(v, extraData)
+	case GameStartedEvent:
+		return handler.HandleGameStartedEvent(v, extraData)
+	case ArenaBoardEvent:
+		return handler.HandleArenaBoardEvent(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

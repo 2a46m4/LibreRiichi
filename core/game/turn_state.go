@@ -19,8 +19,8 @@ type TurnState struct {
 func InitTurnState() TurnState {
 	return TurnState{
 		previousRound: 0,
-		TurnNumber: 0, // For the first draw
-		TotalTurns: 0,
+		TurnNumber:    0, // For the first draw
+		TotalTurns:    0,
 	}
 }
 

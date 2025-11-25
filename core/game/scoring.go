@@ -9,4 +9,3 @@ func InitScoring(initial uint32) Scoring {
 		Points: [4]uint32{initial, initial, initial, initial},
 	}
 }
-

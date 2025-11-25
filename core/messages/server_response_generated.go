@@ -2,85 +2,85 @@
 package core
 
 import (
-    "encoding/json"
-    "fmt"
-    "time"
+	"encoding/json"
+	"fmt"
+	"time"
 )
 
 type ServerResponseType uint8
 
 type ServerResponseUnpacker struct {
-    ServerResponse
+	ServerResponse
 }
 
 const (
-	GENERICRESPONSE ServerResponseType = iota
+	GENERICRESPONSE    ServerResponseType = iota
 	LISTARENASRESPONSE ServerResponseType = iota
-	ARENAINFORESPONSE ServerResponseType = iota
-	GAMEINFORESPONSE ServerResponseType = iota
+	ARENAINFORESPONSE  ServerResponseType = iota
+	GAMEINFORESPONSE   ServerResponseType = iota
 )
+
 func (GenericResponse) serverResponseImpl() {}
 func (obj GenericResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerResponseType ServerResponseType `json:"serverresponse_type"`
-        Success bool `json:"success"`
-        FailReason string `json:"fail_reason"`
+		Success            bool               `json:"success"`
+		FailReason         string             `json:"fail_reason"`
 	}
 
-    raw.ServerResponseType = GENERICRESPONSE
-    raw.Success = obj.Success
-    raw.FailReason = obj.FailReason
+	raw.ServerResponseType = GENERICRESPONSE
+	raw.Success = obj.Success
+	raw.FailReason = obj.FailReason
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ListArenasResponse) serverResponseImpl() {}
 func (obj ListArenasResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerResponseType ServerResponseType `json:"serverresponse_type"`
-        Success bool `json:"success"`
-        ArenaList []string `json:"arena_list"`
+		Success            bool               `json:"success"`
+		ArenaList          []string           `json:"arena_list"`
 	}
 
-    raw.ServerResponseType = LISTARENASRESPONSE
-    raw.Success = obj.Success
-    raw.ArenaList = obj.ArenaList
+	raw.ServerResponseType = LISTARENASRESPONSE
+	raw.Success = obj.Success
+	raw.ArenaList = obj.ArenaList
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (ArenaInfoResponse) serverResponseImpl() {}
 func (obj ArenaInfoResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerResponseType ServerResponseType `json:"serverresponse_type"`
-        Success bool `json:"success"`
-        Name string `json:"name"`
-        Agents []AgentInfo `json:"agents"`
-        GameStarted bool `json:"game_started"`
-        DateCreated time.Time `json:"date_created"`
+		Success            bool               `json:"success"`
+		Name               string             `json:"name"`
+		Agents             []AgentInfo        `json:"agents"`
+		GameStarted        bool               `json:"game_started"`
+		DateCreated        time.Time          `json:"date_created"`
 	}
 
-    raw.ServerResponseType = ARENAINFORESPONSE
-    raw.Success = obj.Success
-    raw.Name = obj.Name
-    raw.Agents = obj.Agents
-    raw.GameStarted = obj.GameStarted
-    raw.DateCreated = obj.DateCreated
+	raw.ServerResponseType = ARENAINFORESPONSE
+	raw.Success = obj.Success
+	raw.Name = obj.Name
+	raw.Agents = obj.Agents
+	raw.GameStarted = obj.GameStarted
+	raw.DateCreated = obj.DateCreated
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
 
 func (GameInfoResponse) serverResponseImpl() {}
 func (obj GameInfoResponse) MarshalJSON() ([]byte, error) {
-    var raw struct {
+	var raw struct {
 		ServerResponseType ServerResponseType `json:"serverresponse_type"`
 	}
 
-    raw.ServerResponseType = GAMEINFORESPONSE
+	raw.ServerResponseType = GAMEINFORESPONSE
 
-    return json.Marshal(raw)
+	return json.Marshal(raw)
 }
-
 
 func (msg *ServerResponseUnpacker) Uncover() ServerResponse {
 	return msg.ServerResponse
@@ -131,22 +131,22 @@ func (msg *ServerResponseUnpacker) UnmarshalJSON(rawData []byte) error {
 }
 
 type ServerResponseHandler[T any, E any] interface {
-    HandleGenericResponse(GenericResponse, E) (T, error)
-    HandleListArenasResponse(ListArenasResponse, E) (T, error)
-    HandleArenaInfoResponse(ArenaInfoResponse, E) (T, error)
-    HandleGameInfoResponse(GameInfoResponse, E) (T, error)
+	HandleGenericResponse(GenericResponse, E) (T, error)
+	HandleListArenasResponse(ListArenasResponse, E) (T, error)
+	HandleArenaInfoResponse(ArenaInfoResponse, E) (T, error)
+	HandleGameInfoResponse(GameInfoResponse, E) (T, error)
 }
 
 func ServerResponseDecode[T any, E any](handler ServerResponseHandler[T, E], data ServerResponse, extraData E) (ret T, err error) {
 	switch v := data.(type) {
-    case GenericResponse:
-        return handler.HandleGenericResponse(v, extraData)
-    case ListArenasResponse:
-        return handler.HandleListArenasResponse(v, extraData)
-    case ArenaInfoResponse:
-        return handler.HandleArenaInfoResponse(v, extraData)
-    case GameInfoResponse:
-        return handler.HandleGameInfoResponse(v, extraData)
+	case GenericResponse:
+		return handler.HandleGenericResponse(v, extraData)
+	case ListArenasResponse:
+		return handler.HandleListArenasResponse(v, extraData)
+	case ArenaInfoResponse:
+		return handler.HandleArenaInfoResponse(v, extraData)
+	case GameInfoResponse:
+		return handler.HandleGameInfoResponse(v, extraData)
 	default:
 		return ret, fmt.Errorf("unexpected type: %#v", data)
 	}

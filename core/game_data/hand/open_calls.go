@@ -18,7 +18,7 @@ const (
 )
 
 type OpenMeld struct {
-	Type OpenMeldType
+	Type      OpenMeldType
 	FirstTile Tile
 }
 
@@ -61,4 +61,3 @@ func (call *OpenMelds) Remove(melds ...OpenMeld) {
 func (call OpenMelds) Has(meld OpenMeld) bool {
 	return slices.ContainsFunc(call.melds[:call.count], meld.Eq)
 }
-

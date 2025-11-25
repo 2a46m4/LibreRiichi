@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"codeberg.org/ijnakashiar/LibreRiichi/core/game"
+	"fmt"
 )
 
 func main() {

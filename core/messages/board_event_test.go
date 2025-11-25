@@ -20,4 +20,3 @@ func TestBoardEventMarshalling(t *testing.T) {
 		t.Fail()
 	}
 }
-

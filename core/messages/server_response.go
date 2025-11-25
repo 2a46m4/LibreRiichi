@@ -27,5 +27,4 @@ type ArenaInfoResponse struct {
 }
 
 type GameInfoResponse struct {
-    
 }

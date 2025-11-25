@@ -1,22 +1,23 @@
 package score
 
 import (
-	"codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	MeldFinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 	game "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	tile "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
-	MeldFinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
+	"codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
 type WinMethodValue int
+
 const (
 	WinByClosedRon WinMethodValue = 10
-	WinByTsumo WinMethodValue = 2
+	WinByTsumo     WinMethodValue = 2
 )
 
 // Represents the scoring system
 type Points struct {
 	Han uint16
-	Fu uint16
+	Fu  uint16
 }
 
 // Represents the amount of points that each role has to pay. In the
@@ -24,8 +25,8 @@ type Points struct {
 // DealerTsumo is invalid.
 type PointValue struct {
 	NonDealerTsumo uint
-	DealerTsumo uint
-	Ron uint
+	DealerTsumo    uint
+	Ron            uint
 }
 
 func ComputePoints(
@@ -55,8 +56,8 @@ func ComputePoints(
 
 	var multiplyBy float32
 	var manganScore uint = 2000
-	baseScore := uint(points.Fu) * (core.IntPow(uint(2), uint(2 + points.Han)))
-	if points.Han <= 4 && roundUp(baseScore * ronMultiplier) < manganScore * ronMultiplier {
+	baseScore := uint(points.Fu) * (core.IntPow(uint(2), uint(2+points.Han)))
+	if points.Han <= 4 && roundUp(baseScore*ronMultiplier) < manganScore*ronMultiplier {
 		value.NonDealerTsumo = roundUp(baseScore * nonDealerMultiplier)
 		value.DealerTsumo = roundUp(baseScore * dealerMultiplier)
 		value.Ron = roundUp(baseScore * ronMultiplier)
@@ -68,13 +69,13 @@ func ComputePoints(
 	switch points.Han {
 	case 5:
 		multiplyBy = 1
-	case 6, 7: 
+	case 6, 7:
 		multiplyBy = 1.5
-	case 8, 9, 10: 
+	case 8, 9, 10:
 		multiplyBy = 2
-	case 11, 12: 
+	case 11, 12:
 		multiplyBy = 3
-	case 13: 
+	case 13:
 		multiplyBy = 4
 	default:
 		multiplyBy = float32(points.Han / 13)
@@ -82,7 +83,7 @@ func ComputePoints(
 
 	value.NonDealerTsumo = uint(float32(baseScore) * float32(nonDealerMultiplier) * multiplyBy)
 	value.DealerTsumo = uint(float32(baseScore) * float32(dealerMultiplier) * multiplyBy)
-	value.Ron = uint(float32(baseScore) * float32(ronMultiplier) * multiplyBy)	
+	value.Ron = uint(float32(baseScore) * float32(ronMultiplier) * multiplyBy)
 
 	return value
 }

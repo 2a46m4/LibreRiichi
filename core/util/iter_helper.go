@@ -13,7 +13,6 @@ func All[T any](seq iter.Seq[T], f func(T) bool) (res bool) {
 	return true
 }
 
-
 func Any[T any](seq iter.Seq[T], f func(T) bool) bool {
 	for i := range seq {
 		if f(i) {

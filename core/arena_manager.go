@@ -16,8 +16,8 @@ import (
 // TODO: This can potentially use RCU
 
 type ArenaList struct {
-	arena map[uuid.UUID]*Arena
-	name  map[string]uuid.UUID
+	arena  map[uuid.UUID]*Arena
+	name   map[string]uuid.UUID
 	logger *slog.Logger
 
 	sync.RWMutex
@@ -49,7 +49,7 @@ func InitializeMap() {
 	if err != nil {
 		panic("Couldn't create debug arena")
 	}
-	
+
 	arena, err := GetArenaFromName("a")
 	if err != nil {
 		panic("Couldn't find arena from name")
@@ -57,7 +57,7 @@ func InitializeMap() {
 	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
 	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
 	arena.HandleAddAIArenaAction(core.AddAIArenaAction{}, 0)
-	
+
 }
 
 func (e EmptyNameError) Error() string {
