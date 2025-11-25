@@ -98,7 +98,7 @@ func InitRoundState() *RoundState {
 }
 
 func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
-	for gameIdx := uint8(0); gameIdx < 4; gameIdx++ {
+	for gameIdx := range uint8(4) {
 		initialTiles := tileState.Hands[gameIdx].ClosedHand.GetHand()
 		sendInfos = append(sendInfos, MessageSendInfo{
 			Events: []BoardEvent{
