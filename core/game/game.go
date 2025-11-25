@@ -20,7 +20,7 @@ func NewMahjongGame() *MahjongGame {
 }
 
 func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-game", game)
+	err = game.gameState.Transition("start-game", game, game.firstRound)
 	sendInfoRaw, _ := game.gameState.GetReturn()
 	sendInfo := sendInfoRaw.([]MessageSendInfo)
 	ChangeToArenaIdx(sendInfo, game.ordering)
