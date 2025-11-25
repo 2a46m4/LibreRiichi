@@ -14,7 +14,7 @@ type MessageSendInfo struct {
 }
 
 // Changes the message from game to arena index
-func ChangeToArenaIdx(infos []MessageSendInfo, orderingOrdering) {
+func ChangeToArenaIdx(infos []MessageSendInfo, ordering Ordering) {
 	for infoI, info := range infos {
 		infos[infoI].SendTo = ordering.ArenaIdx(infos[infoI].SendTo)
 		for eventI, event := range info.Events {
