@@ -1,4 +1,4 @@
-package core
+package hand
 
 type TooManyTilesErr struct{}
 

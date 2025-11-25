@@ -2,7 +2,10 @@ package core
 
 //go:generate go run ../generate_message.go -- BoardEvent
 
-import . "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+import (
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game/game_result"
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+)
 
 type BoardEvent interface {
 	BoardEventWrapper()

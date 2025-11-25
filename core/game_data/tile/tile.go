@@ -1,4 +1,4 @@
-package core
+package tile
 
 type Tile uint8
 
@@ -34,6 +34,11 @@ const (
 	SpecialMask      = 0b11 << 6
 )
 
+// number is one-indexed
+func MakeNumberTile(tileType Tile, number uint8) Tile {
+	return tileType + Tile(number - 1)
+}
+
 func (s Tile) ClearRedOrDora() Tile {
 	return s & ^(DoraTile | RedTile)
 }
@@ -64,6 +69,10 @@ func (s Tile) IsManzu() bool {
 
 func (s Tile) IsPinzu() bool {
 	return s&(TileMask) == PinzuBit
+}
+
+func (s Tile) IsNumberTile() bool {
+	return s < Kazehai
 }
 
 func (s Tile) GetTileNumber() uint8 {

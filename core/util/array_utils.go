@@ -57,5 +57,6 @@ func Count[T comparable](array []T, find T) (count int) {
 			count += 1
 		}
 	}
+
 	return count
 }

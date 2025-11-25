@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-    "net/http"
+	"net/http"
 	core "codeberg.org/ijnakashiar/LibreRiichi/core"
 	web "codeberg.org/ijnakashiar/LibreRiichi/core/web"
 )
