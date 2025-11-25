@@ -78,9 +78,14 @@ func InitGameState() *GameState {
 			"handle-event":        gameState.HandleEvent,
 			"before_round-end":    gameState.BeforeRoundEnd,
 			"round-end":           gameState.RoundEnd,
+			"before_event":        gameState.generalTransition,
 		},
 	)
 	return &gameState
+}
+
+func (gameState *GameState) generalTransition(context context.Context, event *fsm.Event) {
+	gameState.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
 
 func (gameState *GameState) Transition(event string, arguments ...any) error {
@@ -160,7 +165,7 @@ func (gameState *GameState) CheckStartRoundPossible(context context.Context, eve
 	// Transition the round, because we can signal a failure here and cancel the transition
 	round := event.Args[0].(*MahjongRound)
 	isFirstRound := event.Args[1].(bool)
-	err := round.roundState.Transition("start-round", isFirstRound)
+	err := round.roundState.Transition("start-round", round, isFirstRound)
 	if err != nil {
 		event.Cancel(err)
 		return
