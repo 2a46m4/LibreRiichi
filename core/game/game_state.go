@@ -174,7 +174,7 @@ func (gameState *GameState) CheckStartRoundPossible(context context.Context, eve
 
 func (gameState *GameState) HandleStartRound(context context.Context, event *fsm.Event) {
 	round := event.Args[0].(*MahjongRound).roundState
-	if round.RoundFSM.Current() != "pre-draw" {
+	if round.RoundFSM.Current() != "waiting-discard" {
 		panic("Should have already transitioned")
 	} else {
 		data, hasData := round.GetReturn()

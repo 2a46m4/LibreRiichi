@@ -32,7 +32,7 @@ func InitMahjongRoundData() MahjongRoundData {
 func (data *MahjongRoundData) IncrementRound() {
 	data.windState.IncrementWind()
 	data.tileState = CreateNewRound()
-	data.turnState = InitTurnState()
+	data.turnState.NextRound()
 	data.roundNumber += 1
 	// TODO: Implement switching round winds
 }

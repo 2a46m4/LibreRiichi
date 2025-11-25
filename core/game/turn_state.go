@@ -7,6 +7,7 @@ import (
 )
 
 type TurnState struct {
+	previousRound uint8
 	// TurnNumber is the game index of the currently active player
 	// that is either discarding or has just discarded.
 	TurnNumber uint8
@@ -17,9 +18,20 @@ type TurnState struct {
 
 func InitTurnState() TurnState {
 	return TurnState{
+		previousRound: 0,
 		TurnNumber: 0, // For the first draw
 		TotalTurns: 0,
 	}
+}
+
+func (turn *TurnState) NextRound() {
+	turn.TotalTurns = 0
+	turn.TurnNumber = (turn.previousRound + 1) % 4
+	turn.previousRound = (turn.previousRound + 1) % 4
+}
+
+func (turn *TurnState) GetExpectedDrawPlayer() uint8 {
+	return turn.TurnNumber
 }
 
 func (turn *TurnState) PlayerDraw(playerIdx uint8) error {

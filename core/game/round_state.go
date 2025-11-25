@@ -86,6 +86,7 @@ func InitRoundState() *RoundState {
 			"no-naki":          roundState.noNaki,
 			"round-draw":       roundState.roundDraw,
 			"round-win":        roundState.roundWin,
+			"before_event": roundState.infoTransition,
 		},
 	)
 	roundState.context = context.Background()
@@ -96,6 +97,11 @@ func InitRoundState() *RoundState {
 
 	return roundState
 }
+
+func (roundState *RoundState) infoTransition(context context.Context, event *fsm.Event) {
+	roundState.log.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
+}
+
 
 func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
 	for gameIdx := range uint8(4) {
@@ -160,7 +166,10 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 	messages := getRoundSetup(round.data.tileState)
 
 	err := event.FSM.Event(context, "pre-draw")
-	err = event.FSM.Event(context, "draw-tile", round)
+	err = event.FSM.Event(context, "draw-tile",
+		round.data.turnState.GetExpectedDrawPlayer(),
+		round,
+	)
 	if err != nil {
 		panic("Started round but couldn't draw tile")
 	}
@@ -176,8 +185,8 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 // only need to check that the person drawing the tile is correct
 func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.Event) {
 	roundState.log.Info("Checking if draw tile can succeed")
-	playerIdx := event.Args[1].(uint8)
-	round := event.Args[2].(*MahjongRound)
+	playerIdx := event.Args[0].(uint8)
+	round := event.Args[1].(*MahjongRound)
 
 	if playerIdx != round.data.turnState.TurnNumber {
 		event.Cancel()
@@ -190,8 +199,8 @@ func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.E
 // The player either draws the tile and can discard any tile in their
 // closed hand, or must discard the most recently tossed tile if they are in Riichi
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
-	playerIdx := event.Args[1].(uint8)
-	round := event.Args[2].(*MahjongRound)
+	playerIdx := event.Args[0].(uint8)
+	round := event.Args[1].(*MahjongRound)
 	action := round.data.tileState.Draw(playerIdx)
 
 	ret := make([]MessageSendInfo, 0, 4)
