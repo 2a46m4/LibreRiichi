@@ -102,7 +102,7 @@ func getGameSetup(roundData MahjongRoundData,
 		setup := []Setup{
 			{
 				Type: DORA,
-				Data: roundData.tileState.DeadWall.dora.getLastDoraTile(),
+				Data: roundData.tileData.DeadWall.dora.getLastDoraTile(),
 			},
 			{
 				Type: PLAYER_NUMBER,
@@ -114,7 +114,7 @@ func getGameSetup(roundData MahjongRoundData,
 			},
 			{
 				Type: ROUND_WIND,
-				Data: roundData.windState.GetPlayerWind(gameIdx), // Get player's seat wind
+				Data: roundData.windData.GetPlayerWind(gameIdx), // Get player's seat wind
 			},
 			{
 				Type: STARTING_POINTS,

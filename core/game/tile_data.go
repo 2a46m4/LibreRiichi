@@ -9,19 +9,19 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
-type TileState struct {
+type TileData struct {
 	LiveWall
 	DeadWall    DeadWall
 	Hands       [4]Hand
 	DiscardPile [4]DiscardPile
 }
 
-func CreateNewRound() (game TileState) {
+func CreateNewRound() (game TileData) {
 	game.newRound()
 	return game
 }
 
-func (game *TileState) newRound() {
+func (game *TileData) newRound() {
 	// Get the complete set of tiles and shuffle them
 	tiles := GetTileList()
 	PermuteArray(tiles)
@@ -40,46 +40,46 @@ func (game *TileState) newRound() {
 	}
 }
 
-func (game *TileState) IncrementRound() {
+func (game *TileData) IncrementRound() {
 	game.newRound()
 }
 
 // Modifies the tile state and returns the tile drawn
-func (game *TileState) Draw(playerIdx uint8) Draw {
+func (game *TileData) Draw(playerIdx uint8) Draw {
 	tile := game.GetLiveTile()
 	game.Hands[playerIdx].Draw(tile)
 	return Draw{DrawnTile: tile}
 }
 
-func (game *TileState) Discard(playerIdx uint8, tile Tile) Toss {
+func (game *TileData) Discard(playerIdx uint8, tile Tile) Toss {
 	game.Hands[playerIdx].Discard(tile)
 	game.DiscardPile[playerIdx].Add(tile)
 	return Toss{TileToToss: tile}
 }
 
-func (game *TileState) Pon(playerIdx uint8, againstPlayer uint8) Pon {
+func (game *TileData) Pon(playerIdx uint8, againstPlayer uint8) Pon {
 	tile := game.DiscardPile[againstPlayer].Remove()
 	game.Hands[playerIdx].Pon(tile)
 	return Pon{TileToPon: tile}
 }
 
-func (game *TileState) DaiminKan(playerIdx uint8, againstPlayer uint8) Kan {
+func (game *TileData) DaiminKan(playerIdx uint8, againstPlayer uint8) Kan {
 	tile := game.DiscardPile[againstPlayer].Remove()
 	game.Hands[playerIdx].DaiminKan(tile)
 	return Kan{TileToKan: tile}
 }
 
-func (game *TileState) ShouminKan(playerIdx uint8, tile Tile) Kan {
+func (game *TileData) ShouminKan(playerIdx uint8, tile Tile) Kan {
 	game.Hands[playerIdx].ShouminKan(tile)
 	return Kan{TileToKan: tile}
 }
 
-func (game *TileState) AnKan(playerIdx uint8, tile Tile) Kan {
+func (game *TileData) AnKan(playerIdx uint8, tile Tile) Kan {
 	game.Hands[playerIdx].AnKan(tile)
 	return Kan{TileToKan: tile}
 }
 
-func (game *TileState) Chii(playerIdx uint8, tiles [2]Tile) Chii {
+func (game *TileData) Chii(playerIdx uint8, tiles [2]Tile) Chii {
 	tile := game.DiscardPile[(playerIdx+3)%4].Remove()
 	allTiles := []Tile{tile, tiles[0], tiles[1]}
 	slices.Sort(allTiles)
@@ -87,17 +87,17 @@ func (game *TileState) Chii(playerIdx uint8, tiles [2]Tile) Chii {
 	return Chii{TileToChii: tile, TilesInHand: tiles}
 }
 
-func (game *TileState) Riichi(playerIdx uint8, tile Tile) Riichi {
+func (game *TileData) Riichi(playerIdx uint8, tile Tile) Riichi {
 	game.Hands[playerIdx].Riichi(tile)
 	return Riichi{TileToRiichi: tile}
 }
 
-func (game *TileState) Ron(playerIdx uint8, tile Tile) Ron {
+func (game *TileData) Ron(playerIdx uint8, tile Tile) Ron {
 	// TODO: Implement Ron logic and calculate WinResult
 	return Ron{TileToRon: tile}
 }
 
-func (game *TileState) Tsumo(playerIdx uint8, tile Tile) Tsumo {
+func (game *TileData) Tsumo(playerIdx uint8, tile Tile) Tsumo {
 	// TODO: Implement Tsumo logic
 	return Tsumo{TileToTsumo: tile}
 }

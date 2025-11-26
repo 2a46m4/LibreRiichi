@@ -102,7 +102,7 @@ func (roundState *RoundState) infoTransition(context context.Context, event *fsm
 	roundState.log.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
 
-func getRoundSetup(tileState TileState) (sendInfos []MessageSendInfo) {
+func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
 	for gameIdx := range uint8(4) {
 		initialTiles := tileState.Hands[gameIdx].ClosedHand.GetHand()
 		sendInfos = append(sendInfos, MessageSendInfo{
@@ -162,11 +162,11 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 		round.data.IncrementRound()
 	}
 
-	messages := getRoundSetup(round.data.tileState)
+	messages := getRoundSetup(round.data.tileData)
 
 	err := event.FSM.Event(context, "pre-draw")
 	err = event.FSM.Event(context, "draw-tile",
-		round.data.turnState.GetExpectedDrawPlayer(),
+		round.data.turnData.GetExpectedDrawPlayer(),
 		round,
 	)
 	if err != nil {
@@ -187,7 +187,7 @@ func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.E
 	playerIdx := event.Args[0].(uint8)
 	round := event.Args[1].(*MahjongRound)
 
-	if playerIdx != round.data.turnState.TurnNumber {
+	if playerIdx != round.data.turnData.TurnNumber {
 		event.Cancel()
 		return
 	}
@@ -200,7 +200,7 @@ func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.E
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
 	playerIdx := event.Args[0].(uint8)
 	round := event.Args[1].(*MahjongRound)
-	action := round.data.tileState.Draw(playerIdx)
+	action := round.data.tileData.Draw(playerIdx)
 
 	ret := make([]MessageSendInfo, 0, 4)
 	for i := range 4 {
@@ -216,7 +216,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	}
 
 	potentialActions := PotentialActionEvent{}
-	playerHand := &round.data.tileState.Hands[playerIdx]
+	playerHand := &round.data.tileData.Hands[playerIdx]
 
 	// Check for Ankan, Riichi, Tsumo potential options
 	if playerHand.InRiichi {
@@ -255,12 +255,12 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	playerIdx := event.Args[1].(uint8)
 	round := event.Args[2].(*MahjongRound)
 
-	if playerIdx != round.data.turnState.TurnNumber {
+	if playerIdx != round.data.turnData.TurnNumber {
 		event.Cancel()
 		return
 	}
 
-	hand := &round.data.tileState.Hands[playerIdx]
+	hand := &round.data.tileData.Hands[playerIdx]
 	lastTile, err := hand.TileJustReceived()
 	if err != nil {
 		event.Cancel()
@@ -273,7 +273,7 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 		return
 	}
 
-	if !round.data.tileState.Hands[playerIdx].TestDiscard(action.TileToToss) {
+	if !round.data.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) {
 		event.Cancel()
 		return
 	}
@@ -283,7 +283,7 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 	action := event.Args[0].(Toss)
 	playerIdx := event.Args[1].(uint8)
 	round := event.Args[2].(*MahjongRound)
-	round.data.tileState.Discard(playerIdx, action.TileToToss)
+	round.data.tileData.Discard(playerIdx, action.TileToToss)
 
 	// Check for any calls
 	// round.data

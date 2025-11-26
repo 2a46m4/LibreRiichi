@@ -9,7 +9,7 @@ import (
 func TestWindOffset_GetPlayerWind(t *testing.T) {
 	tests := []struct {
 		name     string
-		offset   WindState
+		offset   WindData
 		gameIdx  uint8
 		expected Wind
 	}{
@@ -125,7 +125,7 @@ func TestWindOffset_WrapAround(t *testing.T) {
 	// Test that the wind calculation wraps around correctly for all 16 combinations (4 offsets * 4 players)
 	for offset := uint8(0); offset < 4; offset++ {
 		for gameIdx := uint8(0); gameIdx < 4; gameIdx++ {
-			wind := WindState(offset).GetPlayerWind(gameIdx)
+			wind := WindData(offset).GetPlayerWind(gameIdx)
 
 			// Verify the result is a valid wind
 			validWinds := []Wind{East, South, West, North}
@@ -146,7 +146,7 @@ func TestWindOffset_WrapAround(t *testing.T) {
 
 func TestWindOffset_CyclicProperty(t *testing.T) {
 	// Test that applying the offset 4 times gets back to the same wind
-	offset := WindState(2) // Choose an arbitrary offset
+	offset := WindData(2) // Choose an arbitrary offset
 
 	for gameIdx := uint8(0); gameIdx < 4; gameIdx++ {
 		originalWind := offset.GetPlayerWind(gameIdx)
@@ -179,7 +179,7 @@ func TestWindOffset_CyclicProperty(t *testing.T) {
 func TestWindOffset_EdgeCases(t *testing.T) {
 	// Test edge case: maximum valid values
 	t.Run("Maximum values", func(t *testing.T) {
-		offset := WindState(3)
+		offset := WindData(3)
 		gameIdx := uint8(3)
 		expected := West // (3 + 3) % 4 = 6 % 4 = 2, which is West (0=East,1=South,2=West,3=North)
 		result := offset.GetPlayerWind(gameIdx)
@@ -191,7 +191,7 @@ func TestWindOffset_EdgeCases(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkWindOffset_GetPlayerWind(b *testing.B) {
-	offset := WindState(2)
+	offset := WindData(2)
 	gameIdx := uint8(1)
 
 	b.ResetTimer()
@@ -202,7 +202,7 @@ func BenchmarkWindOffset_GetPlayerWind(b *testing.B) {
 
 func BenchmarkWindOffset_GetPlayerWind_Parallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
-		offset := WindState(2)
+		offset := WindData(2)
 		gameIdx := uint8(1)
 
 		for pb.Next() {

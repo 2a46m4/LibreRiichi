@@ -6,7 +6,7 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
-type TurnState struct {
+type TurnData struct {
 	// Game index of the current dealer
 	CurrentDealer uint8
 	// TurnNumber is the game index of the currently active player
@@ -17,25 +17,25 @@ type TurnState struct {
 	TotalTurns uint8
 }
 
-func InitTurnState() TurnState {
-	return TurnState{
+func InitTurnData() TurnData {
+	return TurnData{
 		CurrentDealer: 0,
 		TurnNumber:    0, // For the first draw
 		TotalTurns:    0,
 	}
 }
 
-func (turn *TurnState) NextRound() {
+func (turn *TurnData) NextRound() {
 	turn.TotalTurns = 0
 	turn.TurnNumber = (turn.CurrentDealer + 1) % 4
 	turn.CurrentDealer = (turn.CurrentDealer + 1) % 4
 }
 
-func (turn *TurnState) GetExpectedDrawPlayer() uint8 {
+func (turn *TurnData) GetExpectedDrawPlayer() uint8 {
 	return turn.TurnNumber
 }
 
-func (turn *TurnState) PlayerDraw(playerIdx uint8) error {
+func (turn *TurnData) PlayerDraw(playerIdx uint8) error {
 	expectedPlayer := (turn.TurnNumber + 1) % 4
 	if playerIdx != expectedPlayer {
 		return errors.New("invalid draw: not the next player's turn")
@@ -47,7 +47,7 @@ func (turn *TurnState) PlayerDraw(playerIdx uint8) error {
 	return nil
 }
 
-func (turn *TurnState) PlayerPon(playerIdx uint8) error {
+func (turn *TurnData) PlayerPon(playerIdx uint8) error {
 	if playerIdx == turn.TurnNumber {
 		return errors.New("invalid pon: cannot call pon on own discard")
 	}
@@ -56,7 +56,7 @@ func (turn *TurnState) PlayerPon(playerIdx uint8) error {
 	return nil
 }
 
-func (turn *TurnState) PlayerKan(playerIdx uint8) error {
+func (turn *TurnData) PlayerKan(playerIdx uint8) error {
 	if playerIdx == turn.TurnNumber {
 		return errors.New("invalid kan: cannot call claimed kan on own discard")
 	}
@@ -65,14 +65,14 @@ func (turn *TurnState) PlayerKan(playerIdx uint8) error {
 	return nil
 }
 
-func (turn *TurnState) PlayerClosedKan(playerIdx uint8) error {
+func (turn *TurnData) PlayerClosedKan(playerIdx uint8) error {
 	if playerIdx != turn.TurnNumber {
 		return errors.New("invalid closed kan: only current player can call closed kan")
 	}
 	return nil
 }
 
-func (turn *TurnState) PlayerChii(playerIdx uint8) error {
+func (turn *TurnData) PlayerChii(playerIdx uint8) error {
 	expectedPlayer := (turn.TurnNumber + 1) % 4
 	if playerIdx != expectedPlayer {
 		return errors.New("invalid chii: only the next player can call chii")
@@ -81,17 +81,17 @@ func (turn *TurnState) PlayerChii(playerIdx uint8) error {
 	return nil
 }
 
-func (turn *TurnState) GetCurrentPlayer() uint8 {
+func (turn *TurnData) GetCurrentPlayer() uint8 {
 	return turn.TurnNumber
 }
 
-func (turn *TurnState) GetTotalTurns() uint8 {
+func (turn *TurnData) GetTotalTurns() uint8 {
 	return turn.TotalTurns
 }
 
 // ProcessAction dispatches an action to the appropriate turn state method
 // Returns an error if the action is invalid for the current turn state
-func (turn *TurnState) ProcessAction(action Action, playerIdx uint8) error {
+func (turn *TurnData) ProcessAction(action Action, playerIdx uint8) error {
 	switch action.(type) {
 	case Draw:
 		return turn.PlayerDraw(playerIdx)
@@ -108,7 +108,7 @@ func (turn *TurnState) ProcessAction(action Action, playerIdx uint8) error {
 
 // ProcessKanAction handles kan actions with type distinction
 // isClosedKan should be true for closed kans (from hand only), false for claimed kans
-func (turn *TurnState) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan bool) error {
+func (turn *TurnData) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan bool) error {
 	if isClosedKan {
 		return turn.PlayerClosedKan(playerIdx)
 	}
@@ -117,9 +117,9 @@ func (turn *TurnState) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan
 
 // Try tests if an action would succeed without modifying the turn state
 // Returns nil if the action would succeed, or an error if it would fail
-func (turn *TurnState) Try(action Action, playerIdx uint8, isClosedKan ...bool) error {
+func (turn *TurnData) Try(action Action, playerIdx uint8, isClosedKan ...bool) error {
 	// Create a copy of the current turn state to test against
-	testTurn := TurnState{
+	testTurn := TurnData{
 		TurnNumber: turn.TurnNumber,
 		TotalTurns: turn.TotalTurns,
 	}

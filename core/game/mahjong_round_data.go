@@ -10,11 +10,11 @@ import (
 )
 
 type MahjongRoundData struct {
-	scoring   Scoring
-	tileState TileState
+	scoring  Scoring
+	tileData TileData
 	// Player direction
-	windState WindState
-	turnState TurnState
+	windData WindData
+	turnData TurnData
 	// Round direction
 	roundWind   Wind
 	roundNumber uint8
@@ -22,17 +22,17 @@ type MahjongRoundData struct {
 
 func InitMahjongRoundData() MahjongRoundData {
 	return MahjongRoundData{
-		scoring:   InitScoring(25000),
-		tileState: CreateNewRound(),
-		windState: WindState(0),
-		turnState: InitTurnState(),
+		scoring:  InitScoring(25000),
+		tileData: CreateNewRound(),
+		windData: WindData(0),
+		turnData: InitTurnData(),
 	}
 }
 
 func (data *MahjongRoundData) IncrementRound() {
-	data.windState.IncrementWind()
-	data.tileState = CreateNewRound()
-	data.turnState.NextRound()
+	data.windData.IncrementWind()
+	data.tileData = CreateNewRound()
+	data.turnData.NextRound()
 	data.roundNumber += 1
 	// TODO: Implement switching round winds
 }
@@ -45,17 +45,17 @@ func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo
 
 		actions := PotentialActionEvent{}
 
-		kanResult := CheckKan(playerIdx, i, data.tileState)
+		kanResult := CheckKan(playerIdx, i, data.tileData)
 		if kanResult != nil {
 			actions.Actions = append(actions.Actions, kanResult)
 		}
 
-		ponResult := CheckPon(playerIdx, i, data.tileState)
+		ponResult := CheckPon(playerIdx, i, data.tileData)
 		if ponResult != nil {
 			actions.Actions = append(actions.Actions, ponResult)
 		}
 
-		chiiResult := CheckChii(playerIdx, i, data.tileState)
+		chiiResult := CheckChii(playerIdx, i, data.tileData)
 		if chiiResult != nil {
 			actions.Actions = append(actions.Actions, chiiResult)
 		}
@@ -74,10 +74,10 @@ func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo
 	return info
 }
 
-func CheckKan(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
-	discardedTile := tileState.DiscardPile[discardedPlayerIdx].Last()
+func CheckKan(discardedPlayerIdx, playerIdx uint8, tileData TileData) Action {
+	discardedTile := tileData.DiscardPile[discardedPlayerIdx].Last()
 
-	if tileState.Hands[playerIdx].ClosedHand.HasTileN(discardedTile) == 3 {
+	if tileData.Hands[playerIdx].ClosedHand.HasTileN(discardedTile) == 3 {
 		return Kan{
 			TileToKan: discardedTile,
 		}
@@ -86,13 +86,13 @@ func CheckKan(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
 	return nil
 }
 
-func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
+func CheckChii(discardedPlayerIdx, playerIdx uint8, tileData TileData) Action {
 	if (discardedPlayerIdx+1)%4 != playerIdx {
 		return nil
 	}
 
-	discardedTile := tileState.DiscardPile[discardedPlayerIdx].Last()
-	playerHand := tileState.Hands[playerIdx].ClosedHand
+	discardedTile := tileData.DiscardPile[discardedPlayerIdx].Last()
+	playerHand := tileData.Hands[playerIdx].ClosedHand
 
 	// Chii can only be done by the player immediately after the discarder (playerIdx == (discardedPlayerIdx + 1) % 4)
 	// For now, we'll check all potential Chii combinations and return the first valid one
@@ -142,9 +142,9 @@ func CheckChii(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action 
 	return nil
 }
 
-func CheckPon(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
-	discardedTile := tileState.DiscardPile[discardedPlayerIdx].Last()
-	playerHand := tileState.Hands[playerIdx].ClosedHand
+func CheckPon(discardedPlayerIdx, playerIdx uint8, tileData TileData) Action {
+	discardedTile := tileData.DiscardPile[discardedPlayerIdx].Last()
+	playerHand := tileData.Hands[playerIdx].ClosedHand
 
 	if playerHand.HasTileN(discardedTile) == 2 {
 		return Pon{
@@ -156,7 +156,7 @@ func CheckPon(discardedPlayerIdx, playerIdx uint8, tileState TileState) Action {
 }
 
 func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Action {
-	discardedTile := data.tileState.DiscardPile[discardedPlayerIdx].Last()
+	discardedTile := data.tileData.DiscardPile[discardedPlayerIdx].Last()
 
 	yakuContext := YakuContext{
 		IsSelfDrawn:                false,
@@ -173,7 +173,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	}
 
 	// Check if adding the discarded tile would complete a winning hand
-	hand := &data.tileState.Hands[playerIdx]
+	hand := &data.tileData.Hands[playerIdx]
 	canWin := CheckHandCanWin(hand, yakuContext, discardedTile)
 	if canWin {
 		list, points, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
@@ -210,7 +210,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 }
 
 func CheckHandWaits(playerIdx uint8, data *MahjongRoundData) []Tile {
-	if data.tileState.Hands[playerIdx].FullHand() {
+	if data.tileData.Hands[playerIdx].FullHand() {
 		panic("Wrong use of check hand waits function")
 	}
 
