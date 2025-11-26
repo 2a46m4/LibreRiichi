@@ -2,7 +2,7 @@ export type CallbackArgs = any[]
 
 // Branded types for compile-time type safety
 export type StateName<T extends string> = T & { readonly __stateBrand: unique symbol }
-export type EventName<T extends string> = T & { readonly __eventBrand: unique symbol } & { readonly toString(): T }
+export type EventName<T extends string> = T & { readonly __eventBrand: unique symbol }
 
 // Helper functions to create branded names
 export function createStateName<T extends string>(name: T): StateName<T> {
@@ -35,6 +35,13 @@ export type GuardCallback<
     ToData extends any,
     Args extends CallbackArgs
 > = (from: FromData, to: ToData, ...args: Args) => boolean
+
+// Helper type to extract Args from a callback function
+export type ExtractCallbackArgs<T> = T extends (from: any, to: any, ...args: infer A) => any 
+    ? A 
+    : T extends (from: any, to: any, ...args: infer A) => any
+    ? A
+    : []
 
 export type TransitionType = 'immediate' | 'deferred'
 
@@ -162,25 +169,34 @@ export class FSM<
      * Type-safe event triggering with compile-time type checking using branded types
      * This provides true compile-time type safety for event arguments
      */
-    async trigger_event<T extends string>(
-        event_name: EventName<T>,
-        ...args: EventArgumentsByBrandedName<TEvents, T>
+    async trigger_event<T extends TEvents[number]>(
+        event: T,
+        ...args: T extends Event<any, any, infer Args> ? Args : never
     ): Promise<void> {
         // Find the event first to check if it's deferred
-        const event = this.find_event_by_branded_name(event_name)
-        if (!event) {
-            throw new FSMError(`Event '${event_name}' not found from current state '${this.current_state.name}'`, this.current_state.name, event_name as string)
+        const found_event = this.config.events.find(e => e.name === event.name)
+        if (!found_event) {
+            throw new FSMError(`Event '${String(event.name)}' not found from current state '${this.current_state.name}'`, this.current_state.name, String(event.name))
+        }
+
+        // Check if event can be triggered from current state
+        if (found_event.from.name !== this.current_state.name) {
+            throw new FSMError(
+                `Cannot trigger event '${String(event.name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`,
+                this.current_state.name,
+                String(event.name)
+            )
         }
 
         // Handle deferred transitions first (before checking transition_in_progress)
-        if (event.transition_type === 'deferred') {
-            this.deferred_queue.push({ event, args: args as any[], reason: 'explicit_deferred' })
+        if (found_event.transition_type === 'deferred') {
+            this.deferred_queue.push({ event: found_event, args: args as any[], reason: 'explicit_deferred' })
             return
         }
 
         // Handle events during transitions
         if (this.transition_in_progress) {
-            this.deferred_queue.push({ event, args: args as any[], reason: 'during_transition' })
+            this.deferred_queue.push({ event: found_event, args: args as any[], reason: 'during_transition' })
             return
         }
 
@@ -188,21 +204,21 @@ export class FSM<
         await this.process_deferred_queue()
 
         // Type-safe state validation (re-check after processing deferred items)
-        if (event.from.name !== this.current_state.name) {
+        if (found_event.from.name !== this.current_state.name) {
             throw new FSMError(
-                `Cannot trigger event '${String(event_name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${event.from.name}'`,
+                `Cannot trigger event '${String(event.name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`,
                 this.current_state.name,
-                String(event_name)
+                String(event.name)
             )
         }
 
         // Check guard condition if present
-        if (event.guard && !event.guard(this.current_state.data, event.to.data, ...(args as any))) {
+        if (found_event.guard && !found_event.guard(this.current_state.data, found_event.to.data, ...(args as any))) {
             return // Transition blocked by guard
         }
 
         // Execute immediate transition
-        await this.perform_transition(event, args as any)
+        await this.perform_transition(found_event, args as any)
     }
 
     /**
@@ -474,7 +490,39 @@ export function create_state<Data>(name: string, data: Data, options?: {
 }
 
 /**
- * Type-safe event creation helper
+ * Type-safe event creation helper with proper argument type inference
+ */
+export function create_event<
+    FromState extends State<any>,
+    ToState extends State<any>,
+    Args extends CallbackArgs
+>(
+    name: string,
+    from: FromState,
+    to: ToState,
+    options: {
+        callback: (from: FromState['data'], to: ToState['data'], ...args: Args) => void | Promise<void>
+        guard?: (from: FromState['data'], to: ToState['data'], ...args: Args) => boolean
+        transition_type?: TransitionType
+    }
+): Event<FromState, ToState, Args>
+
+export function create_event<
+    FromState extends State<any>,
+    ToState extends State<any>
+>(
+    name: string,
+    from: FromState,
+    to: ToState,
+    options?: {
+        callback?: (from: FromState['data'], to: ToState['data'], ...args: any) => void | Promise<void>
+        guard?: (from: FromState['data'], to: ToState['data'], ...args: any) => boolean
+        transition_type?: TransitionType
+    }
+): Event<FromState, ToState, any[]>
+
+/**
+ * Implementation
  */
 export function create_event<
     FromState extends State<any>,
@@ -485,8 +533,8 @@ export function create_event<
     from: FromState,
     to: ToState,
     options?: {
-        callback?: EventCallback<FromState['data'], ToState['data'], Args>
-        guard?: GuardCallback<FromState['data'], ToState['data'], Args>
+        callback?: (from: FromState['data'], to: ToState['data'], ...args: Args) => void | Promise<void>
+        guard?: (from: FromState['data'], to: ToState['data'], ...args: Args) => boolean
         transition_type?: TransitionType
     }
 ): Event<FromState, ToState, Args> {
@@ -494,8 +542,8 @@ export function create_event<
         name: createEventName(name),
         from,
         to,
-        callback: options?.callback,
-        guard: options?.guard,
+        callback: options?.callback as any,
+        guard: options?.guard as any,
         transition_type: options?.transition_type
     }
 }
