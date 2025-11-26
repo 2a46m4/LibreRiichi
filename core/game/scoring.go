@@ -1,6 +1,7 @@
 package game
 
 type Scoring struct {
+	// Game Index
 	Points [4]uint32
 }
 

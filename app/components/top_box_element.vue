@@ -39,6 +39,8 @@ function round_wind() {
     <p>{{ round_wind() }}</p>
     <h1 class="text-xl">Player index:</h1>
     <p>{{ player_idx }}</p>
+    <h1>Debug:</h1>
+    <p>{{ player_to_order_map }}</p>
   </div>
 </template>
 
