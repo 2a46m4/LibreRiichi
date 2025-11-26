@@ -6,6 +6,7 @@ import { Raycaster, Selection, Selector } from "./raycaster";
 import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
 import { Hand } from './hand';
 
+// Animates and manages actions
 export interface IActionAnimator {
     clear_tiles(): void
     add_tile(tile: Tile, player_idx?: number): void
@@ -16,6 +17,7 @@ export interface IActionAnimator {
     select(selections: Selection[]): void
 }
 
+// Callable
 export interface IRenderer {
     animate_frame(dt: number): void
     stop(): void

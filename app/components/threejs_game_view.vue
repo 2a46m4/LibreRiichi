@@ -6,7 +6,7 @@ import { BoardEvent, BoardEventType, PlayerActionEvent } from '../messaging/boar
 import { Setup, SetupType } from '../game/setup'
 import { ArenaMessageBus } from "../messaging/event_handler";
 import { ArenaEventType } from "../messaging/arena_event_generated";
-import { ServerEvent } from "../messaging/server_event_generated";
+import { ServerEvent, ServerEventType } from "../messaging/server_event_generated";
 import { ScoreboardState } from "../game/scoreboard";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
@@ -18,6 +18,8 @@ const props = defineProps<{ in_game: boolean, arena: Arena }>()
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
 const is_fullscreen = ref(false)
+
+const discard_required = ref(false)
 
 let animation_id: number
 
@@ -48,15 +50,21 @@ onMounted(() => {
   window.addEventListener('click', on_click)
 
   ArenaMessageBus.register(message_handler)
+  ArenaMessageBus.register(debug_message_printer)
 })
 
 function on_click(event: MouseEvent) {
   const selection = selection_manager.get_selection()
   if (selection === null) {
     return
-  } else {
-    action_animator.remove_tile(selection.id)
   }
+
+  if (!discard_required.value) {
+    return
+  }
+
+  action_animator.remove_tile(selection.id)
+  discard_required.value = false
 }
 
 function on_window_resize() {
@@ -85,6 +93,35 @@ onUnmounted(() => {
 
   renderer.stop()
 })
+
+function debug_message_printer(event: ServerEvent) {
+  const msg = `ServerEvent message: ${ServerEventType[event.serverevent_type]}\n\t`
+
+  const debug_board_event = function (board_event: BoardEvent, msg: string) {
+    msg += `BoardEvent message: ${BoardEventType[board_event.boardevent_type]}\n\t\t`
+    switch (board_event.boardevent_type) {
+      case BoardEventType.PlayerActionEvent:
+        msg += `PlayerActionEvent message: ${ActionType[board_event.action_data.action_type]} from player ${board_event.from_player}`
+        break
+      case BoardEventType.PotentialActionEvent:
+        msg += `PotentialActionEvent message: ${board_event.actions.map((action) => ActionType[action.action_type])}`
+        break
+      case BoardEventType.GameSetupEvent:
+        msg += `GameSetupEvent message: ${board_event.setup.map((setup) => SetupType[setup.setup_type])}`
+        break
+      case BoardEventType.GameEndEvent:
+        msg += `GameEndEvent message: ${board_event.result}`
+
+    }
+  }
+
+  switch (event.arena_message.arenaevent_type) {
+    case ArenaEventType.ArenaBoardEvent:
+      debug_board_event(event.arena_message.board_event, msg)
+  }
+
+  return true
+}
 
 function message_handler(event: ServerEvent) {
   switch (event.arena_message.arenaevent_type) {
@@ -142,6 +179,7 @@ function handle_player_action_event(action: PlayerActionEvent) {
   }
 }
 
+// TODO: Model an FSM so that it's easier to sequence animations
 function handle_potential_action_event(actions: Action[]) {
   for (let action of actions) {
     switch (action.action_type) {
@@ -152,6 +190,7 @@ function handle_potential_action_event(actions: Action[]) {
       case ActionType.Riichi:
         break;
       case ActionType.Toss:
+        discard_required.value = true
         break;
       case ActionType.Skip:
         break;
