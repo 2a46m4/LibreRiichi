@@ -1,4 +1,4 @@
-import { IncomingMessage, MessageType, validate_message } from './message'
+import { IncomingMessage, MessageType } from './message'
 import { ServerResponse } from './server_response_generated'
 import { ServerEvent } from './server_event_generated'
 import { ArenaEvent } from './arena_event_generated'

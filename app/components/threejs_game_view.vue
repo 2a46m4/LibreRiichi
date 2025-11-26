@@ -1,19 +1,122 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, Ref, render } from 'vue'
-import { decode, Tile } from '../game/tile'
-import { initialize_tiles } from '../render/tile'
-import { BoardEvent, BoardEventType, PlayerActionEvent } from '../messaging/board_event_generated'
-import { Setup, SetupType } from '../game/setup'
-import { ArenaMessageBus } from "../messaging/event_handler";
-import { ArenaEventType } from "../messaging/arena_event_generated";
-import { ServerEvent, ServerEventType } from "../messaging/server_event_generated";
-import { ScoreboardState } from "../game/scoreboard";
+import {onMounted, onUnmounted, ref, watch} from 'vue'
+import {Tile} from '../game/tile'
+import {initialize_tiles} from '../render/tile'
+import {BoardEvent, BoardEventType, PlayerActionEvent} from '../messaging/board_event_generated'
+import {Setup, SetupType} from '../game/setup'
+import {ArenaMessageBus} from "../messaging/event_handler";
+import {ArenaEventType} from "../messaging/arena_event_generated";
+import {ServerEvent, ServerEventType} from "../messaging/server_event_generated";
 import ScoreBoard from "../components/scoreboard.vue"
-import { Action, ActionType } from "../messaging/action_generated";
-import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
-import { Arena } from '../game/arena'
+import {Action, ActionType} from "../messaging/action_generated";
+import {IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer} from "../render/renderer";
+import {Arena} from '../game/arena'
+import {create_event, create_fsm, create_fsm_builder, create_state, createEventName, EventName} from "../fsm";
 
 const props = defineProps<{ in_game: boolean, arena: Arena }>()
+
+interface Add {
+  tag: "add",
+  add: Tile,
+  location: number,
+}
+interface Remove {
+  tag: "remove",
+  id: string,
+  location: number,
+}
+interface NewSet {
+  tag: "newset",
+  set: Tile[],
+}
+type HandAction = Add | Remove | NewSet
+
+const arena_data = ref({
+  dealer_idx: 0,
+  round_wind: 0,
+  round_number: 0,
+  players: [],
+  player_idx: 0,
+})
+
+const game_data = {
+  tiles: new Array<{ tile: Tile, id: string }>(),
+  trigger_action: ref<HandAction>()
+}
+
+const make_fsm = () => {
+
+  const out_of_game = create_state("out_of_game", {})
+  const awaiting_discard = create_state("awaiting_discard", {})
+  const discarded = create_state("discarded", {})
+  const awaiting_other_player = create_state("awaiting_other_player", {
+    player_id: 0,
+  })
+  const awaiting_naki_calls = create_state("awaiting_naki_calls", {})
+  const naki_called = create_state("naki_called", {})
+  const round_finished = create_state("round_finished", {})
+  const game_finished = create_state("game_finished", {})
+
+  const player_starts_event_name = createEventName("player_starts")
+  const player_starts = create_event("player_starts", out_of_game, awaiting_discard, {
+    callback: (_, __, tile_received: Tile) => {
+
+    }
+  })
+  const player_waiting = create_event("player_waiting", out_of_game, awaiting_other_player, {
+    callback: (_, __, player_idx: number) => {
+
+    }
+  })
+  const draw_event = create_event("draw_event", awaiting_other_player, awaiting_discard, {
+	callback: (_, __, tile_received: Tile) => {
+
+	}
+  })
+
+  const fsm = create_fsm_builder()
+      .add_state(out_of_game)
+      .add_state(awaiting_discard)
+      .add_state(discarded)
+      .add_state(awaiting_other_player)
+      .add_state(awaiting_naki_calls)
+      .add_state(naki_called)
+      .add_state(round_finished)
+      .add_state(game_finished)
+      .add_event(player_starts)
+	  .add_event(player_waiting)
+	  .add_event(draw_event)
+      .build(out_of_game)
+
+    fsm.trigger_event(player_starts_event_name, "sdf")
+
+
+  ArenaMessageBus.register((data: ServerEvent)=>{
+    if (data.arena_message.arenaevent_type != ArenaEventType.ArenaBoardEvent) {
+      return true
+    }
+
+    const board_event = data.arena_message.board_event
+    switch (board_event.boardevent_type) {
+      case BoardEventType.PotentialActionEvent:
+        // TODO: Prompt the player to perform some action
+        throw new Error("Not yet implemented")
+        break;
+      case BoardEventType.PlayerActionEvent:
+        break;
+      case BoardEventType.GameSetupEvent:
+        handle_game_setup_event(board_event.setup)
+        break;
+      case BoardEventType.GameEndEvent:
+        break;
+    }
+
+    return true
+  })
+
+  return fsm
+}
+
 
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
@@ -27,14 +130,7 @@ let renderer: IRenderer
 let selection_manager: ISelectionManager
 let action_animator: IActionAnimator
 
-const scoreboard_state: Ref<ScoreboardState> = ref({
-  scoreboard_values: [],
-  player_to_order_map: [],
-  round_wind: 0,
-  round_number: 0,
-  players: [],
-  player_idx: 0,
-})
+let fsm: ReturnType<typeof make_fsm>
 
 onMounted(() => {
   if (!three_canvas.value) return
@@ -48,6 +144,40 @@ onMounted(() => {
 
   window.addEventListener('resize', on_window_resize)
   window.addEventListener('click', on_click)
+
+  fsm = make_fsm()
+
+  // Watch updates to the tile set
+  watch(game_data.trigger_action, (action) => {
+      if (action === undefined) {
+        return
+      }
+
+    switch (action.tag) {
+      case "newset":
+        action_animator.clear_tiles()
+        const uuids = action.set.map(tile => action_animator.add_tile(tile))
+        game_data.tiles = []
+        for (let i = 0; i < uuids.length; i++) {
+          game_data.tiles.push({
+            id: uuids[i],
+            tile: action.set[i]
+          })
+        }
+        break;
+      case "add":
+        const uuid = action_animator.add_tile(action.add, 0, action.location)
+        game_data.tiles.splice(action.location, 0, {
+          id: uuid,
+          tile: action.add,
+        })
+        break;
+      case "remove":
+        game_data.tiles.splice(action.location, 1)
+        action_animator.remove_tile(action.id)
+        break;
+    }
+  })
 
   ArenaMessageBus.register(message_handler)
   ArenaMessageBus.register(debug_message_printer)
@@ -201,6 +331,8 @@ function handle_potential_action_event(actions: Action[]) {
       case ActionType.Chii:
         break;
       case ActionType.Draw:
+		const tile = new Tile(action.drawn_tile)
+        // fsm.trigger_event(draw_event, "sdf")
         break;
     }
   }
@@ -213,7 +345,9 @@ function handle_game_setup_event(setups: Setup[]) {
         action_animator.clear_tiles()
         Tile.from(setup.data)
           .sort(Tile.sort)
-          .forEach((tile) => action_animator.add_tile(tile))
+          .forEach((tile) => {
+            action_animator.add_tile(tile)
+          })
         break
       case SetupType.DORA:
         action_animator.add_dora(new Tile(setup.data))
@@ -225,10 +359,7 @@ function handle_game_setup_event(setups: Setup[]) {
         scoreboard_state.value.player_idx = setup.data
         break
       case SetupType.PLAYER_ORDER:
-        const map = Array.from(decode(setup.data))
-        props.arena.set_game_seating(map)
-        scoreboard_state.value.player_to_order_map = map
-        break
+        throw new Error("Should be removed")
       case SetupType.ROUND_WIND:
         scoreboard_state.value.round_wind = setup.data
         break

@@ -1,30 +1,35 @@
 import { AgentInfo } from "./agent_info";
+import {create_event, create_fsm_builder, create_state, FSM} from "../fsm";
+import {Tile} from "./tile";
+
+interface NoData {}
+
+interface DiscardData {
+    tile?: Tile
+}
+
+interface OtherPlayerTurn {
+    player_id: number
+}
 
 export class Arena {
-  game_seating: number[] | null = null
-
   constructor(
     public agents: AgentInfo[],
     public game_started: boolean,
-    public player_index: number
-  ) { }
+    public player_index: number,
+    public dealer: number
+  ) {
+      const awaiting_discard_state = create_state<NoData>("awaiting_discard", {})
+      const discarded_state = create_state<DiscardData>("discarded_state", {})
+      const other_player_state = create_state<OtherPlayerTurn>("other_player_turn", {
+          player_id: dealer,
+      })
+      const naki_call_state = create_state<NoData>("naki_call_state", {})
 
-  set_game_seating(player_to_order: number[]): void {
-    this.game_seating = player_to_order // Maps arena index to game index
-  }
+      const draw_event = create_event("draw_event", awaiting_discard_state, )
 
-  // Maps arena index to game index
-  agent_to_game(idx: number): number {
-    if (this.game_seating === null) {
-      throw new Error("Seating is null")
-    } else {
-      return this.game_seating[idx]
-    }
-  }
+      create_fsm_builder()
 
-  // Maps game to seat index
-  game_to_seating(idx: number): number {
-    // Seating is always index 0, clockwise increasing
-    return ((idx - this.player_index) + 4) % 4
+
   }
 }

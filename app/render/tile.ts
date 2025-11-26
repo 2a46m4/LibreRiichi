@@ -324,7 +324,7 @@ export function load_all_materials(tile_textures: Map<number, THREE.Texture>) {
         )
 }
 
-// A tile that exists on screen
+// An instance of a tile on screen.
 export class TileObject extends THREE.Mesh implements IAnimatable {
     public tile: Tile
     public tile_animations: IAnimation[] = []

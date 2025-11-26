@@ -3,10 +3,12 @@ import { Tile } from '../game/tile'
 import { TileObject } from './tile'
 import { IAnimation, IAnimationManager, quadratic_interpolator, TileAnimation } from './animation'
 
+// Returns the offset of where the tile should be
 function offset(i: number) {
     return (-7 * 0.45) + i * 0.45
 }
 
+// A renderable object representing a player's hand
 export class Hand extends THREE.Group {
     public array: TileObject[] = []
 
@@ -15,20 +17,34 @@ export class Hand extends THREE.Group {
         tiles.forEach(tile => this.add_tile(tile))
     }
 
-    add_tile(tile: Tile) {
+    // Location: the index at which the new tile will end up at
+    // Returns the UUID of the new tile object
+    add_tile(tile: Tile, location: number = this.array.length) {
         const tile_obj = new TileObject(tile)
         const start = new THREE.Vector3(0, 2, -5)
         const end = new THREE.Vector3(offset(this.array.length), 0, 0)
         const delay = 50 * this.animation_manager.get_animations().length
 
-        this.array.push(tile_obj)
+        this.array.splice(location, 0, tile_obj)
+        for (let i = location + 1; i < this.array.length; i++) {
+            const start = this.array[i].position
+            const end = new THREE.Vector3(offset(i), 0, 0)
+            this.array[i].add_animation(new TileAnimation(tile_obj, start, end, quadratic_interpolator, 300, delay))
+            this.animation_manager.add_animation(this.array[i])
+        }
         tile_obj.add_animation(new TileAnimation(tile_obj, start, end, quadratic_interpolator, 300, delay))
         super.add(tile_obj)
         this.animation_manager.add_animation(this.array[this.array.length - 1])
+
+        return tile_obj.uuid
     }
 
     find_uuid(uuid: string) {
         return this.array.find(id => id.uuid == uuid)
+    }
+
+    find_uuid_index(uuid: string) {
+        return this.array.findIndex(id => id.uuid == uuid)
     }
 
     remove_all() {

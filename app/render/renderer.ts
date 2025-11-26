@@ -9,7 +9,7 @@ import { Hand } from './hand';
 // Animates and manages actions
 export interface IActionAnimator {
     clear_tiles(): void
-    add_tile(tile: Tile, player_idx?: number): void
+    add_tile(tile: Tile, player_idx?: number, location?: number): string
     remove_tile(id: string): void
     add_dora(tile: Tile): void
     draw(player_idx: number, tile?: Tile): void
@@ -25,7 +25,7 @@ export interface IRenderer {
 }
 
 export interface ISelectionManager {
-    get_selection(): { tile: Tile, id: string } | null
+    get_selection(): { tile: Tile, id: string, location: number } | null
 }
 
 const marker_positions = [
@@ -328,8 +328,12 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
         this.hands[0].remove_all()
     }
 
-    add_tile(tile: Tile, player_idx: number = 0) {
-        this.hands[player_idx].add_tile(tile)
+    add_tile(tile: Tile, player_idx: number = 0, add_location: number = -1): string {
+        if (add_location >= 0) {
+            return this.hands[player_idx].add_tile(tile, add_location)
+        } else {
+            return this.hands[player_idx].add_tile(tile)
+        }
     }
 
     remove_tile(id: string): void {
@@ -345,13 +349,14 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
         this.scene.add(dora_tile)
     }
 
-    get_selection(): { tile: Tile; id: string } | null {
+    get_selection(): { tile: Tile; id: string, location: number } | null {
         if (this.selection.tile === null) {
             return null
         }
         return {
             tile: this.selection.tile.tile,
             id: this.selection.tile.uuid,
+            location: this.hands[0].find_uuid_index(this.selection.tile.uuid)
         }
     }
 

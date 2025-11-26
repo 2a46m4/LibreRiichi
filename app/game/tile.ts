@@ -37,14 +37,9 @@ export function decode(array: string): Uint8Array {
   return new Uint8Array(bytes)
 }
 
-// We should use singleton variables that store a single reference to texture/mesh?
-// Or multiple singletons store a single reference to texture/mesh
+// A tile value
 export class Tile {
-  public value: number
-
-  constructor(value: number) {
-    this.value = value
-  }
+  constructor(public value: number) {}
 
   static sort(a: Tile, b: Tile) {
     return a.value - b.value
