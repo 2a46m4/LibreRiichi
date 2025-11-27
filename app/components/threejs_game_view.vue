@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import {onMounted, onUnmounted, ref, watch} from 'vue'
 import {Tile} from '../game/tile'
@@ -11,7 +12,7 @@ import ScoreBoard from "../components/scoreboard.vue"
 import {Action, ActionType} from "../messaging/action_generated";
 import {IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer} from "../render/renderer";
 import {Arena} from '../game/arena'
-import {create_event, create_fsm, create_fsm_builder, create_state, createEventName, EventName} from "../fsm";
+import {create_event, create_fsm, create_fsm_builder, create_state, IsTuple, FSM} from "../fsm";
 
 const props = defineProps<{ in_game: boolean, arena: Arena }>()
 
@@ -57,7 +58,6 @@ const make_fsm = () => {
   const round_finished = create_state("round_finished", {})
   const game_finished = create_state("game_finished", {})
 
-  const player_starts_event_name = createEventName("player_starts")
   const player_starts = create_event("player_starts", out_of_game, awaiting_discard, {
     callback: (_, __, tile_received: Tile) => {
 
@@ -88,10 +88,10 @@ const make_fsm = () => {
 	  .add_event(draw_event)
       .build(out_of_game)
 
-    fsm.trigger_event(player_starts_event_name, "sdf")
+    fsm.trigger_event("player_starts", new Tile(5))
+	// fsm.trigger_event("testing")
 
-
-  ArenaMessageBus.register((data: ServerEvent)=>{
+	ArenaMessageBus.register((data: ServerEvent)=>{
     if (data.arena_message.arenaevent_type != ArenaEventType.ArenaBoardEvent) {
       return true
     }

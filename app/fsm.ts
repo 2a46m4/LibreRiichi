@@ -1,15 +1,13 @@
-export type CallbackArgs = any[]
-
 export type EventCallback<
     FromData extends any,
     ToData extends any,
-    Args extends CallbackArgs
+    Args extends any[]
 > = (from: FromData, to: ToData, ...args: Args) => void | Promise<void>
 
 export type GuardCallback<
     FromData extends any,
     ToData extends any,
-    Args extends CallbackArgs
+    Args extends any[]
 > = (from: FromData, to: ToData, ...args: Args) => boolean
 
 export type FindEvent<NameToMatch, TEvents> =
@@ -19,27 +17,13 @@ export type FindEvent<NameToMatch, TEvents> =
 				? First
 				: Rest extends readonly Event<string, any, any>[]
 					? FindEvent<NameToMatch, Rest>
-					// ? ["Event searched: ", First, FindEvent<NameToMatch, Rest>]
-					: "Fail at rest"
-			: "Failed at first"
-		: "Reached end of list"
-
-type Test = FindEvent<"start", readonly [
-	Event<"start", State<"idle">, State<"running">>,
-	Event<"stop", State<"running">, State<"idle">>
-]>
-
-export type IsTuple<T> = T extends readonly any[]
-  ? number extends T['length'] 
-      ? false  // regular array
-      : true   // tuple (fixed length)
-  : false;
+					: never
+			: never
+		: never
 
 export type ExtractCallbackArgs<T> = T extends Event<any, any, any, infer Args>
     ? Args
     : never
-
-export type TransitionType = 'immediate' | 'deferred'
 
 /**
  * Transition Type Explanation:
@@ -51,6 +35,7 @@ export type TransitionType = 'immediate' | 'deferred'
  *             transitions or when you want to batch multiple operations). You must manually
  *             trigger the transition by calling process_deferred_transitions().
  */
+export type TransitionType = 'immediate' | 'deferred'
 
 // Enhanced type-safe state interface
 export interface State<Name extends string, Data = {}, FromName extends string = string, ToName extends string = string> {
@@ -65,7 +50,7 @@ export interface Event<
 	Name extends string,
     FromState extends State<string>,
     ToState extends State<string>,
-    Args extends CallbackArgs = any[]
+    Args extends any[] = any[]
 > {
     name: Name
     from: FromState
@@ -132,21 +117,15 @@ export class FSM<
     }
 
     /**
-     * Type-safe event triggering with compile-time type checking using branded types
-     * This provides true compile-time type safety for event arguments
+     * Trigger an event by name with type-safe arguments
      */
 	async trigger_event<T extends string, Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
-        // Find the event first to check if it's deferred
-        const found_event = this.config.events.find(e => e.name === event_name)
+        // Find the event that can be triggered from current state
+        const found_event = this.config.events.find(e =>
+            e.name === event_name && e.from.name === this.current_state.name
+        )
         if (!found_event) {
-            throw new Error(`Event '${String(event_name)}' not found from current state '${this.current_state.name}'`)
-        }
-
-        // Check if event can be triggered from current state
-        if (found_event.from.name !== this.current_state.name) {
-            throw new Error(
-                `Cannot trigger event '${String(event_name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`
-            )
+            throw new Error(`Event '${String(event_name)}' cannot be triggered from current state '${this.current_state.name}'. Available events: ${this.get_available_events().join(', ')}`)
         }
 
         // Handle deferred transitions first (before checking transition_in_progress)
@@ -236,15 +215,6 @@ export class FSM<
     }
 
     /**
-     * Find event by name (for type-safe triggering)
-     */
-    private find_event_by_name(event_name: string): TEvents[number] | undefined {
-        return this.config.events.find(event =>
-            event.name === event_name && event.from.name === this.current_state.name
-        )
-    }
-
-    /**
      * Get all possible events from the current state
      */
     get_available_events(): string[] {
@@ -274,9 +244,22 @@ export class FSM<
     async process_deferred_queue(options?: {
         only_explicit_deferred?: boolean;
         only_during_transition?: boolean;
-    }): Promise<void> {
+        stop_on_error?: boolean;
+    }): Promise<{
+        processed: number;
+        failed: Array<{
+            event: string;
+            reason: string;
+            error: Error;
+        }>;
+    }> {
         const queue = [...this.deferred_queue]
         this.deferred_queue = []
+
+        const results = {
+            processed: 0,
+            failed: [] as Array<{event: string; reason: string; error: Error}>
+        }
 
         for (const { event, args, reason } of queue) {
             // Apply filtering if specified
@@ -289,29 +272,30 @@ export class FSM<
                     // Re-check guard condition
                     if (!event.guard || event.guard(this.current_state.data, event.to.data, ...args)) {
                         await this.perform_transition(event, args as any)
+                        results.processed++
                     }
                 }
             } catch (error) {
+                const errorInfo = {
+                    event: event.name,
+                    reason,
+                    error: error instanceof Error ? error : new Error(String(error))
+                }
+
+                if (options?.stop_on_error) {
+                    // Re-queue remaining items for later
+                    this.deferred_queue.unshift(...queue.slice(queue.indexOf({ event, args, reason })))
+                    throw new Error(`Deferred event processing stopped: ${errorInfo.event} failed: ${errorInfo.error.message}`)
+                }
+
+                results.failed.push(errorInfo)
                 console.error(`Deferred event '${event.name}' (reason: ${reason}) failed:`, error)
-                // Continue processing remaining items even if one fails
             }
         }
-    }
 
-    /**
-     * Process only explicit deferred transitions (legacy method)
-     */
-    async process_deferred_transitions(): Promise<void> {
-        await this.process_deferred_queue({ only_explicit_deferred: true })
+        return results
     }
-
-    /**
-     * Process only items queued during transitions (legacy method)
-     */
-    async process_deferred_events(): Promise<void> {
-        await this.process_deferred_queue({ only_during_transition: true })
-    }
-
+    
     /**
      * Get deferred queue information
      */
@@ -340,7 +324,6 @@ export class FSM<
         }
     }
 
-    
     /**
      * Type-safe state data update
      */
@@ -447,7 +430,7 @@ export function create_event<
 	Name extends string,
     FromState extends State<string>,
     ToState extends State<string>,
-    Args extends CallbackArgs
+    Args extends any[]
 >(
     name: Name,
     from: FromState,
@@ -488,7 +471,7 @@ export class FSMBuilder<
     add_event<Name extends string, 
               FromState extends TStates[number], 
               ToState extends TStates[number], 
-              Args extends CallbackArgs,
+              Args extends any[],
               const NewEventType extends readonly [...TEvents, Event<Name, FromState, ToState, Args>]>(
         event: Event<Name, FromState, ToState, Args>
     ): FSMBuilder<TStates, NewEventType> {
