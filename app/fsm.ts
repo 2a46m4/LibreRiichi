@@ -1,29 +1,5 @@
 export type CallbackArgs = any[]
 
-// Branded types for compile-time type safety
-export type StateName<T extends string> = T & { readonly __stateBrand: unique symbol }
-export type EventName<T extends string> = T & { readonly __eventBrand: unique symbol }
-
-// Helper functions to create branded names
-export function createStateName<T extends string>(name: T): StateName<T> {
-    return name as StateName<T>
-}
-
-export function createEventName<T extends string>(name: T): EventName<T> {
-    return name as EventName<T>
-}
-
-// Helper to create typed event constants with their arguments
-export function createTypedEvent<T extends string, Args extends CallbackArgs>(
-    name: T,
-    args: Args
-): { name: EventName<T>; args: Args } {
-    return {
-        name: createEventName(name),
-        args
-    }
-}
-
 export type EventCallback<
     FromData extends any,
     ToData extends any,
@@ -35,6 +11,17 @@ export type GuardCallback<
     ToData extends any,
     Args extends CallbackArgs
 > = (from: FromData, to: ToData, ...args: Args) => boolean
+
+export type FindEvent<NameToMatch extends string, TEvents> =
+	TEvents extends readonly [infer First, ...infer Rest]
+		? First extends Event<infer EventName, any, any>
+			? EventName extends NameToMatch
+				? First
+				: Rest extends readonly Event<string, any, any>[]
+					? ["Event searched: ", First, FindEvent<NameToMatch, Rest>]
+					: "Fail at rest"
+			: "Failed at first"
+		: [TEvents, "Reached end of list"]
 
 // Helper type to extract Args from a callback function
 export type ExtractCallbackArgs<T> = T extends (from: any, to: any, ...args: infer A) => any 
@@ -57,20 +44,21 @@ export type TransitionType = 'immediate' | 'deferred'
  */
 
 // Enhanced type-safe state interface
-export interface State<Data = {}> {
-    name: StateName<string>
+export interface State<Name extends string, Data = {}, FromName extends string = string, ToName extends string = string> {
+    name: Name
     data: Data
-    on_enter?: (from_state: StateName<any>, from_data: any) => void
-    on_exit?: (to_state: StateName<any>, to_data: any) => void
+    on_enter?: (from_state: State<FromName>) => void
+    on_exit?: (to_state: State<ToName>) => void
 }
 
 // Type-safe event interface with explicit state constraints
 export interface Event<
-    FromState extends State<any>,
-    ToState extends State<any>,
-    Args extends CallbackArgs = []
+	Name extends string,
+    FromState extends State<string>,
+    ToState extends State<string>,
+    Args extends CallbackArgs = any[]
 > {
-    name: EventName<string>
+    name: Name
     from: FromState
     to: ToState
     callback?: EventCallback<FromState['data'], ToState['data'], Args>
@@ -80,49 +68,18 @@ export interface Event<
 
 // Type-safe configuration that enforces event-state relationships
 export interface FSMConfig<
-    TStates extends readonly State<any>[],
-    TEvents extends readonly Event<any, any, any>[]
+    TStates extends readonly State<string>[],
+    TEvents extends readonly Event<string, TStates[number], TStates[number]>[]
 > {
     states: TStates
     events: TEvents
     initial_state: TStates[number]
 }
 
-// Type-safe event map for better autocomplete
-export type EventMap<TEvents extends readonly Event<any, any, any>[]> = {
-    [K in TEvents[number]['name']]: Extract<TEvents[number], { name: K }>
-}
-
-// Type-safe event trigger map that links event names to their argument types
-export type EventTriggerMap<TEvents extends readonly Event<any, any, any>[]> = {
-    [K in TEvents[number]['name']]: Extract<TEvents[number], { name: K }> extends Event<any, any, infer Args>
-        ? Args
-        : never
-}
-
-// Helper to get the argument types for a specific event name
-export type EventArguments<TEvents extends readonly Event<any, any, any>[], EventName extends string> =
-    Extract<TEvents[number], { name: EventName }> extends Event<any, any, infer Args>
-        ? Args
-        : never
-
-// Helper to get argument types by branded event name
-export type EventArgumentsByBrandedName<TEvents extends readonly Event<any, any, any>[], T extends string> =
-    Extract<TEvents[number], { name: EventName<T> }> extends Event<any, any, infer Args>
-        ? Args
-        : never
-
-export class FSMError extends Error {
-    constructor(message: string, public readonly from_state?: string, public readonly event_name?: string) {
-        super(message)
-        this.name = 'FSMError'
-    }
-}
-
 // Type-safe FSM class with enhanced constraints
 export class FSM<
-    TStates extends readonly State<any>[],
-    TEvents extends readonly Event<any, any, any>[]
+    TStates extends readonly State<string>[],
+    TEvents extends readonly Event<string, TStates[number], TStates[number]>[]
 > {
     private current_state: TStates[number]
     private deferred_queue: Array<{
@@ -169,22 +126,17 @@ export class FSM<
      * Type-safe event triggering with compile-time type checking using branded types
      * This provides true compile-time type safety for event arguments
      */
-    async trigger_event<T extends TEvents[number]>(
-        event: T,
-        ...args: T extends Event<any, any, infer Args> ? Args : never
-    ): Promise<void> {
+    async trigger_event<T extends string, Args extends FindEvent<T, TEvents>>(event_name: T, args: Args): Promise<void> {
         // Find the event first to check if it's deferred
-        const found_event = this.config.events.find(e => e.name === event.name)
+        const found_event = this.config.events.find(e => e.name === event_name)
         if (!found_event) {
-            throw new FSMError(`Event '${String(event.name)}' not found from current state '${this.current_state.name}'`, this.current_state.name, String(event.name))
+            throw new Error(`Event '${String(event_name)}' not found from current state '${this.current_state.name}'`)
         }
 
         // Check if event can be triggered from current state
         if (found_event.from.name !== this.current_state.name) {
-            throw new FSMError(
-                `Cannot trigger event '${String(event.name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`,
-                this.current_state.name,
-                String(event.name)
+            throw new Error(
+                `Cannot trigger event '${String(event_name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`
             )
         }
 
@@ -205,15 +157,13 @@ export class FSM<
 
         // Type-safe state validation (re-check after processing deferred items)
         if (found_event.from.name !== this.current_state.name) {
-            throw new FSMError(
-                `Cannot trigger event '${String(event.name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`,
-                this.current_state.name,
-                String(event.name)
+            throw new Error(
+                `Cannot trigger event '${String(event_name)}' from state '${this.current_state.name}'. This event can only be triggered from state '${found_event.from.name}'`
             )
         }
 
         // Check guard condition if present
-        if (found_event.guard && !found_event.guard(this.current_state.data, found_event.to.data, ...(args as any))) {
+        if (found_event.guard && !found_event.guard(this.current_state.data, found_event.to.data, ...args)) {
             return // Transition blocked by guard
         }
 
@@ -226,7 +176,7 @@ export class FSM<
      */
     private async perform_transition<T extends TEvents[number]>(
         event: T,
-        args: T extends Event<any, any, infer Args> ? Args : never
+        args: T extends Event<string, any, any, infer Args> ? Args : never
     ): Promise<void> {
         this.transition_in_progress = true
 
@@ -236,12 +186,12 @@ export class FSM<
         try {
             // Call exit callback for current state
             if (from_state.on_exit) {
-                from_state.on_exit(to_state.name, to_state.data)
+                from_state.on_exit(to_state)
             }
 
             // Call event callback if present
             if (event.callback) {
-                await event.callback(from_state.data, to_state.data, ...(args as any))
+                await event.callback(from_state.data, to_state.data, ...args)
             }
 
             // Update current state
@@ -249,7 +199,7 @@ export class FSM<
 
             // Call enter callback for new state
             if (to_state.on_enter) {
-                to_state.on_enter(from_state.name, from_state.data)
+                to_state.on_enter(from_state)
             }
 
             // Note: Deferred events are now processed before each new event in trigger_event()
@@ -258,10 +208,8 @@ export class FSM<
         } catch (error) {
             // If transition fails, rollback
             this.current_state = from_state
-            throw new FSMError(
-                `Transition failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                from_state.name,
-                event.name
+            throw new Error(
+                `Transition failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             )
         } finally {
             this.transition_in_progress = false
@@ -282,15 +230,6 @@ export class FSM<
      * Find event by name (for type-safe triggering)
      */
     private find_event_by_name(event_name: string): TEvents[number] | undefined {
-        return this.config.events.find(event =>
-            event.name === event_name && event.from.name === this.current_state.name
-        )
-    }
-
-    /**
-     * Find event by branded name (for type-safe triggering)
-     */
-    private find_event_by_branded_name<T extends string>(event_name: EventName<T>): TEvents[number] | undefined {
         return this.config.events.find(event =>
             event.name === event_name && event.from.name === this.current_state.name
         )
@@ -339,7 +278,7 @@ export class FSM<
                 // Re-check that the transition is still valid from current state
                 if (event.from.name === this.current_state.name) {
                     // Re-check guard condition
-                    if (!event.guard || event.guard(this.current_state.data, event.to.data, ...(args as any))) {
+                    if (!event.guard || event.guard(this.current_state.data, event.to.data, ...args)) {
                         await this.perform_transition(event, args as any)
                     }
                 }
@@ -400,7 +339,7 @@ export class FSM<
         if (this.current_state.name === state_name) {
             this.current_state.data = { ...this.current_state.data, ...data } as any
         } else {
-            throw new FSMError(`Cannot update data for state '${state_name}' when current state is '${this.current_state.name}'`)
+            throw new Error(`Cannot update data for state '${state_name}' when current state is '${this.current_state.name}'`)
         }
     }
 
@@ -422,16 +361,16 @@ export class FSM<
 
         this.config.events.forEach(event => {
             if (!state_names.has(event.from.name)) {
-                throw new FSMError(`State '${event.from.name}' referenced in event '${event.name}' does not exist in states array`)
+                throw new Error(`State '${event.from.name}' referenced in event '${event.name}' does not exist in states array`)
             }
             if (!state_names.has(event.to.name)) {
-                throw new FSMError(`State '${event.to.name}' referenced in event '${event.name}' does not exist in states array`)
+                throw new Error(`State '${event.to.name}' referenced in event '${event.name}' does not exist in states array`)
             }
         })
 
         // Check that initial state exists
         if (!state_names.has(this.config.initial_state.name)) {
-            throw new FSMError(`Initial state '${this.config.initial_state.name}' does not exist in states array`)
+            throw new Error(`Initial state '${this.config.initial_state.name}' does not exist in states array`)
         }
     }
 
@@ -468,8 +407,8 @@ export class FSM<
  * Type-safe factory function to create an FSM with better type inference
  */
 export function create_fsm<
-    TStates extends readonly State<any>[],
-    TEvents extends readonly Event<any, any, any>[]
+    TStates extends readonly State<string>[],
+    TEvents extends readonly Event<string, TStates[number], TStates[number]>[]
 >(config: FSMConfig<TStates, TEvents>): FSM<TStates, TEvents> {
     return new FSM(config)
 }
@@ -477,27 +416,31 @@ export function create_fsm<
 /**
  * Type-safe state creation helper
  */
-export function create_state<Data>(name: string, data: Data, options?: {
-    on_enter?: (from_state: StateName<any>, from_data: any) => void
-    on_exit?: (to_state: StateName<any>, to_data: any) => void
-}): State<Data> {
+export function create_state<
+	Name extends string, 
+	Data, 
+>(name: Name, data: Data, options?: {
+    on_enter?: (from_state: State<string>) => void
+    on_exit?: (to_state: State<string>) => void
+}): State<Name, Data> {
     return {
-        name: createStateName(name),
+        name: name,
         data,
         on_enter: options?.on_enter,
         on_exit: options?.on_exit
-    }
+    } as const
 }
 
 /**
  * Type-safe event creation helper with proper argument type inference
  */
 export function create_event<
-    FromState extends State<any>,
-    ToState extends State<any>,
+	Name extends string,
+    FromState extends State<string>,
+    ToState extends State<string>,
     Args extends CallbackArgs
 >(
-    name: string,
+    name: Name,
     from: FromState,
     to: ToState,
     options: {
@@ -505,80 +448,45 @@ export function create_event<
         guard?: (from: FromState['data'], to: ToState['data'], ...args: Args) => boolean
         transition_type?: TransitionType
     }
-): Event<FromState, ToState, Args>
-
-export function create_event<
-    FromState extends State<any>,
-    ToState extends State<any>
->(
-    name: string,
-    from: FromState,
-    to: ToState,
-    options?: {
-        callback?: (from: FromState['data'], to: ToState['data'], ...args: any) => void | Promise<void>
-        guard?: (from: FromState['data'], to: ToState['data'], ...args: any) => boolean
-        transition_type?: TransitionType
-    }
-): Event<FromState, ToState, any[]>
-
-/**
- * Implementation
- */
-export function create_event<
-    FromState extends State<any>,
-    ToState extends State<any>,
-    Args extends CallbackArgs = []
->(
-    name: string,
-    from: FromState,
-    to: ToState,
-    options?: {
-        callback?: (from: FromState['data'], to: ToState['data'], ...args: Args) => void | Promise<void>
-        guard?: (from: FromState['data'], to: ToState['data'], ...args: Args) => boolean
-        transition_type?: TransitionType
-    }
-): Event<FromState, ToState, Args> {
+): Event<Name, FromState, ToState, Args> {
     return {
-        name: createEventName(name),
-        from,
-        to,
-        callback: options?.callback as any,
-        guard: options?.guard as any,
+        name: name,
+        from: from,
+        to: to,
+        callback: options?.callback,
+        guard: options?.guard,
         transition_type: options?.transition_type
-    }
+    } as const
 }
 
-/**
- * Type-safe builder pattern for FSM creation
- */
 export class FSMBuilder<
-    TStates extends readonly State<any>[] = [],
-    TEvents extends readonly Event<any, any, any>[] = []
+    const TStates extends readonly State<string>[] = [],
+    const TEvents extends readonly Event<string, TStates[number], TStates[number]>[] = []
 > {
     private states: TStates = [] as unknown as TStates
     private events: TEvents = [] as unknown as TEvents
 
-    add_state<Data>(state: State<Data>): FSMBuilder<[...TStates, State<Data>], TEvents> {
-        const new_states = [...(this.states as readonly State<any>[]), state] as [...TStates, State<Data>]
-        const builder = new FSMBuilder<[...TStates, State<Data>], TEvents>()
-        builder.states = new_states
-        builder.events = this.events
-        return builder as any
+    add_state<const Name extends string, const NewStates extends readonly [...TStates, State<Name>], const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[]>(state: State<Name>): FSMBuilder<NewStates, NewEventType> {
+        const new_states = [...this.states, state]
+		const builder = new FSMBuilder<NewStates, NewEventType>()
+        builder.states = new_states as unknown as NewStates
+        builder.events = this.events as unknown as NewEventType
+        return builder
     }
 
-    add_event<FromState extends TStates[number], ToState extends TStates[number], Args extends CallbackArgs = []>(
-        event: Event<FromState, ToState, Args>
-    ): FSMBuilder<TStates, [...TEvents, Event<FromState, ToState, Args>]> {
-        const new_events = [...(this.events as readonly Event<any, any, any>[]), event] as [...TEvents, Event<FromState, ToState, Args>]
-        const builder = new FSMBuilder<TStates, [...TEvents, Event<FromState, ToState, Args>]>()
-        builder.states = this.states
-        builder.events = new_events
-        return builder as any
+    add_event<Name extends string, const NewStates extends readonly [...TStates, State<Name>], const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[], FromState extends TStates[number], ToState extends TStates[number], Args extends CallbackArgs = []>(
+        event: Event<Name, FromState, ToState, Args>
+    ): FSMBuilder<NewStates, NewEventType> {
+        const new_events = [...this.events, event] 
+		const builder = new FSMBuilder<NewStates, NewEventType>()
+        builder.states = this.states as unknown as NewStates
+        builder.events = new_events as unknown as NewEventType
+        return builder
     }
 
     build<InitialState extends TStates[number]>(initial_state: InitialState): FSM<TStates, TEvents> {
         if (this.states.length === 0) {
-            throw new FSMError('At least one state must be added before building FSM')
+            throw new Error('At least one state must be added before building FSM')
         }
 
         return new FSM({
