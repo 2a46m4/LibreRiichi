@@ -12,23 +12,32 @@ export type GuardCallback<
     Args extends CallbackArgs
 > = (from: FromData, to: ToData, ...args: Args) => boolean
 
-export type FindEvent<NameToMatch extends string, TEvents> =
+export type FindEvent<NameToMatch, TEvents> =
 	TEvents extends readonly [infer First, ...infer Rest]
 		? First extends Event<infer EventName, any, any>
 			? EventName extends NameToMatch
 				? First
 				: Rest extends readonly Event<string, any, any>[]
-					? ["Event searched: ", First, FindEvent<NameToMatch, Rest>]
+					? FindEvent<NameToMatch, Rest>
+					// ? ["Event searched: ", First, FindEvent<NameToMatch, Rest>]
 					: "Fail at rest"
 			: "Failed at first"
-		: [TEvents, "Reached end of list"]
+		: "Reached end of list"
 
-// Helper type to extract Args from a callback function
-export type ExtractCallbackArgs<T> = T extends (from: any, to: any, ...args: infer A) => any 
-    ? A 
-    : T extends (from: any, to: any, ...args: infer A) => any
-    ? A
-    : []
+type Test = FindEvent<"start", readonly [
+	Event<"start", State<"idle">, State<"running">>,
+	Event<"stop", State<"running">, State<"idle">>
+]>
+
+export type IsTuple<T> = T extends readonly any[]
+  ? number extends T['length'] 
+      ? false  // regular array
+      : true   // tuple (fixed length)
+  : false;
+
+export type ExtractCallbackArgs<T> = T extends Event<any, any, any, infer Args>
+    ? Args
+    : never
 
 export type TransitionType = 'immediate' | 'deferred'
 
@@ -89,7 +98,7 @@ export class FSM<
     }> = []
     private transition_in_progress = false
 
-    constructor(private config: FSMConfig<TStates, TEvents>) {
+    constructor(public config: FSMConfig<TStates, TEvents>) {
         this.validate_configuration()
         this.current_state = config.initial_state
     }
@@ -126,7 +135,7 @@ export class FSM<
      * Type-safe event triggering with compile-time type checking using branded types
      * This provides true compile-time type safety for event arguments
      */
-    async trigger_event<T extends string, Args extends FindEvent<T, TEvents>>(event_name: T, args: Args): Promise<void> {
+	async trigger_event<T extends string, Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
         // Find the event first to check if it's deferred
         const found_event = this.config.events.find(e => e.name === event_name)
         if (!found_event) {
@@ -466,20 +475,26 @@ export class FSMBuilder<
     private states: TStates = [] as unknown as TStates
     private events: TEvents = [] as unknown as TEvents
 
-    add_state<const Name extends string, const NewStates extends readonly [...TStates, State<Name>], const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[]>(state: State<Name>): FSMBuilder<NewStates, NewEventType> {
+	add_state<const Name extends string,
+		const NewStates extends readonly [...TStates, State<Name>],
+		const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[] = TEvents
+	>(state: State<Name>): FSMBuilder<NewStates, NewEventType> {
         const new_states = [...this.states, state]
 		const builder = new FSMBuilder<NewStates, NewEventType>()
         builder.states = new_states as unknown as NewStates
-        builder.events = this.events as unknown as NewEventType
         return builder
     }
 
-    add_event<Name extends string, const NewStates extends readonly [...TStates, State<Name>], const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[], FromState extends TStates[number], ToState extends TStates[number], Args extends CallbackArgs = []>(
+    add_event<Name extends string, 
+              FromState extends TStates[number], 
+              ToState extends TStates[number], 
+              Args extends CallbackArgs,
+              const NewEventType extends readonly [...TEvents, Event<Name, FromState, ToState, Args>]>(
         event: Event<Name, FromState, ToState, Args>
-    ): FSMBuilder<NewStates, NewEventType> {
-        const new_events = [...this.events, event] 
-		const builder = new FSMBuilder<NewStates, NewEventType>()
-        builder.states = this.states as unknown as NewStates
+    ): FSMBuilder<TStates, NewEventType> {
+        const new_events = [...this.events, event]
+		const builder = new FSMBuilder<TStates, NewEventType>()
+        builder.states = this.states
         builder.events = new_events as unknown as NewEventType
         return builder
     }
