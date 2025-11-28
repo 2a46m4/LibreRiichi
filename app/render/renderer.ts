@@ -4,7 +4,7 @@ import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
 import { Raycaster, Selection, Selector } from "./raycaster";
 import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
-import { Hand } from './hand';
+import { Hand, Naki, NakiCallType } from './hand';
 import { TableIdx } from '../game/arena';
 
 // Animates and manages actions
@@ -60,8 +60,6 @@ const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
     (i) => new Tile(i),
 )
 
-export type NakiCallType = 'pon' | 'kan' | 'chii'
-
 export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionManager {
 
     scene: THREE.Scene
@@ -72,10 +70,11 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 
     table: THREE.Group
     hands: Hand[]
+    naki_calls: Naki[] = []
     dora_tiles: THREE.Mesh[] = []
 
     discard_pile: TileObject[][]
-	last_discard: [number, number] = [-1, -1]
+    last_discard: [number, number] = [-1, -1]
 
     selection: {
         material: THREE.MeshLambertMaterial
@@ -278,17 +277,17 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
         // Start a new row
         if (pile.length % 6 === 0) {
             const offset = ((pile.length % 6) - 3) * tile_width_gap
-			const vertical_offset = Math.floor(pile.length / 6) * 0.3
-			tile_obj.position.set(
-				discard_positions[player_idx].x - offset * Math.sin(discard_positions[player_idx].rotation),
-				-1.3 + vertical_offset,
-				discard_positions[player_idx].z - offset * Math.cos(discard_positions[player_idx].rotation)
-			)
-			tile_obj.rotation.y = discard_positions[player_idx].rotation
+            const vertical_offset = Math.floor(pile.length / 6) * 0.3
+            tile_obj.position.set(
+                discard_positions[player_idx].x - offset * Math.sin(discard_positions[player_idx].rotation),
+                -1.3 + vertical_offset,
+                discard_positions[player_idx].z - offset * Math.cos(discard_positions[player_idx].rotation)
+            )
+            tile_obj.rotation.y = discard_positions[player_idx].rotation
         }
         pile.push(tile_obj)
-		this.last_discard = [player_idx, pile.length - 1]
-		this.scene.add(tile_obj)
+        this.last_discard = [player_idx, pile.length - 1]
+        this.scene.add(tile_obj)
     }
 
     animate_frame(dt: number): void {
@@ -353,17 +352,17 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
         }
     }
 
-	remove_tile(id: string | number, player_idx: number | undefined): void {
-		if (player_idx === undefined) {
-			player_idx = 0
-		}
+    remove_tile(id: string | number, player_idx: number | undefined): void {
+        if (player_idx === undefined) {
+            player_idx = 0
+        }
 
-		if (typeof id === "string") {
-			this.hands[player_idx].remove_tile_id(id)
-		} else {
-			this.hands[player_idx].remove_tile_idx(id)
-		}
-	}
+        if (typeof id === "string") {
+            this.hands[player_idx].remove_tile_id(id)
+        } else {
+            this.hands[player_idx].remove_tile_idx(id)
+        }
+    }
 
     add_dora(tile: Tile): void {
         const dora_tile = new TileObject(tile)
@@ -403,6 +402,6 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 
     // TODO
     naki_call(called_by: TableIdx, type: NakiCallType): void {
-        
+
     }
 }

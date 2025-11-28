@@ -9,6 +9,7 @@ const props = defineProps<{
   round_number: number,
   players: AgentInfo[]
   player_idx: number,
+  debug_info?: string,
 }>()
 
 watch(props.players, sort_agents.bind(props.players))
@@ -17,7 +18,7 @@ watch(props.players, sort_agents.bind(props.players))
 
 <template>
   <TopBoxElement :player_idx="player_idx" :round_wind="round_wind" :round_number="round_number"
-    :scoreboard_values="scoreboard_values" :players="players" />
+    :scoreboard_values="scoreboard_values" :players="players" :debug_info="debug_info" />
 </template>
 
 <style scoped>

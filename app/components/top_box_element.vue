@@ -8,7 +8,8 @@ const props = defineProps<{
   round_wind: number,
   round_number: number,
   players: AgentInfo[],
-  player_idx: number
+  player_idx: number,
+  debug_info?: string,
 }>()
 
 function round_wind() {
@@ -38,6 +39,11 @@ function round_wind() {
     <p>{{ round_wind() }}</p>
     <h1 class="text-xl">Player index:</h1>
     <p>{{ player_idx }}</p>
+    <div v-if="debug_info !== undefined">
+      <h1 class="text-xl">Debug info:</h1>
+      <p>{{ debug_info }}</p>
+    </div>
+
   </div>
 </template>
 

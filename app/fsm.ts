@@ -119,7 +119,7 @@ export class FSM<
     /**
      * Trigger an event by name with type-safe arguments
      */
-    async trigger_event<T extends string, Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
+    async trigger_event<T extends TEvents[number]['name'], Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
         // Find the event that can be triggered from current state
         const found_event = this.config.events.find(e =>
             e.name === event_name && e.from.name === this.current_state.name

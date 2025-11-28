@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Tile } from '../game/tile'
 import { TileObject } from './tile'
 import { IAnimation, IAnimationManager, quadratic_interpolator, TileAnimation } from './animation'
+export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 
 // Returns the offset of where the tile should be
 function offset(i: number) {
@@ -60,9 +61,9 @@ export class Hand extends THREE.Group {
     }
 
     remove_tile_idx(idx: number) {
-		if (idx < 0) {
-			idx = this.array.length - 1
-		}
+        if (idx < 0) {
+            idx = this.array.length - 1
+        }
 
         const obj = this.array[idx]
         obj.removeFromParent()
@@ -79,5 +80,30 @@ export class Hand extends THREE.Group {
             }
         }
         return obj
+    }
+}
+
+export class Naki extends THREE.Group {
+    public groups: {
+        type: NakiCallType
+        tiles: TileObject[]
+    }[] = []
+
+    constructor() {
+        super()
+    }
+
+    add_call(type: NakiCallType, tiles: Tile[]) {
+        const tile_objs = tiles.map(tile => new TileObject(tile))
+        this.groups.push({
+            type: type,
+            tiles: tile_objs
+        })
+
+        // TODO: Animate naki calls
+    }
+
+    convert_pon_to_shouminkan(tile: Tile) {
+
     }
 }
