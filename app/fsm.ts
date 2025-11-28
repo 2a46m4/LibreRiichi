@@ -11,15 +11,15 @@ export type GuardCallback<
 > = (from: FromData, to: ToData, ...args: Args) => boolean
 
 export type FindEvent<NameToMatch, TEvents> =
-	TEvents extends readonly [infer First, ...infer Rest]
-		? First extends Event<infer EventName, any, any>
-			? EventName extends NameToMatch
-				? First
-				: Rest extends readonly Event<string, any, any>[]
-					? FindEvent<NameToMatch, Rest>
-					: never
-			: never
-		: never
+    TEvents extends readonly [infer First, ...infer Rest]
+    ? First extends Event<infer EventName, any, any>
+    ? EventName extends NameToMatch
+    ? First
+    : Rest extends readonly Event<string, any, any>[]
+    ? FindEvent<NameToMatch, Rest>
+    : never
+    : never
+    : never
 
 export type ExtractCallbackArgs<T> = T extends Event<any, any, any, infer Args>
     ? Args
@@ -47,7 +47,7 @@ export interface State<Name extends string, Data = {}, FromName extends string =
 
 // Type-safe event interface with explicit state constraints
 export interface Event<
-	Name extends string,
+    Name extends string,
     FromState extends State<string>,
     ToState extends State<string>,
     Args extends any[] = any[]
@@ -119,7 +119,7 @@ export class FSM<
     /**
      * Trigger an event by name with type-safe arguments
      */
-	async trigger_event<T extends string, Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
+    async trigger_event<T extends string, Args extends ExtractCallbackArgs<FindEvent<T, TEvents>>>(event_name: T, ...args: Args): Promise<void> {
         // Find the event that can be triggered from current state
         const found_event = this.config.events.find(e =>
             e.name === event_name && e.from.name === this.current_state.name
@@ -204,7 +204,7 @@ export class FSM<
         }
     }
 
-    
+
     /**
      * Type-safe event finding
      */
@@ -258,7 +258,7 @@ export class FSM<
 
         const results = {
             processed: 0,
-            failed: [] as Array<{event: string; reason: string; error: Error}>
+            failed: [] as Array<{ event: string; reason: string; error: Error }>
         }
 
         for (const { event, args, reason } of queue) {
@@ -295,7 +295,7 @@ export class FSM<
 
         return results
     }
-    
+
     /**
      * Get deferred queue information
      */
@@ -409,8 +409,8 @@ export function create_fsm<
  * Type-safe state creation helper
  */
 export function create_state<
-	Name extends string, 
-	Data, 
+    Name extends string,
+    Data,
 >(name: Name, data: Data, options?: {
     on_enter?: (from_state: State<string>) => void
     on_exit?: (to_state: State<string>) => void
@@ -427,7 +427,7 @@ export function create_state<
  * Type-safe event creation helper with proper argument type inference
  */
 export function create_event<
-	Name extends string,
+    Name extends string,
     FromState extends State<string>,
     ToState extends State<string>,
     Args extends any[]
@@ -458,25 +458,34 @@ export class FSMBuilder<
     private states: TStates = [] as unknown as TStates
     private events: TEvents = [] as unknown as TEvents
 
-	add_state<const Name extends string,
-		const NewStates extends readonly [...TStates, State<Name>],
-		const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[] = TEvents
-	>(state: State<Name>): FSMBuilder<NewStates, NewEventType> {
+    add_state<const Name extends string,
+        const NewStates extends readonly [...TStates, State<Name>],
+        const NewEventType extends readonly Event<string, NewStates[number], NewStates[number]>[] = TEvents
+    >(state: State<Name>): FSMBuilder<NewStates, NewEventType> {
         const new_states = [...this.states, state]
-		const builder = new FSMBuilder<NewStates, NewEventType>()
+        const builder = new FSMBuilder<NewStates, NewEventType>()
         builder.states = new_states as unknown as NewStates
         return builder
     }
 
-    add_event<Name extends string, 
-              FromState extends TStates[number], 
-              ToState extends TStates[number], 
-              Args extends any[],
-              const NewEventType extends readonly [...TEvents, Event<Name, FromState, ToState, Args>]>(
-        event: Event<Name, FromState, ToState, Args>
-    ): FSMBuilder<TStates, NewEventType> {
+    add_states<Name extends string>(
+        ...states: State<Name>[]
+    ): FSMBuilder<readonly [...TStates, ...State<Name>[]], []> {
+        const new_states = [...this.states, ...states] as unknown as readonly [...TStates, ...State<Name>[]]
+        const builder = new FSMBuilder<readonly [...TStates, ...State<Name>[]], []>()
+        builder.states = new_states
+        return builder
+    }
+
+    add_event<Name extends string,
+        FromState extends TStates[number],
+        ToState extends TStates[number],
+        Args extends any[],
+        const NewEventType extends readonly [...TEvents, Event<Name, FromState, ToState, Args>]>(
+            event: Event<Name, FromState, ToState, Args>
+        ): FSMBuilder<TStates, NewEventType> {
         const new_events = [...this.events, event]
-		const builder = new FSMBuilder<TStates, NewEventType>()
+        const builder = new FSMBuilder<TStates, NewEventType>()
         builder.states = this.states
         builder.events = new_events as unknown as NewEventType
         return builder

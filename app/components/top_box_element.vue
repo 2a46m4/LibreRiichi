@@ -1,11 +1,10 @@
 <script setup lang="ts">
 
-import { AgentInfo, sort_agents } from "../game/agent_info";
+import { AgentInfo } from "../game/agent_info";
 import { Tile as TileValue } from "../messaging/tile";
 
 const props = defineProps<{
   scoreboard_values: number[],
-  player_to_order_map: number[],
   round_wind: number,
   round_number: number,
   players: AgentInfo[],
@@ -39,8 +38,6 @@ function round_wind() {
     <p>{{ round_wind() }}</p>
     <h1 class="text-xl">Player index:</h1>
     <p>{{ player_idx }}</p>
-    <h1>Debug:</h1>
-    <p>{{ player_to_order_map }}</p>
   </div>
 </template>
 

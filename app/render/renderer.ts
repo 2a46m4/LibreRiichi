@@ -9,12 +9,15 @@ import { Hand } from './hand';
 // Animates and manages actions
 export interface IActionAnimator {
     clear_tiles(): void
+    clear_tiles_on(idx: number): void
     add_tile(tile: Tile, player_idx?: number, location?: number): string
     remove_tile(id: string): void
+    remove_tile(location: number): void
     add_dora(tile: Tile): void
     draw(player_idx: number, tile?: Tile): void
     toss(player_idx: number, tile: Tile): void
     select(selections: Selection[]): void
+    naki_call(): void
 }
 
 // Callable
@@ -328,6 +331,10 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
         this.hands[0].remove_all()
     }
 
+    clear_tiles_on(idx: number): void {
+        this.hands[idx].remove_all()
+    }
+
     add_tile(tile: Tile, player_idx: number = 0, add_location: number = -1): string {
         if (add_location >= 0) {
             return this.hands[player_idx].add_tile(tile, add_location)
@@ -374,5 +381,10 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
             }
             this.add_tile(tile, player_idx)
         }
+    }
+
+    // TODO
+    naki_call(): void {
+        console.error("Not yet implemented")
     }
 }
