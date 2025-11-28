@@ -23,9 +23,10 @@
 	"scripts": {
 		"frontend": "parcel app/index.html",
 		"build-frontend": "parcel build app/index.html",
+		"watch-backend": "air --build.cmd \"go build -o build/server cmd/server/main.go\" --build.entrypoint \"./build/server\"",
 		"backend": "go run cmd/server/main.go",
 		"build-backend": "go build -o dist-server/server cmd/server/main.go",
-		"watch": "concurrently -k \"yarn:frontend\" \"yarn:backend\"",
+		"watch": "concurrently -k \"yarn:frontend\" \"yarn:watch-backend\"",
 		"test-client": "go run cmd/eval_client/eval_client.go",
 		"test": "concurrently -k \"yarn:test-client\" \"yarn:backend\"",
 		"lint": "prettier --write 'app/**/*.{js,ts,vue}'"
