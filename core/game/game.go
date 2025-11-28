@@ -1,6 +1,8 @@
 package game
 
 import (
+	"log"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
@@ -36,6 +38,9 @@ func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
 	err = game.gameState.Transition("handle-event", game.mahjongRound, game.ordering, action, arenaIdx)
+	if err != nil {
+		log.Println("Error occurred: ", err)
+	}
 	sendInfoRaw, _ := game.gameState.GetReturn()
 	sendInfo := sendInfoRaw.([]MessageSendInfo)
 	ChangeToArenaIdx(sendInfo, game.ordering)

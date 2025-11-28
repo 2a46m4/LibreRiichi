@@ -54,6 +54,14 @@ func InitGameState() *GameState {
 				},
 				Dst: "in-round",
 			},
+			// TODO
+			fsm.EventDesc{
+				Name: "handle-event",
+				Src: []string{
+					"in-round",
+				},
+				Dst: "in-round",
+			},
 			fsm.EventDesc{
 				Name: "round-end",
 				Src: []string{
@@ -185,7 +193,7 @@ func (gameState *GameState) HandleStartRound(context context.Context, event *fsm
 }
 
 func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
-
+	
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {

@@ -9,6 +9,7 @@ import (
 	"github.com/looplab/fsm"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
@@ -227,6 +228,10 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 
 		potentialActions.Actions = append(potentialActions.Actions, Toss{
 			TileToToss: tile,
+		})
+	} else {
+		potentialActions.Actions = append(potentialActions.Actions, Toss{
+			TileToToss: tile.Invalid, // Meaning all tiles
 		})
 	}
 

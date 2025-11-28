@@ -60,6 +60,10 @@ export class Hand extends THREE.Group {
     }
 
     remove_tile_idx(idx: number) {
+		if (idx < 0) {
+			idx = this.array.length - 1
+		}
+
         const obj = this.array[idx]
         obj.removeFromParent()
 
