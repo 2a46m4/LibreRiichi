@@ -3,21 +3,22 @@ import { TileObject } from './tile'
 
 // An object that exists in the scene and can be animated
 export interface IAnimatable {
-    animate(dt: number): void
-    add_animation(animation: IAnimation): void
+    position: THREE.Vector3
+    readonly uuid: string
 }
 
-// A type of animation, to be called by an IAnimatable object
+// A type of animation, to be called by the animation manager to yield the next value
 export interface IAnimation {
-    next_step(dt: number): void
+    next_step(dt: number): THREE.Vector3
     finished(): boolean
 }
 
 export interface IAnimationManager {
-    add_animation(object: IAnimatable): void
-    remove_animation(object: IAnimatable): void
+    add_object(object: IAnimatable): void
+    animate_object(id: string, animation: IAnimation): void
+    remove_object(object: string): void
     animate_step(dt: number): void
-    get_animations(): IAnimatable[]
+    get_objects(): IAnimatable[]
 }
 
 export type Interpolator = (t: number) => number
@@ -35,7 +36,6 @@ export class TileLinearAnimation implements IAnimation {
     t: number = 0
 
     constructor(
-        private tile: TileObject,
         private start: THREE.Vector3,
         private end: THREE.Vector3,
         private interp: Interpolator = linear_interpolator,
@@ -43,23 +43,20 @@ export class TileLinearAnimation implements IAnimation {
         public time_before_start: number = 0,
     ) { }
 
-    next_step(dt: number): void {
+    next_step(dt: number): THREE.Vector3 {
 
         if (this.time_before_start >= 0) {
             this.time_before_start -= dt
-            return
+            return this.start
         }
 
         if (this.t >= 1.0) {
             this.is_finished = true
             this.t = 1.0
         }
-
-        this.tile.position.lerpVectors(
-            this.start, this.end, this.interp(this.t)
-        )
-
+	const ret = this.start.lerp(this.end, this.interp(this.t))
         this.t += dt / this.time
+	return ret
     }
 
     finished(): boolean {
@@ -68,28 +65,50 @@ export class TileLinearAnimation implements IAnimation {
 }
 
 export class AnimationManager implements IAnimationManager {
-    animations_in_flight: IAnimatable[] = []
+    private objects: Map<string, {
+	object: IAnimatable,
+	animations: IAnimation[]
+    }> = new Map()
 
     constructor() { }
 
-    remove_animation(object: IAnimatable): void {
-        const index = this.animations_in_flight.indexOf(object)
-        if (index !== -1) {
-            this.animations_in_flight.splice(index, 1)
-        }
+    add_object(object: IAnimatable): void {
+        if (this.objects.has(object.uuid)) {
+	    throw new Error("Already has object")
+	}
+
+	this.objects.set(object.uuid, {
+	    object: object,
+	    animations: []
+	})
     }
 
-    get_animations(): IAnimatable[] {
-        return this.animations_in_flight
+    animate_object(id: string, animation: IAnimation): void {
+        const obj = this.objects.get(id)
+	if (obj === undefined) {
+	    throw new Error("Can't find object")
+	}
+
+	obj.animations.push(animation)
     }
 
-    add_animation(obj: IAnimatable): void {
-        this.animations_in_flight.push(obj)
+    remove_object(object: string): void {
+        this.objects.delete(object)
+    }
+
+    get_objects(): IAnimatable[] {
+        return this.objects.values().map(v => v.object).toArray()
     }
 
     animate_step(dt: number): void {
-        for (let animation of this.animations_in_flight) {
-            animation.animate(dt)
+        for (let object of this.objects.values()) {
+	    if (object.animations.length !== 0) {
+		const next = object.animations[0].next_step(dt)
+		object.object.position = next
+		if (object.animations[0].finished()) {
+		    object.animations.splice(0, 1)
+		}
+	    }
         }
     }
 }
