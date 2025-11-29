@@ -37,6 +37,7 @@ func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
+    // TODO: handle-event breaks here because it doesn't do any transition. I think we should combine both FSMs together
 	err = game.gameState.Transition("handle-event", &game.mahjongRound, &game.ordering, action, arenaIdx)
 	if err != nil {
 		log.Println("Error occurred: ", err)
