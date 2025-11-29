@@ -13,7 +13,7 @@ export interface IAnimation {
 }
 
 export interface IAnimationManager {
-    add_object(object: IAnimatable): void
+    add_object(object: IAnimatable, callback?: (finished: boolean)=>void): void
     animate_object(id: string, animation: IAnimation): void
     remove_object(object: string): void
     animate_step(dt: number): void
@@ -112,18 +112,20 @@ export class AnimationManager implements IAnimationManager {
     private objects: Map<string, {
 	object: IAnimatable,
 	animations: IAnimation[]
+	callback?: (finished:boolean)=>void
     }> = new Map()
 
     constructor() { }
 
-    add_object(object: IAnimatable): void {
+    add_object(object: IAnimatable, finish_callback?: (finished: boolean)=>void): void {
         if (this.objects.has(object.uuid)) {
 	    throw new Error("Already has object")
 	}
 
 	this.objects.set(object.uuid, {
 	    object: object,
-	    animations: []
+	    animations: [],
+	    callback: finish_callback
 	})
     }
 
@@ -146,12 +148,16 @@ export class AnimationManager implements IAnimationManager {
 
     animate_step(dt: number): void {
         for (let object of this.objects.values()) {
-	    if (object.animations.length !== 0) {
-		const next = object.animations[0].next_step(dt)
-		object.object.position = next
-		if (object.animations[0].finished()) {
-		    object.animations.splice(0, 1)
-		}
+	    if (object.animations.length === 0) {
+		continue
+	    }
+	    const next = object.animations[0].next_step(dt)
+	    object.object.position.copy(next)
+	    if (object.animations[0].finished()) {
+		object.animations.splice(0, 1)
+	    }
+	    if (object.callback !== undefined) {
+		object.callback(object.animations.length === 0)
 	    }
         }
     }

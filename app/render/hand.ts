@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { Tile } from '../game/tile'
 import { TileObject } from './tile'
-import { IAnimation, IAnimationManager, quadratic_interpolator, TileLinearAnimation } from './animation'
+import { IAnimationManager, quadratic_interpolator, TileLinearAnimation } from './animation'
 export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 
 // Returns the offset of where the tile should be
@@ -12,6 +12,7 @@ function offset(i: number) {
 // A renderable object representing a player's hand
 export class Hand extends THREE.Group {
     public array: TileObject[] = []
+    private animations_in_flight: number = 0
 
     constructor(public tiles: Tile[], private animation_manager: IAnimationManager) {
         super()
@@ -24,18 +25,25 @@ export class Hand extends THREE.Group {
         const tile_obj = new TileObject(tile)
         const start = new THREE.Vector3(0, 2, -5)
         const end = new THREE.Vector3(offset(this.array.length), 0, 0)
-        const delay = 50 * this.animation_manager.get_animations().length
+        const delay = 50 * this.animations_in_flight
+	this.animations_in_flight += 1
 
-        this.array.splice(location, 0, tile_obj)
         for (let i = location + 1; i < this.array.length; i++) {
             const start = this.array[i].position
             const end = new THREE.Vector3(offset(i), 0, 0)
-            this.array[i].add_animation(new TileLinearAnimation(tile_obj, start, end, quadratic_interpolator, 300, delay))
-            this.animation_manager.add_animation(this.array[i])
+	    const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
+            this.animation_manager.animate_object(this.array[i].uuid, animation)
         }
-        tile_obj.add_animation(new TileLinearAnimation(tile_obj, start, end, quadratic_interpolator, 300, delay))
+
+        this.array.splice(location, 0, tile_obj)
+	this.animation_manager.add_object(tile_obj, (finished)=>{
+	    if (finished) {
+		this.animations_in_flight -= 1
+	    }
+	})
+	const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
+        this.animation_manager.animate_object(tile_obj.uuid, animation)
         super.add(tile_obj)
-        this.animation_manager.add_animation(this.array[this.array.length - 1])
 
         return tile_obj.uuid
     }
@@ -71,12 +79,9 @@ export class Hand extends THREE.Group {
         this.array.splice(idx, 1)
         if (idx <= this.array.length - 1) {
             for (let i = idx; i < this.array.length; i++) {
-
-                const tile_obj = this.array[i]
                 const start = this.array[i].position
                 const end = new THREE.Vector3(offset(i), 0, 0)
-
-                this.array[i].add_animation(new TileLinearAnimation(tile_obj, start, end, quadratic_interpolator, 300, 50 * i))
+		this.animation_manager.animate_object(this.array[i].uuid, new TileLinearAnimation(start, end, quadratic_interpolator, 300, 50 * i))
             }
         }
         return obj

@@ -1,6 +1,6 @@
 import { Tile } from '../game/tile'
 import { Tile as TileValue } from '../messaging/tile'
-import { IAnimatable, IAnimation, TileLinearAnimation } from './animation'
+import { IAnimatable } from './animation'
 import { alphatest_colour, load_texture } from './texture'
 import * as THREE from 'three'
 
@@ -327,7 +327,6 @@ export function load_all_materials(tile_textures: Map<number, THREE.Texture>) {
 // An instance of a tile on screen.
 export class TileObject extends THREE.Mesh implements IAnimatable {
     public tile: Tile
-    public tile_animations: IAnimation[] = []
 
     constructor(tile: Tile) {
         if (!tiles_initialized) {
@@ -341,21 +340,6 @@ export class TileObject extends THREE.Mesh implements IAnimatable {
         this.tile = tile
         Object.getPrototypeOf(this).castShadow = true
         Object.getPrototypeOf(this).receiveShadow = true
-    }
-
-    add_animation(animation: IAnimation) {
-        this.tile_animations.push(animation)
-    }
-
-    animate(dt: number): void {
-        if (this.tile_animations.length === 0) {
-            return
-        }
-
-        this.tile_animations[0].next_step(dt)
-        if (this.tile_animations[0].finished()) {
-            this.tile_animations.shift()
-        }
     }
 
     set value(tile: Tile) {

@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -82,6 +83,7 @@ func InitRoundState() *RoundState {
 			"start-round":      roundState.startRound,
 			"before_draw-tile": roundState.drawTileTest,
 			"draw-tile":        roundState.drawTile,
+			"before_discard-tile": roundState.discardTileTest,
 			"discard-tile":     roundState.discardTile,
 			"call-naki":        roundState.callNaki,
 			"no-naki":          roundState.noNaki,
@@ -122,31 +124,39 @@ func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
 	return sendInfos
 }
 
-// Handles an event and returns an error if there is an invalid transition
+// Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
 func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInfo ...any) (msg []MessageSendInfo, err error) {
-	args := append([]any{action, gameIdx}, extraInfo...)
+    args := append([]any{action, gameIdx}, extraInfo...)
 
-	switch action.(type) {
-	case Chii:
-	case Kan:
-	case Pon:
-	case Ron:
-		err = roundState.Transition("call-naki", args)
-	case Skip:
-		err = roundState.Transition("no-naki", args)
-	case Riichi:
-	case Toss:
-	case Tsumo:
-		err = roundState.Transition("discard-tile", args)
-	case Draw:
-		roundState.log.Error("Wrong action: %#v", action)
-	default:
-		roundState.log.Error("unexpected core.Action: %#v", action)
-		panic(fmt.Sprintf("unexpected core.Action: %#v", action))
-	}
+    roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action))
+    var call string
+    switch action.(type) {
+    case Chii: call = "call-naki"
+    case Kan: call = "call-naki"
+    case Pon: call = "call-naki"
+    case Ron: call = "call-naki"
+    case Skip:
+	call = "no-naki"
+    case Riichi:
+	call = "discard-tile"
+    case Toss:
+	call = "discard-tile"
+    case Tsumo:
+	call = "discard-tile"
+    case Draw:
+	roundState.log.Error("Wrong action: %#v", action)
+    default:
+	roundState.log.Error("unexpected core.Action: %#v", action)
+	panic(fmt.Sprintf("unexpected core.Action: %#v", action))
+    }
 
-	ret, _ := roundState.GetReturn()
-	return ret.([]MessageSendInfo), err
+    err = roundState.Transition(call, args...)
+    if err != nil {
+	panic(err)
+    }
+
+    ret, _ := roundState.GetReturn()
+    return ret.([]MessageSendInfo), err
 }
 
 func (roundState *RoundState) Transition(event string, args ...any) error {
@@ -268,39 +278,54 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	hand := &round.data.tileData.Hands[playerIdx]
 	lastTile, err := hand.TileJustReceived()
 	if err != nil {
-		event.Cancel()
+		event.Cancel(err)
 		return
 	}
 
 	// Riichi must toss the last tile
 	if hand.InRiichi && (lastTile != action.TileToToss) {
-		event.Cancel()
+	    event.Cancel(errors.New("If the hand is in riichi, it must toss the last tile"))
 		return
 	}
 
 	if !round.data.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) {
-		event.Cancel()
+		event.Cancel(errors.New("TestDiscard failed"))
 		return
 	}
 }
 
 func (roundState *RoundState) discardTile(context context.Context, event *fsm.Event) {
-	action := event.Args[0].(Toss)
-	playerIdx := event.Args[1].(uint8)
-	round := event.Args[2].(*MahjongRound)
-	round.data.tileData.Discard(playerIdx, action.TileToToss)
+    roundState.log.Info("Discarding tiles")
+    action := event.Args[0].(Toss)
+    playerIdx := event.Args[1].(uint8)
+    round := event.Args[2].(*MahjongRound)
 
+    tossData := round.data.tileData.Discard(playerIdx, action.TileToToss)
+
+    res := []MessageSendInfo{}
+    for i := range uint8(4) {
 	// Check for any calls
-	// round.data
+	info := round.data.CheckNaki(playerIdx, i)
+	info.Events = append(info.Events, PlayerActionEvent{
+		Action:     tossData,
+		FromPlayer: playerIdx,
+	})
+	res = append(res, info)
+    }
+
+    roundState.setReturn(res)
 }
 
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
-
-	// TODO: Handle naki (call) logic
-	// Process player making a call (chi, pon, kan)
+    roundState.log.Info("CallNaki called")
+    panic("TODO")
+    // TODO: Handle naki (call) logic
+    // Process player making a call (chi, pon, kan)
 }
 
 func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
+    roundState.log.Info("NoNaki called")
+    panic("TODO")
 	// TODO: After players make a discard and there are no naki calls
 	// left, transition to here which should transition directly to another draw
 }

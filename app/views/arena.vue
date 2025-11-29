@@ -120,6 +120,9 @@ async function start_game() {
   in_game.value = true
 }
 
+// TMP
+start_game()
+
 async function add_ai() {
   let msg_idx = websocket_state.conn.send({
     message_type: MessageType.REQUEST,

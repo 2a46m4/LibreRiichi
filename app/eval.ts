@@ -1,8 +1,9 @@
+// tsc: nolint
+
 import { Connection, websocket_address } from './messaging/connection'
 import {
   IncomingMessage,
   MessageType,
-  validate_message,
 } from './messaging/message'
 import {
   EventHandler,
@@ -77,9 +78,7 @@ for (let i = 0; i < 4; i++) {
   conns.push(
     new Connection(new WebSocket(websocket_address), (data: MessageEvent) => {
       let msg = JSON.parse(data.data) as IncomingMessage
-      if (validate_message(msg).isValid) {
         busses[i].handle(msg)
-      }
     }),
   )
 }
@@ -218,24 +217,27 @@ function handle_game(i: number, event: BoardEvent) {
     }
   } else if (event.boardevent_type === BoardEventType.PotentialActionEvent) {
     console.log('potential action: ', event.actions)
-    console.log('initial hand: ', initial_hand)
-    switch (event.actions.action_type) {
-      case ActionType.Toss:
-        console.log('toss')
-        conns[i].send({
-          message_type: MessageType.REQUEST,
-          data: {
-            serveraction_type: ServerActionType.ServerArenaAction,
-            arena_action: {
-              arenaaction_type: ArenaActionType.PlayerActionData,
-              action: {
-                action_type: ActionType.Toss,
-                tile_to_toss: initial_hand[i][0].value,
-              },
-            },
-          },
-        })
-    }
+      console.log('initial hand: ', initial_hand)
+      for (let action of event.actions) {
+	  switch (action.action_type) {
+	      case ActionType.Toss:
+		  console.log('toss')
+		  conns[i].send({
+		      message_type: MessageType.REQUEST,
+		      data: {
+			  serveraction_type: ServerActionType.ServerArenaAction,
+			  arena_action: {
+			      arenaaction_type: ArenaActionType.PlayerActionData,
+			      action: {
+				  action_type: ActionType.Toss,
+				  tile_to_toss: initial_hand[i][0].value,
+			      },
+			  },
+		      },
+		  })
+	  }	  
+      }
+    
   } else if (event.boardevent_type === BoardEventType.PlayerActionEvent) {
     console.log(
       'action occurred:',

@@ -93,6 +93,10 @@ async function create_room() {
     show_error.value = 'Could not create room: ' + msg.fail_reason
   }
 }
+
+// TMP
+room_state.room_name = 'a'
+find_room()
 </script>
 
 <template>

@@ -220,6 +220,7 @@ const make_fsm = () => {
         handle_game_setup_event(board_event.setup)
         break
       case BoardEventType.GameEndEvent:
+		throw new Error("Not yet implemented: GameEndEvent")
         break;
     }
 

@@ -10,14 +10,14 @@ import (
 )
 
 type MahjongRoundData struct {
-	scoring  Scoring
-	tileData TileData
-	// Player direction
-	windData WindData
-	turnData TurnData
-	// Round direction
-	roundWind   Wind
-	roundNumber uint8
+    scoring  Scoring
+    tileData TileData
+    // Player direction
+    windData WindData
+    turnData TurnData
+    // Round direction
+    roundWind   Wind
+    roundNumber uint8
 }
 
 func InitMahjongRoundData() MahjongRoundData {
@@ -37,41 +37,37 @@ func (data *MahjongRoundData) IncrementRound() {
 	// TODO: Implement switching round winds
 }
 
-func (data *MahjongRoundData) CheckNaki(playerIdx uint8) (info []MessageSendInfo) {
-	for i := range uint8(4) {
-		if playerIdx == i {
-			continue
-		}
+func (data *MahjongRoundData) CheckNaki(justDiscarded uint8, againstPlayed uint8) MessageSendInfo {
+    if justDiscarded == againstPlayed {
+	return MessageSendInfo{}
+    }
 
-		actions := PotentialActionEvent{}
+    actions := PotentialActionEvent{}
 
-		kanResult := CheckKan(playerIdx, i, data.tileData)
-		if kanResult != nil {
-			actions.Actions = append(actions.Actions, kanResult)
-		}
+    kanResult := CheckKan(justDiscarded, againstPlayed, data.tileData)
+    if kanResult != nil {
+	actions.Actions = append(actions.Actions, kanResult)
+    }
 
-		ponResult := CheckPon(playerIdx, i, data.tileData)
-		if ponResult != nil {
-			actions.Actions = append(actions.Actions, ponResult)
-		}
+    ponResult := CheckPon(justDiscarded, againstPlayed, data.tileData)
+    if ponResult != nil {
+	actions.Actions = append(actions.Actions, ponResult)
+    }
 
-		chiiResult := CheckChii(playerIdx, i, data.tileData)
-		if chiiResult != nil {
-			actions.Actions = append(actions.Actions, chiiResult)
-		}
+    chiiResult := CheckChii(justDiscarded, againstPlayed, data.tileData)
+    if chiiResult != nil {
+	actions.Actions = append(actions.Actions, chiiResult)
+    }
 
-		ronResult := CheckRon(playerIdx, i, data)
-		if ronResult != nil {
-			actions.Actions = append(actions.Actions, ronResult)
-		}
+    ronResult := CheckRon(justDiscarded, againstPlayed, data)
+    if ronResult != nil {
+	actions.Actions = append(actions.Actions, ronResult)
+    }
 
-		info = append(info, MessageSendInfo{
-			Events: []BoardEvent{actions},
-			SendTo: i,
-		})
-	}
-
-	return info
+    return MessageSendInfo{
+	Events: []BoardEvent{actions},
+	SendTo: againstPlayed,
+    }
 }
 
 func CheckKan(discardedPlayerIdx, playerIdx uint8, tileData TileData) Action {

@@ -2,6 +2,7 @@ package hand
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
@@ -31,11 +32,12 @@ func (hand Hand) FullHand() bool {
 	return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 13
 }
 
+// Returns the tile that the player just received
 func (hand Hand) TileJustReceived() (tile Tile, err error) {
 	if hand.FullHand() {
 		return hand.ClosedHand.hand[hand.ClosedHand.index-1], nil
 	} else {
-		return tile, errors.New("Not full hand, don't have an extra tile")
+		return tile, errors.New(fmt.Sprintf("Not full hand, don't have an extra tile: %#v %#v", hand))
 	}
 }
 

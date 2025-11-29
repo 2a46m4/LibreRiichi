@@ -37,6 +37,9 @@ async function connect() {
 
   await router.push({ name: 'connected_page' })
 }
+
+// TMP
+connect()
 </script>
 
 <template>

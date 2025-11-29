@@ -203,7 +203,7 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 	arenaIdx := event.Args[3].(uint8)
 
 	gameIdx := ordering.GameIdx(arenaIdx)
-	msgInfo, err := round.roundState.HandleEvent(action, gameIdx)
+	msgInfo, err := round.roundState.HandleEvent(action, gameIdx, round)
 	if err != nil {
 		panic("Unable to continue")
 	}
