@@ -28,8 +28,8 @@ func (hand Hand) InTenpai() bool {
 }
 
 func (hand Hand) FullHand() bool {
-	// 13 since ClosedHand.index is 0-based
-	return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 13
+    // index also counts the number of tiles in the closed hand
+    return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 14
 }
 
 // Returns the tile that the player just received

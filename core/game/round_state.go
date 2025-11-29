@@ -156,6 +156,7 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInf
     }
 
     ret, _ := roundState.GetReturn()
+    roundState.log.Info("Got here")
     return ret.([]MessageSendInfo), err
 }
 
@@ -301,18 +302,27 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
     round := event.Args[2].(*MahjongRound)
 
     tossData := round.data.tileData.Discard(playerIdx, action.TileToToss)
+    tossEvent := PlayerActionEvent{
+	Action:     tossData,
+	FromPlayer: playerIdx,
+    }
 
     res := []MessageSendInfo{}
     for i := range uint8(4) {
 	// Check for any calls
 	info := round.data.CheckNaki(playerIdx, i)
-	info.Events = append(info.Events, PlayerActionEvent{
-		Action:     tossData,
-		FromPlayer: playerIdx,
-	})
-	res = append(res, info)
+	if len(info.Events) != 0 {
+	    info.Events = append(info.Events, tossEvent)
+	    res = append(res, info)
+	} else {
+	    res = append(res, MessageSendInfo{
+	    	Events: []BoardEvent{tossEvent},
+	    	SendTo: 0,
+	    })
+	}
     }
 
+    roundState.log.Info("Setting return value", "return", fmt.Sprintf("%#v", res))
     roundState.setReturn(res)
 }
 

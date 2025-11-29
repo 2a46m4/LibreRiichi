@@ -93,7 +93,7 @@ func InitGameState() *GameState {
 }
 
 func (gameState *GameState) generalTransition(context context.Context, event *fsm.Event) {
-	gameState.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
+	gameState.Info("Transitioning:", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
 
 func (gameState *GameState) Transition(event string, arguments ...any) error {
