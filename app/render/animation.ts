@@ -1,11 +1,13 @@
 import * as THREE from 'three'
 import { TileObject } from './tile'
 
+// An object that exists in the scene and can be animated
 export interface IAnimatable {
     animate(dt: number): void
     add_animation(animation: IAnimation): void
 }
 
+// A type of animation, to be called by an IAnimatable object
 export interface IAnimation {
     next_step(dt: number): void
     finished(): boolean
@@ -28,7 +30,7 @@ export function quadratic_interpolator(t: number): number {
     return t * t
 }
 
-export class TileAnimation {
+export class TileLinearAnimation implements IAnimation {
     is_finished: boolean = false
     t: number = 0
 

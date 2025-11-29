@@ -3,7 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
 import { Raycaster, Selection, Selector } from "./raycaster";
-import { AnimationManager, IAnimationManager, quadratic_interpolator, TileAnimation } from "./animation";
+import { AnimationManager, IAnimationManager, quadratic_interpolator, TileLinearAnimation } from "./animation";
 import { Hand, Naki, NakiCallType } from './hand';
 import { TableIdx } from '../game/arena';
 
