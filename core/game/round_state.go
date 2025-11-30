@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 
 	"github.com/looplab/fsm"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	"codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
 // Manages the state of the round and validates that turn transitions are correct
@@ -86,6 +88,7 @@ func InitRoundState() *RoundState {
 			"before_discard-tile": roundState.discardTileTest,
 			"discard-tile":     roundState.discardTile,
 			"call-naki":        roundState.callNaki,
+			"before_no-naki":          roundState.noNakiTest,
 			"no-naki":          roundState.noNaki,
 			"round-draw":       roundState.roundDraw,
 			"round-win":        roundState.roundWin,
@@ -101,8 +104,12 @@ func InitRoundState() *RoundState {
 	return roundState
 }
 
+func (roundState *RoundState) GenerateGraphs() string {
+    return fsm.Visualize(roundState.RoundFSM)
+}
+
 func (roundState *RoundState) infoTransition(context context.Context, event *fsm.Event) {
-	roundState.log.Info("Transitioning: ", "from", event.Src, "to", event.Dst, "event", event.Event)
+	roundState.log.Info("Transitioning:", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
 
 func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
@@ -156,7 +163,6 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInf
     }
 
     ret, _ := roundState.GetReturn()
-    roundState.log.Info("Got here")
     return ret.([]MessageSendInfo), err
 }
 
@@ -308,10 +314,19 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
     }
 
     res := []MessageSendInfo{}
+    waitingNakiCalls := false
     for i := range uint8(4) {
 	// Check for any calls
 	info := round.data.CheckNaki(playerIdx, i)
+	for _, event := range info.Events{
+	    roundState.appendAwaitingMessages(AwaitAction{
+	    	PotentialActions: event.(PotentialActionEvent).Actions,
+	    	SentTo:          i,
+	    })
+	}
+	
 	if len(info.Events) != 0 {
+	    waitingNakiCalls = true
 	    info.Events = append(info.Events, tossEvent)
 	    res = append(res, info)
 	} else {
@@ -322,7 +337,17 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 	}
     }
 
-    roundState.log.Info("Setting return value", "return", fmt.Sprintf("%#v", res))
+    // Transition directly to no naki state if no naki, otherwise
+    // store in metadata and transition only when there is no outgoing
+    // naki calls left
+    if !waitingNakiCalls {
+	err := roundState.RoundFSM.Event(context, "no-naki")
+	if err != nil {
+	    roundState.log.Info("Failed to transition to no-naki:", "err", err)
+	}
+    }
+    
+
     roundState.setReturn(res)
 }
 
@@ -333,11 +358,57 @@ func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event
     // Process player making a call (chi, pon, kan)
 }
 
+// Two possible ways to trigger no naki:
+//
+// 1. Skip (Can fail the transition if there are more naki calls
+// waiting for a return message)
+// 
+// 2. There are no naki calls possible. Then this transition accepts two calls:
+//    - Skip: the action itself
+//    - uint8: the player that performed the skip
+// 
+// This function should be called when the player calls either skip or
+// when there are no naki following a discard.
+func (roundState *RoundState) noNakiTest(context context.Context, event *fsm.Event) {
+    msgs, ok := roundState.getAwaitingMessages()
+    if !ok {
+	roundState.log.Warn("awaiting messages not found")
+    }
+    if len(msgs) == 0 {
+	return
+    }
+    
+    skipAction := event.Args[0].(Skip)
+    playerIdx := event.Args[1].(uint8)
+    action := skipAction.ActionToSkip
+    for msgI, msg := range msgs {
+	if msg.SentTo != playerIdx {
+	    continue
+	}
+
+	for i, potentialActions := range msg.PotentialActions {
+	    if reflect.TypeOf(potentialActions) == reflect.TypeOf(action) {
+		util.Remove(&msg.PotentialActions, i)
+
+		if len(msg.PotentialActions) == 0 {
+		    util.Remove(&msgs, msgI)
+		}
+	    }
+	}
+    }
+
+    roundState.setAwaitingMessages(msgs)
+
+    if len(msgs) >= 0 {
+	event.Cancel()
+    }
+}
+
+// Checks whether or not the game should end
 func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
     roundState.log.Info("NoNaki called")
-    panic("TODO")
-	// TODO: After players make a discard and there are no naki calls
-	// left, transition to here which should transition directly to another draw
+
+    roundState.RoundFSM.Event()
 }
 
 func (roundState *RoundState) roundDraw(context context.Context, event *fsm.Event) {
@@ -362,4 +433,22 @@ func (roundState *RoundState) GetReturn() (ret any, ok bool) {
 
 func (roundState *RoundState) setReturn(data any) {
 	roundState.RoundFSM.SetMetadata("return", data)
+}
+
+func (roundState *RoundState) appendAwaitingMessages(info ...AwaitAction) {
+    msgsRaw, ok := roundState.RoundFSM.Metadata("awaiting")
+    if !ok {
+	roundState.RoundFSM.SetMetadata("awaiting", info)
+    }
+    msgs := msgsRaw.([]AwaitAction)
+    roundState.RoundFSM.SetMetadata("awaiting", append(msgs, info...))
+}
+
+func (roundState *RoundState) setAwaitingMessages(info []AwaitAction) {
+    roundState.RoundFSM.SetMetadata("awaiting", info)
+}
+
+func (roundState *RoundState) getAwaitingMessages() (info []AwaitAction, ok bool) {
+    infoRaw, ok := roundState.RoundFSM.Metadata("awaiting")
+    return infoRaw.([]AwaitAction), ok
 }

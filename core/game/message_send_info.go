@@ -5,11 +5,17 @@ package game
 
 import (
 	msg "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	gamedata "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
 type MessageSendInfo struct {
 	Events []msg.BoardEvent
 	SendTo uint8
+}
+
+type AwaitAction struct {
+    PotentialActions []gamedata.Action
+    SentTo uint8
 }
 
 // Changes the message from game to arena index

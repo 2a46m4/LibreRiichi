@@ -4,6 +4,7 @@ import (
 	"log"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	"github.com/looplab/fsm"
 )
 
 type MahjongGame struct {
@@ -37,15 +38,17 @@ func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
-    // TODO: handle-event breaks here because it doesn't do any transition. I think we should combine both FSMs together
-	err = game.gameState.Transition("handle-event", &game.mahjongRound, &game.ordering, action, arenaIdx)
-	if err != nil {
-		log.Println("Error occurred: ", err)
-	}
-	sendInfoRaw, _ := game.gameState.GetReturn()
-	sendInfo := sendInfoRaw.([]MessageSendInfo)
-	ChangeToArenaIdx(sendInfo, game.ordering)
-	return sendInfo, err
+    err = game.gameState.Transition("handle-event", &game.mahjongRound, &game.ordering, action, arenaIdx)
+    _, isNoTransition := err.(fsm.NoTransitionError)
+    if !isNoTransition {
+	log.Println("Error occurred: ", err)
+    } else {
+	err = nil
+    }
+    sendInfoRaw, _ := game.gameState.GetReturn()
+    sendInfo := sendInfoRaw.([]MessageSendInfo)
+    ChangeToArenaIdx(sendInfo, game.ordering)
+    return sendInfo, err
 }
 
 func (game *MahjongGame) RoundEnd() error {

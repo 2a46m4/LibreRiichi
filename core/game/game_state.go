@@ -48,14 +48,6 @@ func InitGameState() *GameState {
 				Dst: "in-round",
 			},
 			fsm.EventDesc{
-				Name: "in-round-event",
-				Src: []string{
-					"in-round",
-				},
-				Dst: "in-round",
-			},
-			// TODO
-			fsm.EventDesc{
 				Name: "handle-event",
 				Src: []string{
 					"in-round",
@@ -220,8 +212,8 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 	gameState.setReturn(msgInfo)
 }
 
-func (gameState *GameState) GenerateGraphs() (string, error) {
-	return fsm.VisualizeForMermaidWithGraphType(gameState.FSM, fsm.StateDiagram)
+func (gameState *GameState) GenerateGraphs() string {
+    return fsm.Visualize(gameState.FSM)
 }
 
 func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.Event) {

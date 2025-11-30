@@ -74,8 +74,6 @@ func MakeComputerClient() (ComputerClient, error) {
 func (client *ComputerClient) Loop() {
 	log.Println(client.Name, client.ID)
 	for send := range client.Recv {
-		log.Println("Computer Loop")
-
 		switch send := send.(type) {
 		case ServerEvent:
 			ServerEventDecode(client, send, Unit)
@@ -87,33 +85,27 @@ func (client *ComputerClient) Loop() {
 
 func (client *ComputerClient) HandleServerArenaEvent(event ServerArenaEvent, extraData UnitType) (UnitType, error) {
 	// Handle arena events from the server
-	log.Printf("ComputerClient %s received arena event: %+v", client.Name, event)
 	return ArenaEventDecode(client, event.ArenaMessage, extraData)
 }
 
 func (client *ComputerClient) HandlePlayerJoinedEvent(event PlayerJoinedEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Player %s joined the arena", client.Name, event.AgentInfo.Name)
 	return Unit, nil
 }
 
 func (client *ComputerClient) HandlePlayerQuitEvent(event PlayerQuitEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Player %s quit the arena", client.Name, event.Name)
 	return Unit, nil
 }
 
 func (client *ComputerClient) HandleGameStartedEvent(event GameStartedEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Game started", client.Name)
 	// TODO: Initialize AI game state
 	return Unit, nil
 }
 
 func (client *ComputerClient) HandleArenaBoardEvent(event ArenaBoardEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Received board event: %+v", client.Name, event.BoardEvent)
 	return BoardEventDecode(client, event.BoardEvent, extraData)
 }
 
 func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Player %d performed action: %+v", client.Name, event.FromPlayer, event.Action)
 	isOurMove := client.ourMove(event.FromPlayer)
 
 	switch action := event.Action.(type) {
@@ -168,8 +160,6 @@ func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, e
 }
 
 func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (UnitType, error) {
-	log.Printf("ComputerClient %s: Potential actions available: %+v", client.Name, event.Actions)
-
 	// Immediately do a potential action
 	for _, action := range event.Actions {
 		idx, err := client.Arena.getPlayerIdx(client)
