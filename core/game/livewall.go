@@ -5,8 +5,9 @@ import (
 )
 
 type LiveWall struct {
-	tiles [70]Tile
-	index uint8
+    tiles [70]Tile
+    // Index represents 
+    index uint8
 }
 
 func (wall *LiveWall) GetLiveTile() (tile Tile) {

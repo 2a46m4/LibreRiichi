@@ -366,6 +366,7 @@ func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event
 // 2. There are no naki calls possible. Then this transition accepts two calls:
 //    - Skip: the action itself
 //    - uint8: the player that performed the skip
+//    - *MahjongRoundData: the round data
 // 
 // This function should be called when the player calls either skip or
 // when there are no naki following a discard.
@@ -404,16 +405,31 @@ func (roundState *RoundState) noNakiTest(context context.Context, event *fsm.Eve
     }
 }
 
-// Checks whether or not the game should end
+// Checks whether or not the game should end.
+// This happens when there are no more draws left.
+// Otherwise, draw a new tile
+//
+// Arguments:
+// - *MahjongRoundData
 func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
     roundState.log.Info("NoNaki called")
+    roundData := (event.Args[2]).(*MahjongRoundData)
 
-    roundState.RoundFSM.Event()
+    if roundData.tileData.LiveWall.End() {
+	err := roundState.RoundFSM.Event(context, "round-draw")
+	util.PanicIf(err)
+	return
+    }
+
+    err := roundState.RoundFSM.Event(context, "draw-tile")
+    util.PanicIf(err)
 }
 
 func (roundState *RoundState) roundDraw(context context.Context, event *fsm.Event) {
-	// TODO: Handle round draw logic
-	// Process exhaustive draw scenario
+    // TODO: Handle round draw logic
+    // Process exhaustive draw scenario
+
+    panic("TODO")
 }
 
 func (roundState *RoundState) roundWin(context context.Context, event *fsm.Event) {
@@ -444,6 +460,7 @@ func (roundState *RoundState) appendAwaitingMessages(info ...AwaitAction) {
     roundState.RoundFSM.SetMetadata("awaiting", append(msgs, info...))
 }
 
+// Sets messages that need a return
 func (roundState *RoundState) setAwaitingMessages(info []AwaitAction) {
     roundState.RoundFSM.SetMetadata("awaiting", info)
 }
