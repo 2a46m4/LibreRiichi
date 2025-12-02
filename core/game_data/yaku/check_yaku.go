@@ -92,6 +92,7 @@ func CheckHandCanWin(hand *Hand, yakuContext YakuContext, winningTile Tile) bool
 
 	// Check four melds and a pair wins
 	// TODO: Actually need to generate the combination so that we can check for yaku
+
 	return meldfinder.HasWinningCombination(hand.ClosedHand.GetHand(), int(hand.OpenMeldCount()))
 }
 

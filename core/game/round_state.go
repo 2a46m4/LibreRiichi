@@ -20,88 +20,86 @@ import (
 type RoundState struct {
 	RoundFSM *fsm.FSM
 	context  context.Context
-
 	log *slog.Logger
 }
 
-func InitRoundState() *RoundState {
-	roundState := &RoundState{}
-	roundState.RoundFSM = fsm.NewFSM(
-		"out-of-round",
-		fsm.Events{
-			fsm.EventDesc{
-				Name: "start-round",
-				Src: []string{
-					"out-of-round",
-				},
-				Dst: "pre-draw",
-			},
-			fsm.EventDesc{
-				Name: "draw-tile",
-				Src: []string{
-					"pre-draw",
-					"no-naki-state",
-				},
-				Dst: "waiting-discard",
-			},
-			fsm.EventDesc{
-				Name: "discard-tile",
-				Src: []string{
-					"waiting-discard",
-				},
-				Dst: "waiting-naki",
-			},
-			fsm.EventDesc{
-				Name: "call-naki",
-				Src: []string{
-					"waiting-naki",
-				},
-				Dst: "waiting-discard",
-			},
-			fsm.EventDesc{
-				Name: "no-naki",
-				Src: []string{
-					"waiting-naki",
-				},
-				Dst: "no-naki-state",
-			},
-			fsm.EventDesc{
-				Name: "round-draw",
-				Src: []string{
-					"no-naki-state",
-				},
-				Dst: "out-of-round",
-			},
-			fsm.EventDesc{
-				Name: "round-win",
-				Src: []string{
-					"waiting-discard",
-					"waiting-naki",
-				},
-				Dst: "out-of-round",
-			},
+func InitRoundState() RoundState {
+    roundState := RoundState{}
+    roundState.RoundFSM = fsm.NewFSM(
+	"out-of-round",
+	fsm.Events{
+	    fsm.EventDesc{
+		Name: "start-round",
+		Src: []string{
+		    "out-of-round",
 		},
-		fsm.Callbacks{
-			"start-round":      roundState.startRound,
-			"before_draw-tile": roundState.drawTileTest,
-			"draw-tile":        roundState.drawTile,
-			"before_discard-tile": roundState.discardTileTest,
-			"discard-tile":     roundState.discardTile,
-			"call-naki":        roundState.callNaki,
-			"before_no-naki":          roundState.noNakiTest,
-			"no-naki":          roundState.noNaki,
-			"round-draw":       roundState.roundDraw,
-			"round-win":        roundState.roundWin,
-			"before_event":     roundState.infoTransition,
+		Dst: "pre-draw",
+	    },
+	    fsm.EventDesc{
+		Name: "draw-tile",
+		Src: []string{
+		    "pre-draw",
+		    "no-naki-state",
 		},
-	)
-	roundState.context = context.Background()
-	roundState.log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-		Level:     slog.LevelDebug,
-	}))
+		Dst: "waiting-discard",
+	    },
+	    fsm.EventDesc{
+		Name: "discard-tile",
+		Src: []string{
+		    "waiting-discard",
+		},
+		Dst: "waiting-naki",
+	    },
+	    fsm.EventDesc{
+		Name: "call-naki",
+		Src: []string{
+		    "waiting-naki",
+		},
+		Dst: "waiting-discard",
+	    },
+	    fsm.EventDesc{
+		Name: "no-naki",
+		Src: []string{
+		    "waiting-naki",
+		},
+		Dst: "no-naki-state",
+	    },
+	    fsm.EventDesc{
+		Name: "round-draw",
+		Src: []string{
+		    "no-naki-state",
+		},
+		Dst: "out-of-round",
+	    },
+	    fsm.EventDesc{
+		Name: "round-win",
+		Src: []string{
+		    "waiting-discard",
+		    "waiting-naki",
+		},
+		Dst: "out-of-round",
+	    },
+	},
+	fsm.Callbacks{
+	    "start-round":      roundState.startRound,
+	    "draw-tile":        roundState.drawTile,
+	    "before_discard-tile": roundState.discardTileTest,
+	    "discard-tile":     roundState.discardTile,
+	    "call-naki":        roundState.callNaki,
+	    "before_no-naki":   roundState.noNakiTest,
+	    "no-naki":          roundState.noNaki,
+	    "round-draw":       roundState.roundDraw,
+	    "round-win":        roundState.roundWin,
+	    "before_event":     roundState.infoTransition,
+	},
+    )
+    roundState.context = context.Background()
+    roundState.log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	AddSource: true,
+	Level:     slog.LevelDebug,
+    }))
 
-	return roundState
+    return roundState
 }
 
 func (roundState *RoundState) GenerateGraphs() string {
@@ -132,9 +130,7 @@ func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
 }
 
 // Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
-func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInfo ...any) (msg []MessageSendInfo, err error) {
-    args := append([]any{action, gameIdx}, extraInfo...)
-
+func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, data *MahjongRoundData) (msg []MessageSendInfo, err error) {
     roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action))
     var call string
     switch action.(type) {
@@ -157,9 +153,9 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, extraInf
 	panic(fmt.Sprintf("unexpected core.Action: %#v", action))
     }
 
-    err = roundState.Transition(call, args...)
+    err = roundState.Transition(call, action, gameIdx, data)
     if err != nil {
-	panic(err)
+	panic(fmt.Sprintf("Error: %s\nAction:%#v\nFromPlayerGameIdx:%#v", err.Error(), action, gameIdx))
     }
 
     ret, _ := roundState.GetReturn()
@@ -170,23 +166,23 @@ func (roundState *RoundState) Transition(event string, args ...any) error {
 	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
 
+// Arguments:
+//   - *MahjongRoundData
+//   - isFirstRound: bool
 func (roundState *RoundState) startRound(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound)
+	round := event.Args[0].(*MahjongRoundData)
 	isFirstRound := event.Args[1].(bool)
 
 	if isFirstRound {
-		round.data = InitMahjongRoundData()
+		*round = InitMahjongRoundData()
 	} else {
-		round.data.IncrementRound()
+		round.IncrementRound()
 	}
 
-	messages := getRoundSetup(round.data.tileData)
+	messages := getRoundSetup(round.tileData)
 
 	err := event.FSM.Event(context, "pre-draw")
-	err = event.FSM.Event(context, "draw-tile",
-		round.data.turnData.GetExpectedDrawPlayer(),
-		round,
-	)
+	err = event.FSM.Event(context, "draw-tile", round)
 	if err != nil {
 		panic("Started round but couldn't draw tile")
 	}
@@ -198,91 +194,85 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 	roundState.setReturn(append(messages, tileMsgs.([]MessageSendInfo)...))
 }
 
-// The FSM should guarantee that we are in the correct state so we
-// only need to check that the person drawing the tile is correct
-func (roundState *RoundState) drawTileTest(context context.Context, event *fsm.Event) {
-	roundState.log.Info("Checking if draw tile can succeed")
-	playerIdx := event.Args[0].(uint8)
-	round := event.Args[1].(*MahjongRound)
-
-	if playerIdx != round.data.turnData.TurnNumber {
-		event.Cancel()
-		return
-	}
-}
-
 // Transition to a await toss state
 //
 // The player either draws the tile and can discard any tile in their
 // closed hand, or must discard the most recently tossed tile if they are in Riichi
+//
+// Arguments:
+//  - *MahjongRoundData
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
-	playerIdx := event.Args[0].(uint8)
-	round := event.Args[1].(*MahjongRound)
-	action := round.data.tileData.Draw(playerIdx)
+    round := event.Args[0].(*MahjongRoundData)
+    playerIdx := round.turnData.PlayerDraw()
+    action := round.tileData.Draw(playerIdx)
 
-	ret := make([]MessageSendInfo, 0, 4)
-	for i := range 4 {
-		ret = append(ret, MessageSendInfo{
-			Events: []BoardEvent{
-				PlayerActionEvent{
-					Action:     action,
-					FromPlayer: playerIdx,
-				},
-			},
-			SendTo: uint8(i),
-		})
+    ret := make([]MessageSendInfo, 0, 4)
+    for i := range 4 {
+	ret = append(ret, MessageSendInfo{
+	    Events: []BoardEvent{
+		PlayerActionEvent{
+		    Action:     action,
+		    FromPlayer: playerIdx,
+		},
+	    },
+	    SendTo: uint8(i),
+	})
+    }
+
+    potentialActions := PotentialActionEvent{}
+    playerHand := &round.tileData.Hands[playerIdx]
+
+    // Check for Ankan, Riichi, Tsumo potential options
+    if playerHand.InRiichi {
+	tile, err := playerHand.ClosedHand.Last()
+	if err != nil {
+	    panic("Bad state")
 	}
 
-	potentialActions := PotentialActionEvent{}
-	playerHand := &round.data.tileData.Hands[playerIdx]
+	potentialActions.Actions = append(potentialActions.Actions, Toss{
+	    TileToToss: tile,
+	})
+    } else {
+	potentialActions.Actions = append(potentialActions.Actions, Toss{
+	    TileToToss: tile.Invalid, // Meaning all tiles
+	})
+    }
 
-	// Check for Ankan, Riichi, Tsumo potential options
-	if playerHand.InRiichi {
-		tile, err := playerHand.ClosedHand.Last()
-		if err != nil {
-			panic("Bad state")
-		}
+    if playerHand.TestAnKan(action.DrawnTile) {
+	potentialActions.Actions = append(potentialActions.Actions, Kan{
+	    TileToKan: action.DrawnTile,
+	})
+    }
 
-		potentialActions.Actions = append(potentialActions.Actions, Toss{
-			TileToToss: tile,
-		})
-	} else {
-		potentialActions.Actions = append(potentialActions.Actions, Toss{
-			TileToToss: tile.Invalid, // Meaning all tiles
-		})
-	}
+    if playerHand.TestRiichi(action.DrawnTile) {
+	potentialActions.Actions = append(potentialActions.Actions, Riichi{
+	    TileToRiichi: action.DrawnTile,
+	})
+    }
 
-	if playerHand.TestAnKan(action.DrawnTile) {
-		potentialActions.Actions = append(potentialActions.Actions, Kan{
-			TileToKan: action.DrawnTile,
-		})
-	}
+    if len(potentialActions.Actions) > 0 {
+	ret[playerIdx].Events = append(ret[playerIdx].Events, potentialActions)
+    }
 
-	if playerHand.TestRiichi(action.DrawnTile) {
-		potentialActions.Actions = append(potentialActions.Actions, Riichi{
-			TileToRiichi: action.DrawnTile,
-		})
-	}
-
-	if len(potentialActions.Actions) > 0 {
-		ret[playerIdx].Events = append(ret[playerIdx].Events, potentialActions)
-	}
-
-	roundState.setReturn(ret)
+    roundState.setReturn(ret)
 }
 
+// Arguments:
+//  - Toss: Action performed
+//  - uint8: The player index
+//  - *MahjongRound
 func (roundState *RoundState) discardTileTest(context context.Context, event *fsm.Event) {
 	roundState.log.Info("Checking if discard tile can succeed")
 	action := event.Args[0].(Toss)
 	playerIdx := event.Args[1].(uint8)
-	round := event.Args[2].(*MahjongRound)
+	round := event.Args[2].(*MahjongRoundData)
 
-	if playerIdx != round.data.turnData.TurnNumber {
-		event.Cancel()
+	if playerIdx != round.turnData.TurnNumber {
+		event.Cancel(errors.New(fmt.Sprint("Unexpected turn number: Got ", playerIdx, " but expected ", round.turnData.TurnNumber)))
 		return
 	}
 
-	hand := &round.data.tileData.Hands[playerIdx]
+	hand := &round.tileData.Hands[playerIdx]
 	lastTile, err := hand.TileJustReceived()
 	if err != nil {
 		event.Cancel(err)
@@ -292,22 +282,23 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	// Riichi must toss the last tile
 	if hand.InRiichi && (lastTile != action.TileToToss) {
 	    event.Cancel(errors.New("If the hand is in riichi, it must toss the last tile"))
-		return
+	    return
 	}
 
-	if !round.data.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) {
-		event.Cancel(errors.New("TestDiscard failed"))
-		return
+	if !round.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) {
+	    event.Cancel(errors.New("TestDiscard failed"))
+	    return
 	}
 }
 
+// The player performs a discard tile action
 func (roundState *RoundState) discardTile(context context.Context, event *fsm.Event) {
     roundState.log.Info("Discarding tiles")
     action := event.Args[0].(Toss)
     playerIdx := event.Args[1].(uint8)
-    round := event.Args[2].(*MahjongRound)
+    round := event.Args[2].(*MahjongRoundData)
 
-    tossData := round.data.tileData.Discard(playerIdx, action.TileToToss)
+    tossData := round.tileData.Discard(playerIdx, action.TileToToss)
     tossEvent := PlayerActionEvent{
 	Action:     tossData,
 	FromPlayer: playerIdx,
@@ -317,7 +308,7 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
     waitingNakiCalls := false
     for i := range uint8(4) {
 	// Check for any calls
-	info := round.data.CheckNaki(playerIdx, i)
+	info := round.CheckNaki(playerIdx, i)
 	for _, event := range info.Events{
 	    roundState.appendAwaitingMessages(AwaitAction{
 	    	PotentialActions: event.(PotentialActionEvent).Actions,
@@ -351,25 +342,24 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
     roundState.setReturn(res)
 }
 
+// Arguments
 func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event) {
     roundState.log.Info("CallNaki called")
-    panic("TODO")
+
     // TODO: Handle naki (call) logic
     // Process player making a call (chi, pon, kan)
 }
 
-// Two possible ways to trigger no naki:
+// Two possible ways to trigger no naki event:
 //
-// 1. Skip (Can fail the transition if there are more naki calls
-// waiting for a return message)
-// 
-// 2. There are no naki calls possible. Then this transition accepts two calls:
-//    - Skip: the action itself
-//    - uint8: the player that performed the skip
-//    - *MahjongRoundData: the round data
-// 
-// This function should be called when the player calls either skip or
-// when there are no naki following a discard.
+//  1. Skip (Can fail the transition if there are more naki calls
+//     waiting for a return message)
+//  2. There are no naki calls possible.
+//
+// Arguments:
+//  - Skip: the action itself (Can be defaulted in case 2)
+//  - uint8: the player that performed the skip
+//  - *MahjongRoundData: the round data
 func (roundState *RoundState) noNakiTest(context context.Context, event *fsm.Event) {
     msgs, ok := roundState.getAwaitingMessages()
     if !ok {
@@ -408,9 +398,6 @@ func (roundState *RoundState) noNakiTest(context context.Context, event *fsm.Eve
 // Checks whether or not the game should end.
 // This happens when there are no more draws left.
 // Otherwise, draw a new tile
-//
-// Arguments:
-// - *MahjongRoundData
 func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
     roundState.log.Info("NoNaki called")
     roundData := (event.Args[2]).(*MahjongRoundData)
@@ -421,7 +408,7 @@ func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) 
 	return
     }
 
-    err := roundState.RoundFSM.Event(context, "draw-tile")
+    err := roundState.RoundFSM.Event(context, "draw-tile", roundData)
     util.PanicIf(err)
 }
 
@@ -456,7 +443,10 @@ func (roundState *RoundState) appendAwaitingMessages(info ...AwaitAction) {
     if !ok {
 	roundState.RoundFSM.SetMetadata("awaiting", info)
     }
-    msgs := msgsRaw.([]AwaitAction)
+    msgs, ok := msgsRaw.([]AwaitAction)
+    if !ok {
+	msgs = make([]AwaitAction, 0)
+    }
     roundState.RoundFSM.SetMetadata("awaiting", append(msgs, info...))
 }
 

@@ -38,7 +38,8 @@ func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
-    err = game.gameState.Transition("handle-event", &game.mahjongRound, &game.ordering, action, arenaIdx)
+    gameIdx := game.ordering.GameIdx(arenaIdx)
+    err = game.gameState.Transition("handle-event", &game.mahjongRound, action, gameIdx)
     _, isNoTransition := err.(fsm.NoTransitionError)
     if !isNoTransition {
 	log.Println("Error occurred: ", err)

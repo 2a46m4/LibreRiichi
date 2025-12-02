@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
@@ -19,13 +20,18 @@ type Ordering struct {
 	GameToArena [4]uint8
 }
 
+
+
 // Create a random ordering
 func InitRandomOrdering() (ordering Ordering) {
-	util.PermuteArray(ordering.ArenaToGame[:])
-	for arenaIdx, gameIdx := range ordering.ArenaToGame {
-		ordering.GameToArena[gameIdx] = uint8(arenaIdx)
-	}
-	return ordering
+    for i := range uint8(4) {
+	ordering.ArenaToGame[i] = i
+    }
+    util.PermuteArray(ordering.ArenaToGame[:])
+    for arenaIdx, gameIdx := range ordering.ArenaToGame {
+	ordering.GameToArena[gameIdx] = uint8(arenaIdx)
+    }
+    return ordering
 }
 
 func (ordering Ordering) GameIdx(arenaIdx uint8) uint8 {
@@ -34,4 +40,24 @@ func (ordering Ordering) GameIdx(arenaIdx uint8) uint8 {
 
 func (ordering Ordering) ArenaIdx(gameIdx uint8) uint8 {
 	return ordering.GameToArena[gameIdx]
+}
+
+// String returns a pretty-printed representation of the ordering mapping
+func (ordering Ordering) String() string {
+	result := "Ordering Mapping:\n"
+	result += "Arena -> Game: "
+	for arenaIdx, gameIdx := range ordering.ArenaToGame {
+		result += fmt.Sprintf("%d -> %d", arenaIdx, gameIdx)
+		if arenaIdx < 3 {
+			result += ", "
+		}
+	}
+	result += "\nGame -> Arena: "
+	for gameIdx, arenaIdx := range ordering.GameToArena {
+		result += fmt.Sprintf("%d -> %d", gameIdx, arenaIdx)
+		if gameIdx < 3 {
+			result += ", "
+		}
+	}
+	return result
 }

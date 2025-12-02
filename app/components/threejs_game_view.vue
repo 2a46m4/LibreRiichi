@@ -464,6 +464,7 @@ function handle_game_setup_event(setups: Setup[]) {
         arena_data.value.scores = setup.data
         break
       case SetupType.PLAYER_NUMBER:
+		console.log("Player number setup received: ", setup.data)
         arena_data.value.player_idx = setup.data as GameIdx
         break
       case SetupType.PLAYER_ORDER:

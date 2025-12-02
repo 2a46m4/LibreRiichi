@@ -143,7 +143,10 @@ func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
 
 // Also need to test that the hand has a yaku
 func (hand Hand) TestRiichi(tile Tile) bool {
-	return !hand.InRiichi && hand.FullHand() && hand.ClosedHand.HasTile(tile)
+    CheckHandCanWin
+    meldfinder.HasWinningCombination()
+    
+    return hand.Closed() && !hand.InRiichi && hand.FullHand() && hand.ClosedHand.HasTile(tile)
 }
 
 func (hand *Hand) Riichi(tile Tile) {

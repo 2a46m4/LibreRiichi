@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -95,6 +96,7 @@ func (gameState *GameState) Transition(event string, arguments ...any) error {
 func getGameSetup(roundData MahjongRoundData,
 	ordering Ordering, scoringState Scoring) (sendInfos []MessageSendInfo) {
 
+	    fmt.Println(ordering)
 	// Create setup data for each player
 	for arenaIdx := range uint8(4) {
 		gameIdx := ordering.GameIdx(arenaIdx)
@@ -150,7 +152,7 @@ func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.
 	gameState.Info("Handling start game")
 	if firstRound {
 		game.mahjongRound = InitMahjongRound()
-		game.ordering = InitRandomOrdering()
+	    game.ordering = InitRandomOrdering()
 	} else {
 		game.mahjongRound.ContinueMahjongRound() // TODO: Get return value
 	}
@@ -165,7 +167,7 @@ func (gameState *GameState) CheckStartRoundPossible(context context.Context, eve
 	// Transition the round, because we can signal a failure here and cancel the transition
 	round := event.Args[0].(*MahjongRound)
 	isFirstRound := event.Args[1].(bool)
-	err := round.roundState.Transition("start-round", round, isFirstRound)
+	err := round.roundState.Transition("start-round", &round.data, isFirstRound)
 	if err != nil {
 		event.Cancel(err)
 		return
@@ -190,12 +192,9 @@ func (gameState *GameState) CheckHandleEventPossible(context context.Context, ev
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
 	round := event.Args[0].(*MahjongRound)
-	ordering := event.Args[1].(*Ordering)
-	action := event.Args[2].(Action)
-	arenaIdx := event.Args[3].(uint8)
-
-	gameIdx := ordering.GameIdx(arenaIdx)
-	msgInfo, err := round.roundState.HandleEvent(action, gameIdx, round)
+	action := event.Args[1].(Action)
+	gameIdx := event.Args[2].(uint8)
+	msgInfo, err := round.roundState.HandleEvent(action, gameIdx, &round.data)
 	if err != nil {
 		panic("Unable to continue")
 	}

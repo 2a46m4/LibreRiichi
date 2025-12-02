@@ -20,7 +20,7 @@ type TurnData struct {
 func InitTurnData() TurnData {
 	return TurnData{
 		CurrentDealer: 0,
-		TurnNumber:    0, // For the first draw
+		TurnNumber:    3, // For the first draw
 		TotalTurns:    0,
 	}
 }
@@ -31,20 +31,11 @@ func (turn *TurnData) NextRound() {
 	turn.CurrentDealer = (turn.CurrentDealer + 1) % 4
 }
 
-func (turn *TurnData) GetExpectedDrawPlayer() uint8 {
-	return turn.TurnNumber
-}
-
-func (turn *TurnData) PlayerDraw(playerIdx uint8) error {
+func (turn *TurnData) PlayerDraw() uint8 {
 	expectedPlayer := (turn.TurnNumber + 1) % 4
-	if playerIdx != expectedPlayer {
-		return errors.New("invalid draw: not the next player's turn")
-	}
-
-	turn.TurnNumber = playerIdx
+	turn.TurnNumber = expectedPlayer
 	turn.TotalTurns++
-
-	return nil
+	return expectedPlayer
 }
 
 func (turn *TurnData) PlayerPon(playerIdx uint8) error {
@@ -89,23 +80,6 @@ func (turn *TurnData) GetTotalTurns() uint8 {
 	return turn.TotalTurns
 }
 
-// ProcessAction dispatches an action to the appropriate turn state method
-// Returns an error if the action is invalid for the current turn state
-func (turn *TurnData) ProcessAction(action Action, playerIdx uint8) error {
-	switch action.(type) {
-	case Draw:
-		return turn.PlayerDraw(playerIdx)
-	case Pon:
-		return turn.PlayerPon(playerIdx)
-	case Kan:
-		return turn.PlayerKan(playerIdx)
-	case Chii:
-		return turn.PlayerChii(playerIdx)
-	default:
-		return nil
-	}
-}
-
 // ProcessKanAction handles kan actions with type distinction
 // isClosedKan should be true for closed kans (from hand only), false for claimed kans
 func (turn *TurnData) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan bool) error {
@@ -113,30 +87,4 @@ func (turn *TurnData) ProcessKanAction(action Kan, playerIdx uint8, isClosedKan 
 		return turn.PlayerClosedKan(playerIdx)
 	}
 	return turn.PlayerKan(playerIdx)
-}
-
-// Try tests if an action would succeed without modifying the turn state
-// Returns nil if the action would succeed, or an error if it would fail
-func (turn *TurnData) Try(action Action, playerIdx uint8, isClosedKan ...bool) error {
-	// Create a copy of the current turn state to test against
-	testTurn := TurnData{
-		TurnNumber: turn.TurnNumber,
-		TotalTurns: turn.TotalTurns,
-	}
-
-	switch a := action.(type) {
-	case Draw:
-		return testTurn.PlayerDraw(playerIdx)
-	case Pon:
-		return testTurn.PlayerPon(playerIdx)
-	case Kan:
-		if len(isClosedKan) > 0 {
-			return testTurn.ProcessKanAction(a, playerIdx, isClosedKan[0])
-		}
-		return testTurn.PlayerKan(playerIdx)
-	case Chii:
-		return testTurn.PlayerChii(playerIdx)
-	default:
-		return nil
-	}
 }
