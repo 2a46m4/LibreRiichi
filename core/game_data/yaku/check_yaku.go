@@ -1,7 +1,6 @@
 package yaku
 
 import (
-	"errors"
 	"slices"
 
 	meldfinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
@@ -21,7 +20,6 @@ type YakuContext struct {
 	IsDoubleRiichi             bool
 	IsTenhou                   bool
 	IsChiihou                  bool
-	IsHandOpen                 bool
 	HandInRiichi               bool
 	RoundWind                  core.Wind
 	PlayerWind                 core.Wind
@@ -77,28 +75,14 @@ var YakuCheckerMap = map[YakuType]YakuChecker{
 	CHIIHOU_YAKU:         CheckChiihou,
 }
 
-func CheckHandCanWin(hand *Hand, yakuContext YakuContext, winningTile Tile) bool {
-	if CheckKokushiMusou(hand, yakuContext, winningTile) {
-		return true
-	}
-
-	if CheckKokushiMusouThirteenWaits(hand, yakuContext, winningTile) {
-		return true
-	}
-
-	if CheckChiitoitsu(hand, yakuContext, winningTile) {
-		return true
-	}
-
-	// Check four melds and a pair wins
-	// TODO: Actually need to generate the combination so that we can check for yaku
-
-	return meldfinder.HasWinningCombination(hand.ClosedHand.GetHand(), int(hand.OpenMeldCount()))
+type NoValidYakus struct {}
+func (NoValidYakus) Error() string {
+    return "No valid yakus"
 }
 
 // Returns yaku and score of a given hand
 func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (YakuList, score.PointValue, error) {
-	yakuBuilder := NewYakuBuilder(yakuContext.IsHandOpen)
+	yakuBuilder := NewYakuBuilder(hand.Closed())
 
 	if CheckKokushiMusouThirteenWaits(hand, yakuContext, winningTile) {
 		yakuBuilder.AddYaku(KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU)
@@ -181,7 +165,7 @@ RANGE_OVER_COMBOS:
 	if foundValidYaku {
 		return yakuList, scoreValue, nil
 	} else {
-		return yakuList, scoreValue, errors.New("No valid yakus")
+		return yakuList, scoreValue, NoValidYakus{}
 	}
 }
 
@@ -197,7 +181,7 @@ func CheckMenzenTsumoYaku(hand *Hand,
 		return false
 	}
 
-	if context.IsHandOpen {
+	if hand.Open() {
 		return false
 	}
 
@@ -205,7 +189,10 @@ func CheckMenzenTsumoYaku(hand *Hand,
 }
 
 func CheckRiichi(hand *Hand, context YakuContext, winningTile Tile) bool {
+    if hand.Open() {
 	return false
+    }
+    return false
 }
 
 func CheckIppatsu(hand *Hand, context YakuContext, winningTile Tile) bool {
@@ -277,7 +264,7 @@ func CheckSankantsu(hand *Hand, context YakuContext, winningTile Tile) bool {
 }
 
 func CheckChiitoitsu(hand *Hand, context YakuContext, winningTile Tile) bool {
-	if context.IsHandOpen {
+	if hand.Open() {
 		return false
 	}
 
@@ -319,7 +306,7 @@ func CheckKazoeYakuman(hand *Hand, context YakuContext, winningTile Tile) bool {
 }
 
 func CheckKokushiMusou(hand *Hand, context YakuContext, winningTile Tile) bool {
-	if context.IsHandOpen {
+    if hand.Open() {
 		return false
 	}
 
@@ -351,20 +338,20 @@ func CheckKokushiMusou(hand *Hand, context YakuContext, winningTile Tile) bool {
 }
 
 func CheckKokushiMusouThirteenWaits(hand *Hand, context YakuContext, winningTile Tile) bool {
-	if context.IsHandOpen {
-		return false
-	}
+    if hand.Open() {
+	return false
+    }
 
-	typeList := []Tile{Manzu, Pinzu, Souzu}
-	numberList := []uint8{1, 9}
-	tileList := []Tile{}
-	for _, t := range typeList {
-		for _, n := range numberList {
-			tileList = append(tileList, MakeNumberTile(t, n))
-		}
+    typeList := []Tile{Manzu, Pinzu, Souzu}
+    numberList := []uint8{1, 9}
+    tileList := []Tile{}
+    for _, t := range typeList {
+	for _, n := range numberList {
+	    tileList = append(tileList, MakeNumberTile(t, n))
 	}
+    }
 
-	return hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, winningTile)
+    return hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, winningTile)
 }
 
 func CheckSuuankou(hand *Hand, context YakuContext, winningTile Tile) bool {

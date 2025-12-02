@@ -244,7 +244,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	})
     }
 
-    if playerHand.TestRiichi(action.DrawnTile) {
+    if CheckRiichi(action.DrawnTile) {
 	potentialActions.Actions = append(potentialActions.Actions, Riichi{
 	    TileToRiichi: action.DrawnTile,
 	})

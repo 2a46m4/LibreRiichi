@@ -164,21 +164,19 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 		IsDoubleRiichi:             false,
 		IsTenhou:                   false,
 		IsChiihou:                  false,
-		IsHandOpen:                 false,
 		HandInRiichi:               false,
 	}
 
 	// Check if adding the discarded tile would complete a winning hand
 	hand := &data.tileData.Hands[playerIdx]
-	canWin := CheckHandCanWin(hand, yakuContext, discardedTile)
-	if canWin {
-		list, points, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
+	yakuList, pointValue, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
+	if err == nil {
 		if err != nil {
 			panic("Shouldn't get here")
 		}
 
 		yaku := []winresult.Yaku{}
-		for _, y := range list.Yakus {
+		for _, y := range yakuList.Yakus {
 			yaku = append(yaku, winresult.Yaku{
 				Name: y.YakuName,
 				Han:  y.HanValue,
@@ -195,7 +193,7 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 					{
 						To:     playerIdx,
 						From:   discardedPlayerIdx,
-						Amount: points.Ron,
+						Amount: pointValue.Ron,
 					},
 				},
 			},

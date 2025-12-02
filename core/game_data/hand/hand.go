@@ -1,9 +1,7 @@
 package hand
 
 import (
-	"errors"
 	"fmt"
-	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 )
@@ -12,7 +10,6 @@ type Hand struct {
 	ClosedHand ClosedHand
 	OpenMelds  OpenMelds
 	InRiichi   bool
-	WaitingFor []Tile // Only used when the hand is in riichi
 }
 
 func (hand Hand) Open() bool {
@@ -23,6 +20,7 @@ func (hand Hand) Closed() bool {
 	return hand.OpenMelds.IsEmpty()
 }
 
+// TODO
 func (hand Hand) InTenpai() bool {
 	return false
 }
@@ -37,16 +35,12 @@ func (hand Hand) TileJustReceived() (tile Tile, err error) {
 	if hand.FullHand() {
 		return hand.ClosedHand.hand[hand.ClosedHand.index-1], nil
 	} else {
-		return tile, errors.New(fmt.Sprintf("Not full hand, don't have an extra tile: %#v %#v", hand))
+		return tile, fmt.Errorf("Not full hand, don't have an extra tile: %#v %#v", hand)
 	}
 }
 
 func (hand Hand) OpenMeldCount() uint8 {
 	return hand.OpenMelds.count
-}
-
-func (hand Hand) TestDraw() bool {
-	return !hand.FullHand()
 }
 
 func (hand *Hand) Draw(tile Tile) {
@@ -141,14 +135,6 @@ func (hand *Hand) Chii(firstTile Tile, tiles [2]Tile) {
 	})
 }
 
-// Also need to test that the hand has a yaku
-func (hand Hand) TestRiichi(tile Tile) bool {
-    CheckHandCanWin
-    meldfinder.HasWinningCombination()
-    
-    return hand.Closed() && !hand.InRiichi && hand.FullHand() && hand.ClosedHand.HasTile(tile)
-}
-
 func (hand *Hand) Riichi(tile Tile) {
 	// Calculate the tiles that the user is waiting for
 
@@ -158,16 +144,11 @@ func (hand *Hand) Riichi(tile Tile) {
 
 // TODO: Also need to test that the hand has a yaku
 func (hand Hand) TestRon(tile Tile) bool {
-	return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
+	// return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
 }
 
 func (hand *Hand) Ron(tile Tile) {
 	hand.ClosedHand.Add(tile)
-}
-
-// Also need to test that the hand has a yaku
-func (hand Hand) TestTsumo(tile Tile) bool {
-	return hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
 }
 
 func (hand *Hand) Tsumo(tile Tile) {
