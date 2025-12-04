@@ -13,28 +13,10 @@ type MahjongRoundData struct {
     scoring  Scoring
     tileData TileData
     // Player direction
-    windData WindData
     turnData TurnData
     // Round direction
     roundWind   Wind
     roundNumber uint8
-}
-
-func InitMahjongRoundData() MahjongRoundData {
-	return MahjongRoundData{
-		scoring:  InitScoring(25000),
-		tileData: CreateNewRound(),
-		windData: WindData(0),
-		turnData: InitTurnData(),
-	}
-}
-
-func (data *MahjongRoundData) IncrementRound() {
-	data.windData.IncrementWind()
-	data.tileData = CreateNewRound()
-	data.turnData.NextRound()
-	data.roundNumber += 1
-	// TODO: Implement switching round winds
 }
 
 func (data *MahjongRoundData) CheckNaki(justDiscarded uint8, againstPlayed uint8) MessageSendInfo {

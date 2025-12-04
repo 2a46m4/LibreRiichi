@@ -1,0 +1,11 @@
+* 2025-12-03
+- FSM methods should avoid storing, checking, and modifying their own data
+  - Storing just the state is fine. Rely on other things to check correctness for you
+  - Creates a lot of dependencies in case the data that they need is outside of what they have
+  - i.e. compose the state machine in other functions
+  - Also hard to reason about correctness
+- OTOH, storing state in the FSM means that we don't have to dig through a ton of dereferences to get to the data that we want
+- Either we define functions that operate on both the state or the data, or have the state store the data and update the data based on the state
+- Going with the second approach, storing the data in the state, but as fields of the state machine so that we don't die from dereferencing everything
+- Should combine state and data (for both round and game), so that it's easier to pass data around
+

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"slices"
 
 	"github.com/looplab/fsm"
 
@@ -16,15 +17,38 @@ import (
 	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
 )
 
+type OutgoingNakiRequest struct {
+    Action Action
+    Player uint8
+}
+
 // Manages the state of the round and validates that turn transitions are correct
 type RoundState struct {
-	RoundFSM *fsm.FSM
-	context  context.Context
-	log *slog.Logger
+    RoundFSM *fsm.FSM
+    context  context.Context
+    log *slog.Logger
+
+    scoring  Scoring
+    turnData TurnData
+    tileData TileData
+
+    outgoingRequests util.Set[OutgoingNakiRequest]
 }
 
 func InitRoundState() RoundState {
-    roundState := RoundState{}
+    roundState := RoundState{
+    	RoundFSM:         &fsm.FSM{},
+    	context:          context.Background(),
+    	log:              slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	    AddSource: true,
+	    Level:     slog.LevelDebug,
+	})),
+    	scoring:          InitScoring(25000),
+    	turnData:         InitTurnData(),
+    	tileData:         CreateNewRound(),
+    	outgoingRequests: util.NewSet[OutgoingNakiRequest](),
+    }
+    // TODO: Decouple the receiver functions and move this in the constructor
     roundState.RoundFSM = fsm.NewFSM(
 	"out-of-round",
 	fsm.Events{
@@ -93,13 +117,18 @@ func InitRoundState() RoundState {
 	    "before_event":     roundState.infoTransition,
 	},
     )
-    roundState.context = context.Background()
-    roundState.log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-	AddSource: true,
-	Level:     slog.LevelDebug,
-    }))
-
+    
+    
     return roundState
+}
+
+func (roundState *RoundState) StartRound() ([]MessageSendInfo) {
+    roundState.Transition("start-round")
+    return nil
+}
+
+func (roundState *RoundState) CanTransitionTo(state string) bool {
+    return slices.Contains(roundState.RoundFSM.AvailableTransitions(), state)
 }
 
 func (roundState *RoundState) GenerateGraphs() string {
@@ -110,17 +139,54 @@ func (roundState *RoundState) infoTransition(context context.Context, event *fsm
 	roundState.log.Info("Transitioning:", "from", event.Src, "to", event.Dst, "event", event.Event)
 }
 
-func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
+func getRoundSetup(roundData *RoundState) (sendInfos []MessageSendInfo) {
+
+	// Create setup data for each player
 	for gameIdx := range uint8(4) {
-		initialTiles := tileState.Hands[gameIdx].ClosedHand.GetHand()
+		setup := []Setup{
+			{
+				Type: DORA,
+				Data: roundData.tileData.DeadWall.dora.getLastDoraTile(),
+			},
+			{
+				Type: PLAYER_NUMBER,
+				Data: gameIdx,
+			},
+			{
+				Type: ROUND_NUMBER,
+				Data: uint8(0), // First round
+			},
+			{
+				Type: ROUND_WIND,
+				Data: East,
+			},
+			{
+				Type: STARTING_POINTS,
+				Data: [4]uint32{
+					roundData.scoring.Points[0],
+					roundData.scoring.Points[1],
+					roundData.scoring.Points[2],
+					roundData.scoring.Points[3],
+				},
+			},
+		}
+
+	    initialTiles := roundData.tileData.Hands[gameIdx].ClosedHand.GetHand()
+	    sendInfos = append(sendInfos, MessageSendInfo{
+		Events: []BoardEvent{
+		    GameSetupEvent{Setup: []Setup{
+			{
+			    Type: INITIAL_TILES,
+			    Data: initialTiles,
+			},
+		    }},
+		},
+		SendTo: gameIdx,
+	    })
+
 		sendInfos = append(sendInfos, MessageSendInfo{
 			Events: []BoardEvent{
-				GameSetupEvent{Setup: []Setup{
-					{
-						Type: INITIAL_TILES,
-						Data: initialTiles,
-					},
-				}},
+				GameSetupEvent{Setup: setup},
 			},
 			SendTo: gameIdx,
 		})
@@ -130,7 +196,7 @@ func getRoundSetup(tileState TileData) (sendInfos []MessageSendInfo) {
 }
 
 // Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
-func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, data *MahjongRoundData) (msg []MessageSendInfo, err error) {
+func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []MessageSendInfo, err error) {
     roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action))
     var call string
     switch action.(type) {
@@ -153,13 +219,13 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8, data *Ma
 	panic(fmt.Sprintf("unexpected core.Action: %#v", action))
     }
 
-    err = roundState.Transition(call, action, gameIdx, data)
+    err = roundState.Transition(call, action, gameIdx)
     if err != nil {
 	panic(fmt.Sprintf("Error: %s\nAction:%#v\nFromPlayerGameIdx:%#v", err.Error(), action, gameIdx))
     }
 
     ret, _ := roundState.GetReturn()
-    return ret.([]MessageSendInfo), err
+    return ret, err
 }
 
 func (roundState *RoundState) Transition(event string, args ...any) error {
@@ -170,28 +236,18 @@ func (roundState *RoundState) Transition(event string, args ...any) error {
 //   - *MahjongRoundData
 //   - isFirstRound: bool
 func (roundState *RoundState) startRound(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRoundData)
-	isFirstRound := event.Args[1].(bool)
+    messages := getRoundSetup(roundState)
 
-	if isFirstRound {
-		*round = InitMahjongRoundData()
-	} else {
-		round.IncrementRound()
-	}
+    err := event.FSM.Event(context, "draw-tile")
+    if err != nil {
+	panic("Started round but couldn't draw tile")
+    }
+    tileMsgs, ok := roundState.GetReturn()
+    if !ok {
+	panic("Getting return failed")
+    }
 
-	messages := getRoundSetup(round.tileData)
-
-	err := event.FSM.Event(context, "pre-draw")
-	err = event.FSM.Event(context, "draw-tile", round)
-	if err != nil {
-		panic("Started round but couldn't draw tile")
-	}
-	tileMsgs, ok := roundState.GetReturn()
-	if !ok {
-		panic("Getting return failed")
-	}
-
-	roundState.setReturn(append(messages, tileMsgs.([]MessageSendInfo)...))
+    roundState.setReturn(append(messages, tileMsgs...))
 }
 
 // Transition to a await toss state
@@ -267,8 +323,8 @@ func (roundState *RoundState) discardTileTest(context context.Context, event *fs
 	playerIdx := event.Args[1].(uint8)
 	round := event.Args[2].(*MahjongRoundData)
 
-	if playerIdx != round.turnData.TurnNumber {
-		event.Cancel(errors.New(fmt.Sprint("Unexpected turn number: Got ", playerIdx, " but expected ", round.turnData.TurnNumber)))
+	if playerIdx != round.turnData.CurrentPlayer {
+		event.Cancel(errors.New(fmt.Sprint("Unexpected turn number: Got ", playerIdx, " but expected ", round.turnData.CurrentPlayer)))
 		return
 	}
 
@@ -309,13 +365,16 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
     for i := range uint8(4) {
 	// Check for any calls
 	info := round.CheckNaki(playerIdx, i)
-	for _, event := range info.Events{
-	    roundState.appendAwaitingMessages(AwaitAction{
-	    	PotentialActions: event.(PotentialActionEvent).Actions,
-	    	SentTo:          i,
-	    })
+
+	for _, event := range info.Events {
+	    for _, action := range event.(PotentialActionEvent).Actions {
+		roundState.outgoingRequests.Add(OutgoingNakiRequest{
+	    	    Action: action,
+	    	    Player: i,
+		})	
+	    }
 	}
-	
+
 	if len(info.Events) != 0 {
 	    waitingNakiCalls = true
 	    info.Events = append(info.Events, tossEvent)
@@ -361,36 +420,19 @@ func (roundState *RoundState) callNaki(context context.Context, event *fsm.Event
 //  - uint8: the player that performed the skip
 //  - *MahjongRoundData: the round data
 func (roundState *RoundState) noNakiTest(context context.Context, event *fsm.Event) {
-    msgs, ok := roundState.getAwaitingMessages()
-    if !ok {
-	roundState.log.Warn("awaiting messages not found")
-    }
-    if len(msgs) == 0 {
-	return
-    }
-    
     skipAction := event.Args[0].(Skip)
     playerIdx := event.Args[1].(uint8)
-    action := skipAction.ActionToSkip
-    for msgI, msg := range msgs {
-	if msg.SentTo != playerIdx {
-	    continue
-	}
-
-	for i, potentialActions := range msg.PotentialActions {
-	    if reflect.TypeOf(potentialActions) == reflect.TypeOf(action) {
-		util.Remove(&msg.PotentialActions, i)
-
-		if len(msg.PotentialActions) == 0 {
-		    util.Remove(&msgs, msgI)
-		}
-	    }
-	}
+    if isOutgoingRequest(OutgoingNakiRequest{
+    	Action: skipAction,
+    	Player: playerIdx,
+    }, roundState) {
+	roundState.outgoingRequests.Remove(OutgoingNakiRequest{
+		Action: skipAction.ActionToSkip,
+		Player: playerIdx,
+	})
     }
 
-    roundState.setAwaitingMessages(msgs)
-
-    if len(msgs) >= 0 {
+    if len(roundState.outgoingRequests) >= 0 {
 	event.Cancel()
     }
 }
@@ -422,32 +464,21 @@ func (roundState *RoundState) roundDraw(context context.Context, event *fsm.Even
 func (roundState *RoundState) roundWin(context context.Context, event *fsm.Event) {
 	// TODO: Handle round win logic
 	// Process player winning the round (tsumo/ron)
+    roundState.turnData.NextRound(false)
 }
 
 func (roundState *RoundState) RoundEnded() bool {
 	return roundState.RoundFSM.Is("out-of-round")
 }
 
-func (roundState *RoundState) GetReturn() (ret any, ok bool) {
-	ret, ok = roundState.RoundFSM.Metadata("return")
-	roundState.RoundFSM.DeleteMetadata("return")
-	return ret, ok
+func (roundState *RoundState) GetReturn() (ret []MessageSendInfo, ok bool) {
+    data, ok := roundState.RoundFSM.Metadata("return")
+    roundState.RoundFSM.DeleteMetadata("return")
+    return data.([]MessageSendInfo), ok
 }
 
-func (roundState *RoundState) setReturn(data any) {
+func (roundState *RoundState) setReturn(data []MessageSendInfo) {
 	roundState.RoundFSM.SetMetadata("return", data)
-}
-
-func (roundState *RoundState) appendAwaitingMessages(info ...AwaitAction) {
-    msgsRaw, ok := roundState.RoundFSM.Metadata("awaiting")
-    if !ok {
-	roundState.RoundFSM.SetMetadata("awaiting", info)
-    }
-    msgs, ok := msgsRaw.([]AwaitAction)
-    if !ok {
-	msgs = make([]AwaitAction, 0)
-    }
-    roundState.RoundFSM.SetMetadata("awaiting", append(msgs, info...))
 }
 
 // Sets messages that need a return
@@ -459,3 +490,19 @@ func (roundState *RoundState) getAwaitingMessages() (info []AwaitAction, ok bool
     infoRaw, ok := roundState.RoundFSM.Metadata("awaiting")
     return infoRaw.([]AwaitAction), ok
 }
+
+
+// Reomves the request from the set of current outgoing requests, and
+// returns true if the request was in the outgoing set
+func isOutgoingRequest(request OutgoingNakiRequest, roundState *RoundState) bool {
+    actionSkip, isSkip := request.Action.(Skip)
+    if isSkip {
+	request = OutgoingNakiRequest{
+	    Action: actionSkip,
+	    Player: request.Player,
+	}
+    }
+
+    return roundState.outgoingRequests.In(request)
+}
+

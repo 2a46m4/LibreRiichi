@@ -25,6 +25,7 @@ type Client interface {
 type Game interface {
 	StartGame() ([]MessageSendInfo, error)
 	StartRound() ([]MessageSendInfo, error)
+	ContinueRound() ([]MessageSendInfo, error)
 	HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error)
 	RoundEnd() error
 	GameEnd() error
@@ -144,35 +145,40 @@ func (arena *Arena) JoinArena(agent Client) error {
 
 // Drives the game forward
 func (arena *Arena) driveGame(action Action, fromPlayer uint8) error {
-	arena.log.Info("Driving game")
+    arena.log.Info("Driving game")
 
-	var sendInfos []MessageSendInfo
-	var err error
+    sendInfos, err := arena.game.HandleEvent(action, fromPlayer)
 
-	if arena.game.RoundEnded() {
-		arena.FinishRoundArena()
-		if arena.game.GameEnded() {
-			arena.FinishGameArena()
-			return nil
-		}
+    if err != nil {
+	arena.log.Info("Error: ", "Msg", err.Error())
+	return err
+    }
 
-		sendInfos, err = arena.game.StartRound()
-	} else {
-		sendInfos, err = arena.game.HandleEvent(action, fromPlayer)
-	}
-
+    if arena.game.RoundEnded() {
+	send, err := arena.FinishRoundArena()
 	if err != nil {
-		arena.log.Info("Error: ", "Msg", err.Error())
-		return err
+	    arena.log.Info("Error: ", "Msg", err.Error())
+	    return err	    
 	}
+	sendInfos = append(sendInfos, send...)
+    }
 
-	for _, sendInfo := range sendInfos {
-		for _, event := range sendInfo.Events {
-			arena.SendBoardEvent(event, sendInfo.SendTo)
-		}
+    if arena.game.GameEnded() {
+	send, err := arena.FinishGameArena()	
+	if err != nil {
+	    arena.log.Info("Error: ", "Msg", err.Error())
+	    return err	    
 	}
+	sendInfos = append(sendInfos, send...)
+    }
 
-	return nil
+    for _, sendInfo := range sendInfos {
+	for _, event := range sendInfo.Events {
+	    arena.SendBoardEvent(event, sendInfo.SendTo)
+	}
+    }
+
+    return nil
 }
 
 // StartArena is called by a client when a game should be started. It broadcasts a start round message to the connected players
@@ -267,13 +273,21 @@ func (arena *Arena) HandleGameInfoActionData(data GameInfoActionData, fromPlayer
 	return Unit, nil
 }
 
-// FinishRoundArena is called when the arena round should be finished. It broadcasts an end round message to the connected players
-func (arena *Arena) FinishRoundArena() {
+// FinishRoundArena is called when the arena round should be
+// finished. It broadcasts an end round message to the connected
+// players and sets up for the next round if needed. It returns the
+// list of messages that need to be sent to the player
+func (arena *Arena) FinishRoundArena() ([]MessageSendInfo, error) {
+    // Call ContinueRound somewhere here...
 	panic("TODO")
 	// arena.game.GetGameResults()
 }
 
-func (arena *Arena) FinishGameArena() {
+// FinishGameArena is called when the game should be
+// finished. It broadcasts an end game message to the connected
+// players and sets up for the next round if needed. It returns the
+// list of messages that need to be sent to the player
+func (arena *Arena) FinishGameArena() ([]MessageSendInfo, error) {
 	panic("TODO")
 	// arena.game.GetGameResults()
 }

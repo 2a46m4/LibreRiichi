@@ -9,33 +9,37 @@ import (
 
 type MahjongGame struct {
 	gameState    GameState
-	mahjongRound MahjongRound
 	ordering     Ordering
-	firstRound   bool
 }
 
 func NewMahjongGame() *MahjongGame {
 	return &MahjongGame{
 		gameState:  *InitGameState(),
-		firstRound: true,
 	}
 }
 
+// We should be calling the function inside
 func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-game", game, game.firstRound)
-	sendInfoRaw, _ := game.gameState.GetReturn()
-	sendInfo := sendInfoRaw.([]MessageSendInfo)
+	err = game.gameState.Transition("start-game")
+	sendInfo, _ := game.gameState.GetReturn()
 	ChangeToArenaIdx(sendInfo, game.ordering)
 	return sendInfo, err
 }
 
 func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-round", &game.mahjongRound, game.firstRound)
-	sendInfoRaw, _ := game.gameState.GetReturn()
-	sendInfo := sendInfoRaw.([]MessageSendInfo)
+	err = game.gameState.Transition("start-round", true)
+	sendInfo, _ := game.gameState.GetReturn()
 	ChangeToArenaIdx(sendInfo, game.ordering)
 	return sendInfo, err
 }
+
+func (game *MahjongGame) ContinueRound() (msgs []MessageSendInfo, err error) {
+    err = game.gameState.Transition("start-round", false)
+    sendInfo, _ := game.gameState.GetReturn()
+    ChangeToArenaIdx(sendInfo, game.ordering)
+    return nil, nil
+}
+
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
     gameIdx := game.ordering.GameIdx(arenaIdx)
@@ -46,29 +50,26 @@ func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []Mess
     } else {
 	err = nil
     }
-    sendInfoRaw, _ := game.gameState.GetReturn()
-    sendInfo := sendInfoRaw.([]MessageSendInfo)
+    sendInfo, _ := game.gameState.GetReturn()
     ChangeToArenaIdx(sendInfo, game.ordering)
     return sendInfo, err
 }
 
-func (game *MahjongGame) RoundEnd() error {
-	// Do the increment post-round
-	game.mahjongRound.data.IncrementRound()
+func (game *MahjongGame) RoundEnd() (msgs []MessageSendInfo, err error) {
+    // Do the increment post-round
+    // TODO
+    // game.mahjongRound.roundState
 
-	if game.firstRound {
-		game.firstRound = false
-	}
 
-	return nil
+    return nil, nil
 }
 
 func (game *MahjongGame) RoundEnded() bool {
 	return game.gameState.Current() == "in-game"
 }
 
-func (game *MahjongGame) GameEnd() error {
-	return nil
+func (game *MahjongGame) GameEnd() (msgs []MessageSendInfo, err error) {
+	return nil, nil
 }
 
 func (game *MahjongGame) GameEnded() bool {

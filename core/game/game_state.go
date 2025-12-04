@@ -3,22 +3,22 @@ package game
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
-	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	"github.com/looplab/fsm"
 )
 
 // Stores the state of the current game (in game, in round, etc.)
 type GameState struct {
-	*fsm.FSM
-	// We can probably use this for timeout events when waiting
-	// for the user to return some input
-	context context.Context
-	*slog.Logger
+    *fsm.FSM
+    // We can probably use this for timeout events when waiting
+    // for the user to return some input
+    context context.Context
+    *slog.Logger
+
+    roundState RoundState
 }
 
 func InitGameState() *GameState {
@@ -93,72 +93,21 @@ func (gameState *GameState) Transition(event string, arguments ...any) error {
 	return gameState.FSM.Event(gameState.context, event, arguments...)
 }
 
-func getGameSetup(roundData MahjongRoundData,
-	ordering Ordering, scoringState Scoring) (sendInfos []MessageSendInfo) {
-
-	    fmt.Println(ordering)
-	// Create setup data for each player
-	for arenaIdx := range uint8(4) {
-		gameIdx := ordering.GameIdx(arenaIdx)
-
-		setup := []Setup{
-			{
-				Type: DORA,
-				Data: roundData.tileData.DeadWall.dora.getLastDoraTile(),
-			},
-			{
-				Type: PLAYER_NUMBER,
-				Data: ordering.GameIdx(arenaIdx),
-			},
-			{
-				Type: ROUND_NUMBER,
-				Data: uint8(0), // First round
-			},
-			{
-				Type: ROUND_WIND,
-				Data: roundData.windData.GetPlayerWind(gameIdx), // Get player's seat wind
-			},
-			{
-				Type: STARTING_POINTS,
-				Data: [4]uint32{
-					scoringState.Points[0],
-					scoringState.Points[1],
-					scoringState.Points[2],
-					scoringState.Points[3],
-				},
-			},
-		}
-
-		sendInfos = append(sendInfos, MessageSendInfo{
-			Events: []BoardEvent{
-				GameSetupEvent{Setup: setup},
-			},
-			SendTo: arenaIdx,
-		})
-	}
-
-	return sendInfos
-}
-
 func (gameState *GameState) CheckStartGamePossible(context context.Context, event *fsm.Event) {
 	// TODO: Do some checks that starting the game is possible
 	// event.Cancel(errors.New("Hello"))
 }
 
 func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.Event) {
-	game := event.Args[0].(*MahjongGame)
-	firstRound := event.Args[1].(bool)
+    firstRound := event.Args[1].(bool)
 
-	gameState.Info("Handling start game")
-	if firstRound {
-		game.mahjongRound = InitMahjongRound()
-	    game.ordering = InitRandomOrdering()
-	} else {
-		game.mahjongRound.ContinueMahjongRound() // TODO: Get return value
-	}
+    gameState.Info("Handling start game")
+    if firstRound {
+	gameState.roundState = InitRoundState()
+    } 
+    info := gameState.roundState.StartRound()
 
-	setup := getGameSetup(game.mahjongRound.data, game.ordering, game.mahjongRound.data.scoring)
-	gameState.SetMetadata("return", convertToArenaIdx(setup, game.ordering))
+    gameState.SetMetadata("return", info)
 }
 
 func (gameState *GameState) CheckStartRoundPossible(context context.Context, event *fsm.Event) {
@@ -191,24 +140,17 @@ func (gameState *GameState) CheckHandleEventPossible(context context.Context, ev
 }
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound)
-	action := event.Args[1].(Action)
-	gameIdx := event.Args[2].(uint8)
-	msgInfo, err := round.roundState.HandleEvent(action, gameIdx, &round.data)
-	if err != nil {
-		panic("Unable to continue")
-	}
+    action := event.Args[1].(Action)
+    gameIdx := event.Args[2].(uint8)
+    msgInfo, err := gameState.roundState.HandleEvent(action, gameIdx)
+    if err != nil {
+	panic("Unable to continue")
+    }
 
-	err = event.FSM.Event(context, "round-end", round)
-	if err == nil { // Game has ended
-		endRoundInfo, ok := gameState.GetReturn()
-		if !ok {
-			panic("Can't get end round info")
-		}
-
-		msgInfo = append(msgInfo, endRoundInfo.([]MessageSendInfo)...)
-	}
+    if gameState.roundState.RoundEnded() {
 	gameState.setReturn(msgInfo)
+	gameState.Transition("round-end")
+    }
 }
 
 func (gameState *GameState) GenerateGraphs() string {
@@ -228,14 +170,14 @@ func (gameState *GameState) RoundEnd(context context.Context, event *fsm.Event) 
 
 }
 
-func (gameState *GameState) GetReturn() (data any, ok bool) {
-	data, ok = gameState.Metadata("return")
-	gameState.DeleteMetadata("return")
-	return data, ok
+func (gameState *GameState) GetReturn() (data []MessageSendInfo, ok bool) {
+    dataRaw, ok := gameState.Metadata("return")
+    gameState.DeleteMetadata("return")
+    return dataRaw.([]MessageSendInfo), ok
 }
 
-func (gameState *GameState) setReturn(data any) {
-	gameState.SetMetadata("return", data)
+func (gameState *GameState) setReturn(data []MessageSendInfo) {
+    gameState.SetMetadata("return", data)
 }
 
 // Modifies the original array
