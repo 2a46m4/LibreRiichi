@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 
 	"github.com/looplab/fsm"
 
@@ -113,85 +112,22 @@ func InitRoundState() RoundState {
 	    "no-naki":          roundState.noNaki,
 	    "round-draw":       roundState.roundDraw,
 	    "round-win":        roundState.roundWin,
-	    "before_event":     roundState.infoTransition,
+	    "before_event":     func(ctx context.Context, event *fsm.Event){
+		roundState.log.Info("Transitioning:",
+		    "from", event.Src,
+		    "to", event.Dst,
+		    "event", event.Event)
+	    },
 	},
     )
-    
-    
+
     return roundState
 }
 
-func (roundState *RoundState) StartRound() ([]MessageSendInfo) {
-    roundState.Transition("start-round")
-    return nil
-}
-
-func (roundState *RoundState) CanTransitionTo(state string) bool {
-    return slices.Contains(roundState.RoundFSM.AvailableTransitions(), state)
-}
-
-func (roundState *RoundState) GenerateGraphs() string {
-    return fsm.Visualize(roundState.RoundFSM)
-}
-
-func (roundState *RoundState) infoTransition(context context.Context, event *fsm.Event) {
-	roundState.log.Info("Transitioning:", "from", event.Src, "to", event.Dst, "event", event.Event)
-}
-
-func getRoundSetup(roundData *RoundState) (sendInfos []MessageSendInfo) {
-
-	// Create setup data for each player
-	for gameIdx := range uint8(4) {
-		setup := []Setup{
-			{
-				Type: DORA,
-				Data: roundData.tileData.DeadWall.dora.getLastDoraTile(),
-			},
-			{
-				Type: PLAYER_NUMBER,
-				Data: gameIdx,
-			},
-			{
-				Type: ROUND_NUMBER,
-				Data: uint8(0), // First round
-			},
-			{
-				Type: ROUND_WIND,
-				Data: East,
-			},
-			{
-				Type: STARTING_POINTS,
-				Data: [4]uint32{
-					roundData.scoring.Points[0],
-					roundData.scoring.Points[1],
-					roundData.scoring.Points[2],
-					roundData.scoring.Points[3],
-				},
-			},
-		}
-
-	    initialTiles := roundData.tileData.Hands[gameIdx].ClosedHand.GetHand()
-	    sendInfos = append(sendInfos, MessageSendInfo{
-		Events: []BoardEvent{
-		    GameSetupEvent{Setup: []Setup{
-			{
-			    Type: INITIAL_TILES,
-			    Data: initialTiles,
-			},
-		    }},
-		},
-		SendTo: gameIdx,
-	    })
-
-		sendInfos = append(sendInfos, MessageSendInfo{
-			Events: []BoardEvent{
-				GameSetupEvent{Setup: setup},
-			},
-			SendTo: gameIdx,
-		})
-	}
-
-	return sendInfos
+func (roundState *RoundState) StartRound() ([]MessageSendInfo, error) {
+    err := roundState.Transition("start-round")
+    ret, _ := roundState.GetReturn()
+    return ret, err
 }
 
 // Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
@@ -231,9 +167,6 @@ func (roundState *RoundState) Transition(event string, args ...any) error {
 	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
 
-// Arguments:
-//   - *MahjongRoundData
-//   - isFirstRound: bool
 func (roundState *RoundState) startRound(context context.Context, event *fsm.Event) {
     messages := getRoundSetup(roundState)
 
@@ -253,13 +186,9 @@ func (roundState *RoundState) startRound(context context.Context, event *fsm.Eve
 //
 // The player either draws the tile and can discard any tile in their
 // closed hand, or must discard the most recently tossed tile if they are in Riichi
-//
-// Arguments:
-//  - *MahjongRoundData
 func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event) {
-    round := event.Args[0].(*MahjongRoundData)
-    playerIdx := round.turnData.PlayerDraw()
-    action := round.tileData.Draw(playerIdx)
+    playerIdx := roundState.turnData.CurrentPlayer
+    action := roundState.tileData.Draw(playerIdx)
 
     ret := make([]MessageSendInfo, 0, 4)
     for i := range 4 {
@@ -275,7 +204,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
     }
 
     potentialActions := PotentialActionEvent{}
-    playerHand := &round.tileData.Hands[playerIdx]
+    playerHand := &roundState.tileData.Hands[playerIdx]
 
     // Check for Ankan, Riichi, Tsumo potential options
     if playerHand.InRiichi {
@@ -505,3 +434,53 @@ func isOutgoingRequest(request OutgoingNakiRequest, roundState *RoundState) bool
     return roundState.outgoingRequests.In(request)
 }
 
+func getRoundSetup(roundData *RoundState) (sendInfos []MessageSendInfo) {
+
+    // Create setup data for each player
+    for gameIdx := range uint8(4) {
+	setup := []Setup{
+	    {
+		Type: DORA,
+		Data: roundData.tileData.DeadWall.dora.getLastDoraTile(),
+	    },
+	    {
+		Type: PLAYER_NUMBER, // TODO: Don't need to send twice
+		Data: gameIdx,
+	    },
+	    {
+		Type: ROUND_NUMBER,
+		Data: roundData.turnData.GetRoundNumber(),
+	    },
+	    {
+		Type: ROUND_WIND,
+		Data: roundData.turnData.RoundWind,
+	    },
+	    {
+		Type: STARTING_POINTS,
+		Data: [4]uint32{
+		    roundData.scoring.Points[0],
+		    roundData.scoring.Points[1],
+		    roundData.scoring.Points[2],
+		    roundData.scoring.Points[3],
+		},
+	    },
+	    {
+		Type: INITIAL_TILES,
+		Data: roundData.tileData.Hands[gameIdx].ClosedHand.GetHand(),
+	    },
+	}
+
+	sendInfos = append(sendInfos, MessageSendInfo{
+	    Events: []BoardEvent{
+		GameSetupEvent{Setup: setup},
+	    },
+	    SendTo: gameIdx,
+	})
+    }
+
+    return sendInfos
+}
+
+func (roundState *RoundState) GenerateGraphs() string {
+    return fsm.Visualize(roundState.RoundFSM)
+}

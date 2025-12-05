@@ -13,32 +13,41 @@ import (
 
 // Essentially a thin wrapper over game state and changes the ordering
 type MahjongGame struct {
-	gameState    GameState
-	ordering     Ordering
+    gameState    GameState
+    ordering     Ordering
+    // We can probably use this for timeout events when waiting
+    // for the user to return some input
+    context context.Context
+    *slog.Logger
+    state fsm.FSM
 }
 
 func NewMahjongGame() *MahjongGame {
+
+
+
 	return &MahjongGame{
 		gameState:  *InitGameState(),
 	}
 }
 
-func (game *MahjongGame) StartGame() (messages []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-game")
-	sendInfo, _ := game.gameState.GetReturn()
-	ChangeToArenaIdx(sendInfo, game.ordering)
-	return sendInfo, err
-}
+func (game *MahjongGame) StartGameAndRound() (messages []MessageSendInfo, err error) {
+    // if game.state.Cannot("start-game") {
+	// return nil, errors.New("Can't start game")
+    // }
 
-func (game *MahjongGame) StartRound() (msgs []MessageSendInfo, err error) {
-	err = game.gameState.Transition("start-round", true)
-	sendInfo, _ := game.gameState.GetReturn()
-	ChangeToArenaIdx(sendInfo, game.ordering)
-	return sendInfo, err
+    err = game.gameState.Transition("start-game")
+    if err != nil {
+	return nil, err
+    }
+    err = game.gameState.Transition("start-round")
+    sendInfo, _ := game.gameState.GetReturn()
+    ChangeToArenaIdx(sendInfo, game.ordering)
+    return sendInfo, err
 }
 
 func (game *MahjongGame) ContinueRound() (msgs []MessageSendInfo, err error) {
-    err = game.gameState.Transition("start-round", false)
+    err = game.gameState.Transition("start-round")
     sendInfo, _ := game.gameState.GetReturn()
     ChangeToArenaIdx(sendInfo, game.ordering)
     return nil, nil
@@ -151,7 +160,6 @@ func InitGameState() *GameState {
 			"before_start-game":   gameState.CheckStartGamePossible,
 			"start-game":          gameState.HandleStartGame,
 			"before_start-round":  gameState.CheckStartRoundPossible,
-			"start-round":         gameState.HandleStartRound,
 			"before_handle-event": gameState.CheckHandleEventPossible,
 			"handle-event":        gameState.HandleEvent,
 			"before_round-end":    gameState.BeforeRoundEnd,
@@ -176,46 +184,24 @@ func (gameState *GameState) CheckStartGamePossible(context context.Context, even
 }
 
 func (gameState *GameState) HandleStartGame(context context.Context, event *fsm.Event) {
-    isFirstRound := event.Args[1].(bool)
-
     gameState.Info("Handling start game")
-    if isFirstRound {
-	gameState.roundState = InitRoundState()
-    } 
-    info := gameState.roundState.StartRound()
-
-    gameState.SetMetadata("return", info)
+    gameState.roundState = InitRoundState()
 }
 
 func (gameState *GameState) CheckStartRoundPossible(context context.Context, event *fsm.Event) {
     // TODO: Do some checks
-    // TODO: Potentially combine everything into one big FSM
+    // TODO: Potentially combine everything into one big FSM to avoid this hacky approach
 
-	// Transition the round, because we can signal a failure here and cancel the transition
-	round := event.Args[0].(*MahjongRound)
-	isFirstRound := event.Args[1].(bool)
-	err := round.roundState.Transition("start-round", &round.data, isFirstRound)
-	if err != nil {
-		event.Cancel(err)
-		return
-	}
+    // Transition the round, because we can signal a failure here and cancel the transition
+    data, err := gameState.roundState.StartRound()
+    if err != nil {
+	event.Cancel(err)
+	return
+    }
+    gameState.setReturn(data)
 }
 
-func (gameState *GameState) HandleStartRound(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound).roundState
-	if round.RoundFSM.Current() != "waiting-discard" {
-		panic("Should have already transitioned")
-	} else {
-		data, hasData := round.GetReturn()
-		if hasData {
-			gameState.setReturn(data)
-		}
-	}
-}
-
-func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {
-	
-}
+func (gameState *GameState) CheckHandleEventPossible(context context.Context, event *fsm.Event) {}
 
 func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Event) {
     action := event.Args[1].(Action)
@@ -232,16 +218,14 @@ func (gameState *GameState) HandleEvent(context context.Context, event *fsm.Even
 }
 
 func (gameState *GameState) BeforeRoundEnd(context context.Context, event *fsm.Event) {
-	round := event.Args[0].(*MahjongRound)
-
-	if !round.roundState.RoundEnded() {
+	if !gameState.roundState.RoundEnded() {
 		event.Cancel(errors.New("Round is still going"))
 	}
 }
 
 func (gameState *GameState) RoundEnd(context context.Context, event *fsm.Event) {
-	// Compute some ending results, etc.
-
+    // Compute some ending results, etc.
+    panic("TODO")
 }
 
 func (gameState *GameState) GetReturn() (data []MessageSendInfo, ok bool) {
