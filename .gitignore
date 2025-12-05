@@ -5,3 +5,7 @@
 /dist-server/
 .DS_Store
 app/**/*.js
+*.~undo-tree~
+/build/
+/tmp/
+/GoRiichi.code-workspace

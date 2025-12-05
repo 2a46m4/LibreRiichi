@@ -59,8 +59,12 @@ func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []Mess
     return sendInfo, err
 }
 
+func (game *MahjongGame) IsInGame() bool {
+    return game.gameState.Current() == "in-game"
+}
+
 func (game *MahjongGame) HasRoundEnded() bool {
-	return game.gameState.Current() == "in-game"
+	return game.gameState.Current() != "in-round"
 }
 
 func (game *MahjongGame) RoundEndCleanup() (msgs []MessageSendInfo, err error) {

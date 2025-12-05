@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"reflect"
 	"slices"
 
 	"github.com/looplab/fsm"

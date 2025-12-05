@@ -23,13 +23,15 @@ type Client interface {
 }
 
 type Game interface {
-    StartGame() ([]MessageSendInfo, error)
-    StartRound() ([]MessageSendInfo, error)
+    StartGameAndRound() ([]MessageSendInfo, error)
     ContinueRound() ([]MessageSendInfo, error)
     HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error)
+    IsInGame() bool
     HasRoundEnded() bool
-    RoundEndCleanup()
+    // Send round results
+    RoundEndCleanup() ([]MessageSendInfo, error) 
     ShouldContinueRound() bool
+    // Send game results
     GameEndCleanup() ([]MessageSendInfo, error)
 }
 
@@ -71,7 +73,7 @@ func (arena *Arena) GetArenaInfo() ArenaInfoResponse {
 		Success:     true,
 		Name:        arena.Name,
 		Agents:      agents,
-		GameStarted: !arena.game.GameEnded(),
+		GameStarted: !arena.game.IsInGame(),
 		DateCreated: arena.DateCreated,
 	}
 }
@@ -154,9 +156,7 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 		return Unit, errors.New("Not enough agents")
 	}
 
-	sendGameInfo, err := arena.game.StartGame()
-	sendRoundInfo, err := arena.game.StartRound()
-	sendInfo := append(sendGameInfo, sendRoundInfo...)
+	sendInfo, err := arena.game.StartGameAndRound()
 	if err != nil {
 		return Unit, err
 	}
@@ -179,9 +179,7 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uint8) (UnitType, error) {
     arena.Lock()
     defer arena.Unlock()
-
     arena.log.Info("Driving game")
-
     sendInfos, err := arena.game.HandleEvent(data.Action, fromPlayer)
 
     if err != nil {
@@ -189,22 +187,20 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 	return Unit, err
     }
 
-    if arena.game.RoundEnded() {
-	send, err := arena.FinishRoundArena()
+    if arena.game.HasRoundEnded() {
+	infos, err := arena.game.RoundEndCleanup()
 	if err != nil {
-	    arena.log.Info("Error: ", "Msg", err.Error())
-	    return Unit, err	    
-	}
-	sendInfos = append(sendInfos, send...)
-    }
-
-    if arena.game.GameEnded() {
-	send, err := arena.FinishGameArena()	
-	if err != nil {
-	    arena.log.Info("Error: ", "Msg", err.Error())
 	    return Unit, err
 	}
-	sendInfos = append(sendInfos, send...)
+	sendInfos = append(sendInfos, infos...)
+    }
+
+    if !arena.game.ShouldContinueRound(){
+	infos, err := arena.game.GameEndCleanup()
+	if err != nil {
+	    return Unit, err
+	}
+	sendInfos = append(sendInfos, infos...)	
     }
 
     for _, sendInfo := range sendInfos {
@@ -219,7 +215,7 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPlayer uint8) (UnitType, error) {
 	arena.Lock()
 	defer arena.Unlock()
-	if !arena.game.GameEnded() {
+	if arena.game.IsInGame() {
 		// TODO: Replace with AI
 	} else if len(arena.agents) == 1 {
 		// TODO: Cleanup
@@ -260,25 +256,6 @@ func (arena *Arena) HandleRemoveAIArenaAction(data RemoveAIArenaAction, fromPlay
 func (arena *Arena) HandleGameInfoActionData(data GameInfoActionData, fromPlayer uint8) (UnitType, error) {
 	arena.log.Info("NYI")
 	return Unit, nil
-}
-
-// FinishRoundArena is called when the arena round should be
-// finished. It broadcasts an end round message to the connected
-// players and sets up for the next round if needed. It returns the
-// list of messages that need to be sent to the player
-func (arena *Arena) FinishRoundArena() ([]MessageSendInfo, error) {
-    // Call ContinueRound somewhere here...
-	panic("TODO")
-	// arena.game.GetGameResults()
-}
-
-// FinishGameArena is called when the game should be
-// finished. It broadcasts an end game message to the connected
-// players and sets up for the next round if needed. It returns the
-// list of messages that need to be sent to the player
-func (arena *Arena) FinishGameArena() ([]MessageSendInfo, error) {
-	panic("TODO")
-	// arena.game.GetGameResults()
 }
 
 // Gives a copy of the game
