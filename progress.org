@@ -9,3 +9,5 @@
 - Going with the second approach, storing the data in the state, but as fields of the state machine so that we don't die from dereferencing everything
 - Should combine state and data (for both round and game), so that it's easier to pass data around
 
+* 2025-12-04
+- Clean up arena, calling more fine grained hooks into game
