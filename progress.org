@@ -11,3 +11,4 @@
 
 * 2025-12-04
 - Clean up arena, calling more fine grained hooks into game
+- Move game state into game and set up one object

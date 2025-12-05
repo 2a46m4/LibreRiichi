@@ -145,6 +145,10 @@ func (game *MahjongGame) HasRoundEnded() bool {
 }
 
 func (game *MahjongGame) RoundEndCleanup() (msgs []MessageSendInfo, err error) {
+    if !game.state.Is("in-game") {
+	return msgs, errors.New("Wrong state")
+    }
+
     // Do the increment post-round
     // TODO
     // game.mahjongRound.roundState
@@ -159,7 +163,10 @@ func (game *MahjongGame) HasGameEnded() bool {
 
 // TODO: Send game results
 func (game *MahjongGame) GameEndCleanup() (msgs []MessageSendInfo, err error) {
-	return nil, nil
+    if !game.state.Is("out-of-game") {
+	return msgs, errors.New("Wrong state")
+    }
+    return nil, nil
 }
 
 // Modifies the original array

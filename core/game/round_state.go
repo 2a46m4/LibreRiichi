@@ -46,6 +46,7 @@ func InitRoundState() RoundState {
     	tileData:         CreateNewRound(),
     	outgoingRequests: util.NewSet[OutgoingNakiRequest](),
     }
+
     // TODO: Decouple the receiver functions and move this in the constructor
     roundState.RoundFSM = fsm.NewFSM(
 	"out-of-round",
@@ -420,8 +421,7 @@ func (roundState *RoundState) getAwaitingMessages() (info []AwaitAction, ok bool
 }
 
 
-// Reomves the request from the set of current outgoing requests, and
-// returns true if the request was in the outgoing set
+// Returns true if the request was in the outgoing set
 func isOutgoingRequest(request OutgoingNakiRequest, roundState *RoundState) bool {
     actionSkip, isSkip := request.Action.(Skip)
     if isSkip {
