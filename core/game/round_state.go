@@ -207,7 +207,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
     potentialActions := PotentialActionEvent{}
     playerHand := &roundState.tileData.Hands[playerIdx]
 
-    // Check for Ankan, Riichi, Tsumo potential options
+    // If the player is in Riichi, we can only discard the most recently obtained tile
     if playerHand.InRiichi {
 	tile, err := playerHand.ClosedHand.Last()
 	if err != nil {
@@ -223,6 +223,7 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
 	})
     }
 
+    // Check for Ankan, Riichi, Tsumo potential options
     if playerHand.TestAnKan(action.DrawnTile) {
 	potentialActions.Actions = append(potentialActions.Actions, Kan{
 	    TileToKan: action.DrawnTile,
