@@ -35,7 +35,7 @@ func (hand Hand) TileJustReceived() (tile Tile, err error) {
 	if hand.FullHand() {
 		return hand.ClosedHand.hand[hand.ClosedHand.index-1], nil
 	} else {
-		return tile, fmt.Errorf("Not full hand, don't have an extra tile: %#v %#v", hand)
+		return tile, fmt.Errorf("Not full hand, don't have an extra tile: %#v", hand)
 	}
 }
 
@@ -107,10 +107,6 @@ func (hand *Hand) ShouminKan(tile Tile) {
 	})
 }
 
-func (hand Hand) TestAnKan(tile Tile) bool {
-	return !hand.InRiichi && hand.FullHand() && (hand.ClosedHand.HasTileN(tile) == 4)
-}
-
 func (hand *Hand) AnKan(tile Tile) {
 	hand.ClosedHand.RemoveTile(tile, tile, tile, tile)
 	hand.OpenMelds.Add(OpenMeld{
@@ -144,7 +140,8 @@ func (hand *Hand) Riichi(tile Tile) {
 
 // TODO: Also need to test that the hand has a yaku
 func (hand Hand) TestRon(tile Tile) bool {
-	// return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
+    // return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
+    return false
 }
 
 func (hand *Hand) Ron(tile Tile) {

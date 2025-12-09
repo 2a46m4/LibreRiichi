@@ -10,20 +10,20 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 )
 
+// Check that yaku exist
 type YakuContext struct {
-	IsSelfDrawn                bool
-	HasCalledRiichi            bool
-	IsIppatsu                  bool
-	IsLastTileDrawnOrDiscarded bool
-	IsDeadWallCall             bool
-	IsFromOpponentKanCall      bool
-	IsDoubleRiichi             bool
-	IsTenhou                   bool
-	IsChiihou                  bool
-	HandInRiichi               bool
-	RoundWind                  core.Wind
-	PlayerWind                 core.Wind
-	IsDealer                   bool
+    IsSelfDrawn                bool
+    IsIppatsu                  bool
+    IsLastLiveTile             bool
+    IsDeadWallCall             bool // Rinshan Kaihou
+    IsFromOpponentKanCall      bool // Chankan
+    IsDoubleRiichi             bool
+    IsTenhou                   bool
+    IsChiihou                  bool
+    HandInRiichi               bool
+    RoundWind                  core.Wind
+    PlayerWind                 core.Wind
+    IsDealer                   bool
 }
 
 // Checks whether the current yaku is valid for the given hand
@@ -124,7 +124,7 @@ func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (Y
 	}
 
 	// Check four melds and a pair wins
-	combos := meldfinder.FindMelds(hand.ClosedHand.Hand(), int(hand.OpenMeldCount()))
+	combos := meldfinder.FindMelds(hand.ClosedHand.GetHand(), int(hand.OpenMeldCount()))
 	var maxScore uint = 0
 	var scoreValue score.PointValue
 	var yakuList YakuList

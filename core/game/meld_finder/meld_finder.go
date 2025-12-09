@@ -23,6 +23,8 @@ type Meld struct {
 }
 
 // Finds all combinations of winning Mahjong hands
+//   - Requires a full hand
+//   - alreadyCompleted is the number of melds already completed
 func FindMelds(tiles []Tile, alreadyCompleted int) (ret []WinningCombination) {
 
 	// Just need a pair

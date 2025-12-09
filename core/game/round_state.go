@@ -13,6 +13,7 @@ import (
 	"codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	yaku "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/yaku"
 )
 
 type OutgoingNakiRequest struct {
@@ -224,17 +225,31 @@ func (roundState *RoundState) drawTile(context context.Context, event *fsm.Event
     }
 
     // Check for Ankan, Riichi, Tsumo potential options
-    if playerHand.TestAnKan(action.DrawnTile) {
+    if CanAnkan(Kan{TileToKan: action.DrawnTile}, playerHand) {
 	potentialActions.Actions = append(potentialActions.Actions, Kan{
 	    TileToKan: action.DrawnTile,
 	})
     }
 
-    if CheckRiichi(action.DrawnTile) {
-	potentialActions.Actions = append(potentialActions.Actions, Riichi{
-	    TileToRiichi: action.DrawnTile,
-	})
+    riichiTargets := GetRiichiTargets(playerHand, action.DrawnTile)
+    for _, target := range (riichiTargets) {
+	potentialActions.Actions = append(potentialActions.Actions, target)
     }
+
+    yaku.CheckYakuAndScore(playerHand, yaku.YakuContext{
+    	IsSelfDrawn:                true,
+    	IsIppatsu:                  roundState.turnData.IppatsuPossible(playerIdx),
+    	IsLastLiveTile:             roundState.tileData.End(),
+    	IsDeadWallCall:             false, // TODO
+    	IsFromOpponentKanCall:      false,
+    	IsDoubleRiichi:             roundState.turnData.IsDoubleRiichi(playerIdx),
+    	IsTenhou:                   roundState.turnData.TotalTurns == 0,
+    	IsChiihou:                  roundState.turnData.TotalTurns < 4,
+    	HandInRiichi:               playerHand.InRiichi,
+    	RoundWind:                  roundState.turnData.RoundWind,
+    	PlayerWind:                 roundState.turnData.GetPlayerWind(playerIdx),
+    	IsDealer:                   roundState.turnData.CurrentDealer == playerIdx,
+    }, action.DrawnTile)
 
     if len(potentialActions.Actions) > 0 {
 	ret[playerIdx].Events = append(ret[playerIdx].Events, potentialActions)

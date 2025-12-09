@@ -12,3 +12,11 @@
 * 2025-12-04
 - Clean up arena, calling more fine grained hooks into game
 - Move game state into game and set up one object
+
+* 2025-12-08
+- Perform testing success of actions into its own file
+- Pull in required data when needed, no receiver
+- Also check for tsumo when drawing tile
+
+
+

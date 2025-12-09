@@ -138,9 +138,8 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 
 	yakuContext := YakuContext{
 		IsSelfDrawn:                false,
-		HasCalledRiichi:            false,
 		IsIppatsu:                  false,
-		IsLastTileDrawnOrDiscarded: false,
+		IsLastLiveTile: false,
 		IsDeadWallCall:             false,
 		IsFromOpponentKanCall:      false,
 		IsDoubleRiichi:             false,
