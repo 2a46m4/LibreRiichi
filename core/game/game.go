@@ -166,14 +166,3 @@ func (game *MahjongGame) GameEndCleanup() (msgs []MessageSendInfo, err error) {
 	}
 	return nil, nil
 }
-
-// Modifies the original array
-func convertToArenaIdx(msgs []MessageSendInfo, ordering Ordering) []MessageSendInfo {
-	for i, msg := range msgs {
-		msgs[i] = MessageSendInfo{
-			Events: msg.Events,
-			SendTo: ordering.ArenaIdx(msg.SendTo),
-		}
-	}
-	return msgs
-}

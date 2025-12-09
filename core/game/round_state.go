@@ -152,9 +152,9 @@ func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []M
 	case Tsumo:
 		call = "discard-tile"
 	case Draw:
-		roundState.log.Error("Wrong action: %#v", action)
+		roundState.log.Error("Wrong action: %#v", "action", action)
 	default:
-		roundState.log.Error("unexpected core.Action: %#v", action)
+		roundState.log.Error("unexpected core.Action: %#v", "action", action)
 		panic(fmt.Sprintf("unexpected core.Action: %#v", action))
 	}
 
@@ -459,16 +459,6 @@ func (roundState *RoundState) GetReturn() (ret []MessageSendInfo, ok bool) {
 
 func (roundState *RoundState) setReturn(data []MessageSendInfo) {
 	roundState.RoundFSM.SetMetadata("return", data)
-}
-
-// Sets messages that need a return
-func (roundState *RoundState) setAwaitingMessages(info []AwaitAction) {
-	roundState.RoundFSM.SetMetadata("awaiting", info)
-}
-
-func (roundState *RoundState) getAwaitingMessages() (info []AwaitAction, ok bool) {
-	infoRaw, ok := roundState.RoundFSM.Metadata("awaiting")
-	return infoRaw.([]AwaitAction), ok
 }
 
 // Returns true if the request was in the outgoing set
