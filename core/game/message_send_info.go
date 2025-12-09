@@ -4,8 +4,8 @@ package game
 // Game indices should be kept internal
 
 import (
-	msg "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 	gamedata "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
+	msg "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
 )
 
 type MessageSendInfo struct {
@@ -14,8 +14,8 @@ type MessageSendInfo struct {
 }
 
 type AwaitAction struct {
-    PotentialActions []gamedata.Action
-    SentTo uint8
+	PotentialActions []gamedata.Action
+	SentTo           uint8
 }
 
 // Changes the message from game to arena index

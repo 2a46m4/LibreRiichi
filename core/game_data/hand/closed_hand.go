@@ -1,7 +1,6 @@
 package hand
 
 import (
-	"errors"
 	"slices"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
@@ -59,12 +58,12 @@ func (closed *ClosedHand) HasTileN(tile Tile) (count int) {
 	return Count(closed.hand[:closed.index], tile)
 }
 
-func (closed *ClosedHand) Last() (tile Tile, err error) {
-	if closed.index == 0 {
-		return tile, errors.New("out of bounds")
-	}
+func (closed *ClosedHand) Last() Tile {
+	return closed.hand[closed.index-1]
+}
 
-	return closed.hand[closed.index-1], nil
+func (closed *ClosedHand) Length() uint8 {
+	return closed.index
 }
 
 func (closed ClosedHand) UniqueTiles() ([]Tile, []uint8) {

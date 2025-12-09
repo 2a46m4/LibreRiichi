@@ -1,8 +1,8 @@
 package game
 
 import (
-	"fmt"
 	util "codeberg.org/ijnakashiar/LibreRiichi/core/util"
+	"fmt"
 )
 
 // TODO
@@ -20,18 +20,16 @@ type Ordering struct {
 	GameToArena [4]uint8
 }
 
-
-
 // Create a random ordering
 func InitRandomOrdering() (ordering Ordering) {
-    for i := range uint8(4) {
-	ordering.ArenaToGame[i] = i
-    }
-    util.PermuteArray(ordering.ArenaToGame[:])
-    for arenaIdx, gameIdx := range ordering.ArenaToGame {
-	ordering.GameToArena[gameIdx] = uint8(arenaIdx)
-    }
-    return ordering
+	for i := range uint8(4) {
+		ordering.ArenaToGame[i] = i
+	}
+	util.PermuteArray(ordering.ArenaToGame[:])
+	for arenaIdx, gameIdx := range ordering.ArenaToGame {
+		ordering.GameToArena[gameIdx] = uint8(arenaIdx)
+	}
+	return ordering
 }
 
 func (ordering Ordering) GameIdx(arenaIdx uint8) uint8 {

@@ -10,46 +10,46 @@ import (
 )
 
 type MahjongRoundData struct {
-    scoring  Scoring
-    tileData TileData
-    // Player direction
-    turnData TurnData
-    // Round direction
-    roundWind   Wind
-    roundNumber uint8
+	scoring  Scoring
+	tileData TileData
+	// Player direction
+	turnData TurnData
+	// Round direction
+	roundWind   Wind
+	roundNumber uint8
 }
 
 func (data *MahjongRoundData) CheckNaki(justDiscarded uint8, againstPlayed uint8) MessageSendInfo {
-    if justDiscarded == againstPlayed {
-	return MessageSendInfo{}
-    }
+	if justDiscarded == againstPlayed {
+		return MessageSendInfo{}
+	}
 
-    actions := PotentialActionEvent{}
+	actions := PotentialActionEvent{}
 
-    kanResult := CheckKan(justDiscarded, againstPlayed, data.tileData)
-    if kanResult != nil {
-	actions.Actions = append(actions.Actions, kanResult)
-    }
+	kanResult := CheckKan(justDiscarded, againstPlayed, data.tileData)
+	if kanResult != nil {
+		actions.Actions = append(actions.Actions, kanResult)
+	}
 
-    ponResult := CheckPon(justDiscarded, againstPlayed, data.tileData)
-    if ponResult != nil {
-	actions.Actions = append(actions.Actions, ponResult)
-    }
+	ponResult := CheckPon(justDiscarded, againstPlayed, data.tileData)
+	if ponResult != nil {
+		actions.Actions = append(actions.Actions, ponResult)
+	}
 
-    chiiResult := CheckChii(justDiscarded, againstPlayed, data.tileData)
-    if chiiResult != nil {
-	actions.Actions = append(actions.Actions, chiiResult)
-    }
+	chiiResult := CheckChii(justDiscarded, againstPlayed, data.tileData)
+	if chiiResult != nil {
+		actions.Actions = append(actions.Actions, chiiResult)
+	}
 
-    ronResult := CheckRon(justDiscarded, againstPlayed, data)
-    if ronResult != nil {
-	actions.Actions = append(actions.Actions, ronResult)
-    }
+	ronResult := CheckRon(justDiscarded, againstPlayed, data)
+	if ronResult != nil {
+		actions.Actions = append(actions.Actions, ronResult)
+	}
 
-    return MessageSendInfo{
-	Events: []BoardEvent{actions},
-	SendTo: againstPlayed,
-    }
+	return MessageSendInfo{
+		Events: []BoardEvent{actions},
+		SendTo: againstPlayed,
+	}
 }
 
 func CheckKan(discardedPlayerIdx, playerIdx uint8, tileData TileData) Action {
@@ -137,20 +137,20 @@ func CheckRon(discardedPlayerIdx, playerIdx uint8, data *MahjongRoundData) Actio
 	discardedTile := data.tileData.DiscardPile[discardedPlayerIdx].Last()
 
 	yakuContext := YakuContext{
-		IsSelfDrawn:                false,
-		IsIppatsu:                  false,
-		IsLastLiveTile: false,
-		IsDeadWallCall:             false,
-		IsFromOpponentKanCall:      false,
-		IsDoubleRiichi:             false,
-		IsTenhou:                   false,
-		IsChiihou:                  false,
-		HandInRiichi:               false,
+		IsSelfDrawn:           false,
+		IsIppatsu:             false,
+		IsLastLiveTile:        false,
+		IsDeadWallCall:        false,
+		IsFromOpponentKanCall: false,
+		IsDoubleRiichi:        false,
+		IsTenhou:              false,
+		IsChiihou:             false,
+		HandInRiichi:          false,
 	}
 
 	// Check if adding the discarded tile would complete a winning hand
 	hand := &data.tileData.Hands[playerIdx]
-	yakuList, pointValue, err := CheckYakuAndScore(hand, yakuContext, discardedTile)
+	yakuList, pointValue, err := CheckYakuAndScore(hand, yakuContext)
 	if err == nil {
 		if err != nil {
 			panic("Shouldn't get here")

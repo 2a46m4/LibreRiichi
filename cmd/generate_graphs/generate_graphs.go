@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-    fmt.Println(game.InitGameState().GenerateGraphs())
-    // fmt.Println(game.InitRoundState().GenerateGraphs())
+	fmt.Println(game.InitGameState().GenerateGraphs())
+	// fmt.Println(game.InitRoundState().GenerateGraphs())
 }

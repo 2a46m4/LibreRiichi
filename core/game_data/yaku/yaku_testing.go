@@ -1,8 +1,6 @@
 package yaku
 
 import (
-	"slices"
-
 	meldfinder "codeberg.org/ijnakashiar/LibreRiichi/core/game/meld_finder"
 	core "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/hand"
@@ -12,25 +10,25 @@ import (
 
 // Check that yaku exist
 type YakuContext struct {
-    IsSelfDrawn                bool
-    IsIppatsu                  bool
-    IsLastLiveTile             bool
-    IsDeadWallCall             bool // Rinshan Kaihou
-    IsFromOpponentKanCall      bool // Chankan
-    IsDoubleRiichi             bool
-    IsTenhou                   bool
-    IsChiihou                  bool
-    HandInRiichi               bool
-    RoundWind                  core.Wind
-    PlayerWind                 core.Wind
-    IsDealer                   bool
+	IsSelfDrawn           bool
+	IsIppatsu             bool
+	IsLastLiveTile        bool
+	IsDeadWallCall        bool // Rinshan Kaihou
+	IsFromOpponentKanCall bool // Chankan
+	IsDoubleRiichi        bool
+	IsTenhou              bool
+	IsChiihou             bool
+	HandInRiichi          bool
+	RoundWind             core.Wind
+	PlayerWind            core.Wind
+	IsDealer              bool
+	WinningTileIdx uint8
 }
 
 // Checks whether the current yaku is valid for the given hand
 type YakuChecker func(
 	hand *Hand,
-	context YakuContext,
-	winningTile Tile,
+	context YakuContext,	
 ) bool
 
 // Checks just the conventional 4 melds + 1 pair win
@@ -75,16 +73,18 @@ var YakuCheckerMap = map[YakuType]YakuChecker{
 	CHIIHOU_YAKU:         CheckChiihou,
 }
 
-type NoValidYakus struct {}
+type NoValidYakus struct{}
+
 func (NoValidYakus) Error() string {
-    return "No valid yakus"
+	return "No valid yakus"
 }
 
 // Returns yaku and score of a given hand
-func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (YakuList, score.PointValue, error) {
+// Must be full hand
+func CheckYakuAndScore(hand *Hand, yakuContext YakuContext) (YakuList, score.PointValue, error) {
 	yakuBuilder := NewYakuBuilder(hand.Closed())
 
-	if CheckKokushiMusouThirteenWaits(hand, yakuContext, winningTile) {
+	if CheckKokushiMusouThirteenWaits(hand, yakuContext) {
 		yakuBuilder.AddYaku(KOKUSHI_MUSOU_THIRTEEN_WAITS_YAKU)
 		list, err := yakuBuilder.Build()
 		if err != nil {
@@ -97,7 +97,7 @@ func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (Y
 		return list, currentScore, nil
 	}
 
-	if CheckKokushiMusou(hand, yakuContext, winningTile) {
+	if CheckKokushiMusou(hand, yakuContext) {
 		yakuBuilder.AddYaku(KOKUSHI_MUSOU_YAKU)
 		list, err := yakuBuilder.Build()
 		if err != nil {
@@ -110,7 +110,7 @@ func CheckYakuAndScore(hand *Hand, yakuContext YakuContext, winningTile Tile) (Y
 		return list, currentScore, err
 	}
 
-	if CheckChiitoitsu(hand, yakuContext, winningTile) {
+	if CheckChiitoitsu(hand, yakuContext) {
 		yakuBuilder.AddYaku(CHIITOITSU_YAKU)
 		list, err := yakuBuilder.Build()
 		if err != nil {
@@ -136,7 +136,7 @@ RANGE_OVER_COMBOS:
 
 		// Compute han
 		for yakuType, check := range YakuCheckerMap {
-			if check(hand, yakuContext, winningTile) {
+			if check(hand, yakuContext) {
 				err := yakuBuilder.AddYaku(yakuType)
 				if err != nil {
 					goto RANGE_OVER_COMBOS
@@ -174,7 +174,6 @@ RANGE_OVER_COMBOS:
 // 2. The hand must be closed/concealed (no open calls)
 func CheckMenzenTsumoYaku(hand *Hand,
 	context YakuContext,
-	winningTile Tile,
 ) bool {
 
 	if !context.IsSelfDrawn {
@@ -188,82 +187,82 @@ func CheckMenzenTsumoYaku(hand *Hand,
 	return true
 }
 
-func CheckRiichi(hand *Hand, context YakuContext, winningTile Tile) bool {
-    if hand.Open() {
-	return false
-    }
-    return false
-}
-
-func CheckIppatsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckRiichi(hand *Hand, context YakuContext, ) bool {
+	if hand.Open() {
+		return false
+	}
 	return false
 }
 
-func CheckPinfu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckIppatsu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckIipeikou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckPinfu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckHaiteiYaoyue(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckIipeikou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckHouteiRaoyui(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckHaiteiYaoyue(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckRinshanKaihou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckHouteiRaoyui(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChankan(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckRinshanKaihou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckTanyao(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChankan(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckYakuhai(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckTanyao(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckDoubleRiichi(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckYakuhai(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChantaiyao(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckDoubleRiichi(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckSanshokuDoujun(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChantaiyao(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckIttsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSanshokuDoujun(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckToitoi(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckIttsu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckSanankou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckToitoi(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckSanshokuDoukou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSanankou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckSankantsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSanshokuDoukou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChiitoitsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSankantsu(hand *Hand, context YakuContext, ) bool {
+	return false
+}
+
+func CheckChiitoitsu(hand *Hand, context YakuContext, ) bool {
 	if hand.Open() {
 		return false
 	}
@@ -277,36 +276,36 @@ func CheckChiitoitsu(hand *Hand, context YakuContext, winningTile Tile) bool {
 	return len(unique) == 7
 }
 
-func CheckHonroutou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckHonroutou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckShousangen(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckShousangen(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckHonitsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckHonitsu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckJunchan(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckJunchan(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckRyanpeikou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckRyanpeikou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChinitsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChinitsu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckKazoeYakuman(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckKazoeYakuman(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckKokushiMusou(hand *Hand, context YakuContext, winningTile Tile) bool {
-    if hand.Open() {
+func CheckKokushiMusou(hand *Hand, context YakuContext, ) bool {
+	if hand.Open() {
 		return false
 	}
 
@@ -318,9 +317,8 @@ func CheckKokushiMusou(hand *Hand, context YakuContext, winningTile Tile) bool {
 			tileList = append(tileList, MakeNumberTile(t, n))
 		}
 	}
+	tileList = append(tileList, EastTile, SouthTile, WestTile, NorthTile, White, Red, Green)
 
-	hand.ClosedHand.Add(winningTile)
-	defer hand.ClosedHand.Pop(1)
 	totalValid := 0
 	for _, tile := range tileList {
 		count := hand.ClosedHand.HasTileN(tile)
@@ -337,68 +335,70 @@ func CheckKokushiMusou(hand *Hand, context YakuContext, winningTile Tile) bool {
 	return totalValid == 14
 }
 
-func CheckKokushiMusouThirteenWaits(hand *Hand, context YakuContext, winningTile Tile) bool {
-    if hand.Open() {
-	return false
-    }
-
-    typeList := []Tile{Manzu, Pinzu, Souzu}
-    numberList := []uint8{1, 9}
-    tileList := []Tile{}
-    for _, t := range typeList {
-	for _, n := range numberList {
-	    tileList = append(tileList, MakeNumberTile(t, n))
+func CheckKokushiMusouThirteenWaits(hand *Hand, context YakuContext, ) bool {
+	if !CheckKokushiMusou(hand, context) {
+		return false
 	}
-    }
-
-    return hand.ClosedHand.HasTile(tileList...) && slices.Contains(tileList, winningTile)
+	for _, tile := range hand.ClosedHand.GetHand() {
+		if tile == hand.ClosedHand.GetHand()[context.WinningTileIdx] {
+			if hand.ClosedHand.HasTileN(tile) != 2 {
+				return false
+			}
+		} else {
+			if hand.ClosedHand.HasTileN(tile) != 1 {
+				return false
+			}
+		}
+		
+	}
+	return true
 }
 
-func CheckSuuankou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSuuankou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckDaisangen(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckDaisangen(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckShousuushii(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckShousuushii(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckDaisuushii(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckDaisuushii(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckTsuuiisou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckTsuuiisou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChinroutou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChinroutou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckRyuuiisou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckRyuuiisou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChuurenPoutou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChuurenPoutou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckSuukantsu(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckSuukantsu(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckTenhou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckTenhou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
-func CheckChiihou(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckChiihou(hand *Hand, context YakuContext, ) bool {
 	return false
 }
 
 // TODO: Need to grab the entire board state
-func CheckNagashiMangan(hand *Hand, context YakuContext, winningTile Tile) bool {
+func CheckNagashiMangan(hand *Hand, context YakuContext, ) bool {
 	return false
 }

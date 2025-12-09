@@ -25,9 +25,9 @@ type GameSetupEvent struct {
 }
 
 type RoundEndEvent struct {
-    RoundResult RoundResult `json:"round_result"`
+	RoundResult RoundResult `json:"round_result"`
 }
 
 type GameEndEvent struct {
-    GameResult GameResult `json:"result"`
+	GameResult GameResult `json:"result"`
 }

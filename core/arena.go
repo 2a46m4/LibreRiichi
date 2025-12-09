@@ -23,16 +23,16 @@ type Client interface {
 }
 
 type Game interface {
-    StartGameAndRound() ([]MessageSendInfo, error)
-    ContinueRound() ([]MessageSendInfo, error)
-    HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error)
-    IsInGame() bool
-    HasRoundEnded() bool
-    // Send round results
-    RoundEndCleanup() ([]MessageSendInfo, error) 
-    ShouldContinueRound() bool
-    // Send game results
-    GameEndCleanup() ([]MessageSendInfo, error)
+	StartGameAndRound() ([]MessageSendInfo, error)
+	ContinueRound() ([]MessageSendInfo, error)
+	HandleEvent(action Action, arenaIdx uint8) ([]MessageSendInfo, error)
+	IsInGame() bool
+	HasRoundEnded() bool
+	// Send round results
+	RoundEndCleanup() ([]MessageSendInfo, error)
+	ShouldContinueRound() bool
+	// Send game results
+	GameEndCleanup() ([]MessageSendInfo, error)
 }
 
 // A location where players gather. Controls the flow of the game,
@@ -177,39 +177,39 @@ func (arena *Arena) HandleStartGameActionData(data StartGameActionData, fromPlay
 }
 
 func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uint8) (UnitType, error) {
-    arena.Lock()
-    defer arena.Unlock()
-    arena.log.Info("Driving game")
-    sendInfos, err := arena.game.HandleEvent(data.Action, fromPlayer)
+	arena.Lock()
+	defer arena.Unlock()
+	arena.log.Info("Driving game")
+	sendInfos, err := arena.game.HandleEvent(data.Action, fromPlayer)
 
-    if err != nil {
-	arena.log.Info("Error: ", "Msg", err.Error())
+	if err != nil {
+		arena.log.Info("Error: ", "Msg", err.Error())
+		return Unit, err
+	}
+
+	if arena.game.HasRoundEnded() {
+		infos, err := arena.game.RoundEndCleanup()
+		if err != nil {
+			return Unit, err
+		}
+		sendInfos = append(sendInfos, infos...)
+	}
+
+	if !arena.game.ShouldContinueRound() {
+		infos, err := arena.game.GameEndCleanup()
+		if err != nil {
+			return Unit, err
+		}
+		sendInfos = append(sendInfos, infos...)
+	}
+
+	for _, sendInfo := range sendInfos {
+		for _, event := range sendInfo.Events {
+			arena.SendBoardEvent(event, sendInfo.SendTo)
+		}
+	}
+
 	return Unit, err
-    }
-
-    if arena.game.HasRoundEnded() {
-	infos, err := arena.game.RoundEndCleanup()
-	if err != nil {
-	    return Unit, err
-	}
-	sendInfos = append(sendInfos, infos...)
-    }
-
-    if !arena.game.ShouldContinueRound(){
-	infos, err := arena.game.GameEndCleanup()
-	if err != nil {
-	    return Unit, err
-	}
-	sendInfos = append(sendInfos, infos...)	
-    }
-
-    for _, sendInfo := range sendInfos {
-	for _, event := range sendInfo.Events {
-	    arena.SendBoardEvent(event, sendInfo.SendTo)
-	}
-    }
-
-    return Unit, err
 }
 
 func (arena *Arena) HandlePlayerQuitActionData(data PlayerQuitActionData, fromPlayer uint8) (UnitType, error) {

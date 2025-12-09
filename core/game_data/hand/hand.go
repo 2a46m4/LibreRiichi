@@ -26,8 +26,8 @@ func (hand Hand) InTenpai() bool {
 }
 
 func (hand Hand) FullHand() bool {
-    // index also counts the number of tiles in the closed hand
-    return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 14
+	// index also counts the number of tiles in the closed hand
+	return (hand.ClosedHand.index + hand.OpenMelds.count*3) == 14
 }
 
 // Returns the tile that the player just received
@@ -53,7 +53,7 @@ func (hand Hand) TestDiscard(tile Tile) bool {
 	}
 
 	if hand.InRiichi {
-		handTile, _ := hand.ClosedHand.Last()
+		handTile := hand.ClosedHand.Last()
 		return handTile == tile
 	} else {
 		return hand.ClosedHand.HasTile(tile)
@@ -140,8 +140,8 @@ func (hand *Hand) Riichi(tile Tile) {
 
 // TODO: Also need to test that the hand has a yaku
 func (hand Hand) TestRon(tile Tile) bool {
-    // return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
-    return false
+	// return !hand.FullHand() && slices.Contains(hand.WaitingFor, tile)
+	return false
 }
 
 func (hand *Hand) Ron(tile Tile) {
