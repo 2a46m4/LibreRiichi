@@ -17,6 +17,7 @@
 - Perform testing success of actions into its own file
 - Pull in required data when needed, no receiver
 - Also check for tsumo when drawing tile
-
+- Readd discard tile logic
+- Need to try running the game now
 
 
