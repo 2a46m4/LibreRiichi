@@ -70,15 +70,13 @@ func (client HumanClient) Loop() {
 			var msg Message
 
 			switch send.(type) {
-			case ServerAction:
-				panic("Wrong type")
-			case ServerResponse:
-				panic("Wrong type")
 			case ServerEvent:
 				msg.MessageType = EVENT
 				msg.MessageIndex = client.EventIndex
 				msg.Data = send
 				client.EventIndex += 1
+			default:
+				panic("Wrong type")
 			}
 
 			bytes, err := json.Marshal(msg)
