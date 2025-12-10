@@ -325,7 +325,7 @@ export function load_all_materials(tile_textures: Map<number, THREE.Texture>) {
 }
 
 // An instance of a tile on screen.
-export class TileObject extends THREE.Mesh implements IAnimatable {
+export class TileObject extends THREE.Mesh {
     public tile: Tile
 
     constructor(tile: Tile) {

@@ -1,7 +1,7 @@
 import { IncomingMessage, MessageType } from './message'
 import { ServerResponse } from './server_response_generated'
 import { ServerEvent } from './server_event_generated'
-import { ArenaEvent } from './arena_event_generated'
+import { ECS } from '../render/ecs'
 
 export class EventHandler<TIncoming> {
   private listeners: Array<(data: TIncoming) => boolean> = []
@@ -40,6 +40,7 @@ ServerMessageBus.register(
     }
   }),
 )
+export const ClickEventBus = new EventHandler<ECS.EntityID>()
 
 export function register_request(
   msg_idx: number,

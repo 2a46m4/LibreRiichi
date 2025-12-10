@@ -9,7 +9,7 @@ import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent, ServerEventType } from "../messaging/server_event_generated";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
-import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
+import { IActionAnimator, IRenderer, ISelectionManager, Scene } from "../render/renderer";
 import { GameIdx, TableIdx } from '../game/arena'
 import { create_event, create_fsm_builder, create_state } from "../fsm";
 import { use_websocket_state } from '..'
@@ -249,7 +249,7 @@ onMounted(() => {
   if (!three_canvas.value) return
   initialize_tiles()
 
-  const manager = new ThreeJSRenderer(three_canvas.value)
+  const manager = new Scene(three_canvas.value)
   renderer = manager
   selection_manager = manager
   action_animator = manager

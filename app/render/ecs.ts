@@ -1,22 +1,35 @@
 import { v4 as uuidv4 } from 'uuid'
+import * as THREE from "three"
+import { Tile } from '../game/tile'
+import { ClickEventBus } from '../messaging/event_handler'
 
-namespace ECS {
-	type EntityID = string & { readonly __brand: unique symbol }
-	type ComponentID = string & { readonly __brand: unique symbol }
-	type SystemID = string & { readonly __brand: unique symbol }
+export namespace ECS {
+	export type EntityID = string & { readonly __brand: unique symbol }
+	export type ComponentID = string & { readonly __brand: unique symbol }
+	export type SystemID = string & { readonly __brand: unique symbol }
 
 	export class Registry {
 		entities: Map<EntityID, {
 			components: ComponentID[],
 		}> = new Map()
 		components: Map<ComponentID, ComponentArray> = new Map()
-		systems: Map<SystemID, System> = new Map()
 
 		add_entity(entity: Entity, components: { id: ComponentID, component: Component }[]) {
 			this.entities.set(entity.uuid, { components: components.map(c => c.id) })
 			for (let component of components) {
 				const c = this.components.get(component.id)
 				c?.add_entity(entity, component.component)
+			}
+		}
+
+		update_entity_component(entity: EntityID, ...components: { id: ComponentID, component: Component }[]) {
+			const existing = this.entities.get(entity)
+			if (existing === undefined) {
+				throw new Error("Entity not found")
+			}
+			for (let component of components) {
+				const c = this.components.get(component.id)
+				c?.update_entity(entity, component.component)
 			}
 		}
 
@@ -49,7 +62,7 @@ namespace ECS {
 		}
 
 		remove_entity(entity: EntityID) {
-			this.components.forEach(c=>c.drop_entity(entity))
+			this.components.forEach(c => c.drop_entity(entity))
 		}
 
 		add_component(): ComponentID {
@@ -58,19 +71,7 @@ namespace ECS {
 			return arr.component_uuid
 		}
 
-		add_system(system: System) {
-			this.systems.set(system.uuid, system)
-		}
-
-		run_system(system: System | SystemID): void {
-			let id: SystemID
-			if (typeof system === "object") {
-				id = system.uuid
-			} else {
-				id = system
-			}
-
-			const sys = this.systems.get(id)
+		run_system(sys: System): void {
 			if (sys === undefined) {
 				throw new Error("Could not find system")
 			}
@@ -86,18 +87,13 @@ namespace ECS {
 					}
 					return cmp.get_entity(e)
 				}))
-				.forEach(val => sys.apply(val))
-		}
-
-		run_all_systems() {
-			this.systems.values().forEach(s => this.run_system(s))
+				.forEach(val => sys.apply(...val))
 		}
 	}
 
 	export class System {
 		public uuid: SystemID = uuidv4() as SystemID
-		public component_ids: ComponentID[] = []
-		constructor(public apply: (components: Component[]) => void) { }
+		constructor(public component_ids: ComponentID[], public apply: (...components: Component[]) => void) { }
 	}
 
 	export class Entity {
@@ -115,6 +111,14 @@ namespace ECS {
 				throw new Error("Couldn't find entity")
 			}
 			return this.array[idx]
+		}
+
+		update_entity(entity: EntityID, value: any) {
+			const idx = this.map.get(entity)
+			if (idx === undefined) {
+				throw new Error("Couldn't find entity")
+			}
+			this.array[idx] = value
 		}
 
 		add_entity(entity: Entity, value: any) {
@@ -152,7 +156,54 @@ namespace ECS {
 		}
 	}
 
+	export const GlobalRegistry: Registry = new Registry()
+
 	export class Component {
 		constructor(public entity_uuid: EntityID, public data: any) { }
 	}
+
+	export class Object extends Component {
+		static ID = GlobalRegistry.add_component()
+		constructor(public id: EntityID, public data: THREE.Mesh) { super(id, data) }
+	}
+
+	export class Animation extends Component {
+		static ID = GlobalRegistry.add_component()
+		constructor(public id: EntityID, public data: (dt: number) => THREE.Vector3) { super(id, data) }
+	}
+
+	export class TileType extends Component {
+		static ID = GlobalRegistry.add_component()
+		constructor(public id: EntityID, public data: Tile) { super(id, data) }
+	}
+
+	export class Selectable extends Component {
+		static ID = GlobalRegistry.add_component()
+		constructor(public id: EntityID) { super(id, {}) }
+	}
+	
+	function AnimateSystem(dt: number) {
+		return new System([Object.ID, Animation.ID], (...components: Component[]) => {
+			const obj = components[0] as Object
+			const anim = components[1] as Animation
+			obj.data.position.copy(anim.data(dt))
+		})
+	}
+
+	function SelectSystem(camera: THREE.Camera, pointer: THREE.Vector2) {
+		const raycaster = new THREE.Raycaster()
+		return new System([Object.ID, Selectable.ID], (obj: Component, selectable: {}) => {
+			const object = obj as Object
+			raycaster.setFromCamera(pointer, camera)
+			const results = raycaster.intersectObject(object.data)
+			if (results.length > 0)
+				ClickEventBus.handle(object.entity_uuid)
+		})
+	}
+
+	function ApplyAnimation(target: EntityID, anim: (dt: number)=>THREE.Vector3) {
+		GlobalRegistry.update_entity_component(target, { id: Animation.ID, component: new Component(target, anim)})
+	}
+
+
 }
