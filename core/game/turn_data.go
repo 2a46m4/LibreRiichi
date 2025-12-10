@@ -26,7 +26,7 @@ type TurnData struct {
 func InitTurnData() TurnData {
 	return TurnData{
 		CurrentDealer:    0,
-		CurrentPlayer:    3, // For the first draw
+		CurrentPlayer:    0,
 		TurnsSinceRiichi: [4]int8{-1, -1, -1, -1},
 		TotalTurns:       0,
 		RoundWind:        East,

@@ -132,7 +132,7 @@ func (roundState *RoundState) StartRound() ([]MessageSendInfo, error) {
 
 // Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
 func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []MessageSendInfo, err error) {
-	roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action))
+	roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action), "playeridx", gameIdx)
 	var call string
 	switch action.(type) {
 	case Chii:
