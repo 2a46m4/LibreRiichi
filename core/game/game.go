@@ -83,7 +83,7 @@ func NewMahjongGame() *MahjongGame {
 
 func (game *MahjongGame) StartGameAndRound() (messages []MessageSendInfo, err error) {
 	if game.state.Cannot("start-game") {
-		return nil, errors.New("Can't start game")
+		return nil, errors.New("can't start game")
 	}
 
 	err = game.state.Event(game.context, "start-game")

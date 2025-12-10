@@ -19,22 +19,6 @@ func CanRon(
 	playerIdx uint8,
 	playerHand *Hand,
 	yakuContext YakuContext) *Ron {
-	// discardedTile := data.tileData.DiscardPile[discardedPlayerIdx].Last()
-
-	// yakuContext := YakuContext{
-	// 	IsSelfDrawn:           false,
-	// 	IsIppatsu:             false,
-	// 	IsLastLiveTile:        false,
-	// 	IsDeadWallCall:        false,
-	// 	IsFromOpponentKanCall: false,
-	// 	IsDoubleRiichi:        false,
-	// 	IsTenhou:              false,
-	// 	IsChiihou:             false,
-	// 	HandInRiichi:          false,
-	// }
-
-	// Check if adding the discarded tile would complete a winning hand
-	// hand := &data.tileData.Hands[playerIdx]
 	yakuList, pointValue, err := CheckYakuAndScore(playerHand, yakuContext)
 	if err == nil {
 
@@ -73,12 +57,7 @@ func GetChiiTargets(
 	if (discardedPlayerIdx+1)%4 != playerIdx {
 		return nil
 	}
-
-	// discardedTile := tileData.DiscardPile[discardedPlayerIdx].Last()
-	// playerHand := tileData.Hands[playerIdx].ClosedHand
-
-	// Chii can only be done by the player immediately after the discarder (playerIdx == (discardedPlayerIdx + 1) % 4)
-	// For now, we'll check all potential Chii combinations and return the first valid one
+	// Check all potential Chii combinations and return the first valid one
 
 	// Check for sequences where discarded tile is the first tile
 	if !discardedTile.IsHonour() {
