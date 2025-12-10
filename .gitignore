@@ -9,3 +9,4 @@ app/**/*.js
 /build/
 /tmp/
 /GoRiichi.code-workspace
+cmd/server/__debug_bin*

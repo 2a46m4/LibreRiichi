@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"os"
 
+	"log"
+
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 	"github.com/looplab/fsm"
-	"log"
 )
 
 // Essentially a thin wrapper over game state and changes the ordering
@@ -73,6 +74,7 @@ func NewMahjongGame() *MahjongGame {
 				},
 			},
 		),
+		ordering:   InitRandomOrdering(),
 		context:    context.Background(),
 		Logger:     logger,
 		roundState: InitRoundState(),

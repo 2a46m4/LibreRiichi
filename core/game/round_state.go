@@ -285,8 +285,10 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 			return
 		}
 
-		if !roundState.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) {
+		err = roundState.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) 
+		if err != nil {
 			event.Cancel(errors.New("TestDiscard failed"))
+			panic(action)
 			return
 		}
 

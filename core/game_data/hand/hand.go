@@ -1,6 +1,7 @@
 package hand
 
 import (
+	"errors"
 	"fmt"
 
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data/tile"
@@ -47,17 +48,17 @@ func (hand *Hand) Draw(tile Tile) {
 	hand.ClosedHand.Add(tile)
 }
 
-func (hand Hand) TestDiscard(tile Tile) bool {
+func (hand Hand) TestDiscard(tile Tile) error {
 	if !hand.FullHand() {
-		return false
+		return errors.New("Can't discard when full")
 	}
 
-	if hand.InRiichi {
-		handTile := hand.ClosedHand.Last()
-		return handTile == tile
-	} else {
-		return hand.ClosedHand.HasTile(tile)
+	if hand.InRiichi && hand.ClosedHand.Last() != tile{
+		return errors.New("Wrong riichi discard")
+	} else if !hand.ClosedHand.HasTile(tile) {
+		return errors.New("No tile")
 	}
+	return nil
 
 }
 
