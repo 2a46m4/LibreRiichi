@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Tile } from '../game/tile'
 import { TileObject } from './tile'
 import { IAnimationManager, quadratic_interpolator, TileLinearAnimation } from './animation'
+import { ECS } from './ecs'
 export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 
 // Returns the offset of where the tile should be
@@ -11,41 +12,37 @@ function offset(i: number) {
 
 // A renderable object representing a player's hand
 export class Hand extends THREE.Group {
-	public array: TileObject[] = []
-	private animations_in_flight: number = 0
+	public array: ECS.EntityID[] = []
 
-	constructor(public tiles: Tile[], private animation_manager: IAnimationManager) {
+	constructor(public tiles: Tile[]) {
 		super()
-		tiles.forEach(tile => this.add_tile(tile))
+		this.add_tiles(tiles.map(t => { return { tile: t, location: this.array.length } }))
 	}
 
 	// Location: the index at which the new tile will end up at
 	// Returns the UUID of the new tile object
-	add_tile(tile: Tile, location: number = this.array.length) {
-		const tile_obj = new TileObject(tile)
-		const start = new THREE.Vector3(0, 2, -5)
-		const end = new THREE.Vector3(offset(this.array.length), 0, 0)
-		const delay = 50 * this.animations_in_flight
-		this.animations_in_flight += 1
+	add_tiles(tiles: { tile: Tile, location: number }[]) {
+		let tiles_added = 0
+		for (let { tile: tile, location: location } of tiles) {
+			const tile_entity = ECS.MakeNewTile(tile)
+			ECS.GlobalRegistry.add_entity(tile_entity.entity, tile_entity.components)
 
-		for (let i = location + 1; i < this.array.length; i++) {
-			const start = this.array[i].position
-			const end = new THREE.Vector3(offset(i), 0, 0)
-			const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
-			this.animation_manager.animate_object(this.array[i].uuid, animation)
-		}
-
-		this.array.splice(location, 0, tile_obj)
-		this.animation_manager.add_object(tile_obj, (finished) => {
-			if (finished) {
-				this.animations_in_flight -= 1
+			const start = new THREE.Vector3(0, 2, -5)
+			const end = new THREE.Vector3(offset(this.array.length), 0, 0)
+			const delay = 50 * tiles_added
+			tiles_added += 1
+			for (let i = location + 1; i < this.array.length; i++) {
+				const start = ECS.GlobalRegistry.find_component(this.array[i], ECS.Object.ID) as ECS.Object
+				const end = new THREE.Vector3(offset(i), 0, 0)
+				const animation = new TileLinearAnimation(start.data.position, end, quadratic_interpolator, 300, delay)
+				ECS.ApplyAnimation(this.array[i], animation.next_step.bind(animation))
 			}
-		})
-		const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
-		this.animation_manager.animate_object(tile_obj.uuid, animation)
-		super.add(tile_obj)
 
-		return tile_obj.uuid
+			this.array.splice(location, 0, tile_entity.entity.uuid)
+			const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
+			ECS.ApplyAnimation(tile_entity.entity.uuid, animation.next_step.bind(animation))
+			super.add(tile_entity.components[0].component.data as THREE.Mesh)
+		}
 	}
 
 	find_uuid(uuid: string) {

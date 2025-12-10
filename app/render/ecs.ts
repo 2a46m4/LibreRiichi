@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import * as THREE from "three"
 import { Tile } from '../game/tile'
 import { ClickEventBus } from '../messaging/event_handler'
+import { TileObject } from './tile'
 
 export namespace ECS {
 	export type EntityID = string & { readonly __brand: unique symbol }
@@ -69,6 +70,10 @@ export namespace ECS {
 			const arr = new ComponentArray()
 			this.components.set(arr.component_uuid, arr)
 			return arr.component_uuid
+		}
+
+		find_component(entity: EntityID, component: ComponentID): Component {
+			return this.components.get(component)?.get_entity(entity)?
 		}
 
 		run_system(sys: System): void {
@@ -181,8 +186,8 @@ export namespace ECS {
 		static ID = GlobalRegistry.add_component()
 		constructor(public id: EntityID) { super(id, {}) }
 	}
-	
-	function AnimateSystem(dt: number) {
+
+	export function AnimateSystem(dt: number) {
 		return new System([Object.ID, Animation.ID], (...components: Component[]) => {
 			const obj = components[0] as Object
 			const anim = components[1] as Animation
@@ -190,7 +195,7 @@ export namespace ECS {
 		})
 	}
 
-	function SelectSystem(camera: THREE.Camera, pointer: THREE.Vector2) {
+	export function SelectSystem(camera: THREE.Camera, pointer: THREE.Vector2) {
 		const raycaster = new THREE.Raycaster()
 		return new System([Object.ID, Selectable.ID], (obj: Component, selectable: {}) => {
 			const object = obj as Object
@@ -201,9 +206,25 @@ export namespace ECS {
 		})
 	}
 
-	function ApplyAnimation(target: EntityID, anim: (dt: number)=>THREE.Vector3) {
+	export function ApplyAnimation(target: EntityID, anim: (dt: number)=>THREE.Vector3) {
 		GlobalRegistry.update_entity_component(target, { id: Animation.ID, component: new Component(target, anim)})
 	}
 
-
+	export function MakeNewTile(tile: Tile) {
+		const obj = new TileObject(tile)
+		const entity = new ECS.Entity
+		return {
+			entity: entity,
+			components: [
+				{
+					id: ECS.Object.ID,
+					component: new ECS.Object(entity.uuid, obj)
+				},
+				{
+					id: ECS.Animation.ID,
+					component: new ECS.Animation(entity.uuid, ()=>obj.position)
+				}
+			]
+		}
+	}
 }
