@@ -1,25 +1,5 @@
 import * as THREE from 'three'
 
-// An object that exists in the scene and can be animated
-export interface IAnimatable {
-	position: THREE.Vector3
-	readonly uuid: string
-}
-
-// A type of animation, to be called by the animation manager to yield the next value
-export interface IAnimation {
-	next_step(dt: number): THREE.Vector3
-	finished(): boolean
-}
-
-export interface IAnimationManager {
-	add_object(object: IAnimatable, callback?: (finished: boolean) => void): void
-	animate_object(id: string, animation: IAnimation): void
-	remove_object(object: string): void
-	animate_step(dt: number): void
-	get_objects(): IAnimatable[]
-}
-
 export type Interpolator = (t: number) => number
 
 export function linear_interpolator(t: number): number {
@@ -68,7 +48,7 @@ function binom(n: number, k: number) {
 	return fact(n) / (fact(k) * fact(n - k))
 }
 
-export class BezierAnimation implements IAnimation {
+export class BezierAnimation {
 	n: number
 	t: number = 0
 	is_finished: boolean = false
@@ -101,57 +81,3 @@ export class BezierAnimation implements IAnimation {
 	}
 }
 
-export class AnimationManager implements IAnimationManager {
-	private objects: Map<string, {
-		object: IAnimatable,
-		animations: IAnimation[]
-		callback?: (finished: boolean) => void
-	}> = new Map()
-
-	constructor() { }
-
-	add_object(object: IAnimatable, finish_callback?: (finished: boolean) => void): void {
-		if (this.objects.has(object.uuid)) {
-			throw new Error("Already has object")
-		}
-
-		this.objects.set(object.uuid, {
-			object: object,
-			animations: [],
-			callback: finish_callback
-		})
-	}
-
-	animate_object(id: string, animation: IAnimation): void {
-		const obj = this.objects.get(id)
-		if (obj === undefined) {
-			throw new Error("Can't find object")
-		}
-
-		obj.animations.push(animation)
-	}
-
-	remove_object(object: string): void {
-		this.objects.delete(object)
-	}
-
-	get_objects(): IAnimatable[] {
-		return this.objects.values().map(v => v.object).toArray()
-	}
-
-	animate_step(dt: number): void {
-		for (let object of this.objects.values()) {
-			if (object.animations.length === 0) {
-				continue
-			}
-			const next = object.animations[0].next_step(dt)
-			object.object.position.copy(next)
-			if (object.animations[0].finished()) {
-				object.animations.splice(0, 1)
-			}
-			if (object.callback !== undefined) {
-				object.callback(object.animations.length === 0)
-			}
-		}
-	}
-}

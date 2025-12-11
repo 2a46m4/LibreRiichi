@@ -1,6 +1,5 @@
 import { Tile } from '../game/tile'
 import { Tile as TileValue } from '../messaging/tile'
-import { IAnimatable } from './animation'
 import { alphatest_colour, load_texture } from './texture'
 import * as THREE from 'three'
 

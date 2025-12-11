@@ -9,13 +9,14 @@ import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent, ServerEventType } from "../messaging/server_event_generated";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
-import { IActionAnimator, IRenderer, ISelectionManager, Scene } from "../render/renderer";
+import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
 import { GameIdx, TableIdx } from '../game/arena'
 import { create_event, create_fsm_builder, create_state } from "../fsm";
 import { use_websocket_state } from '..'
 import { MessageType } from '../messaging/message'
 import { ServerActionType } from '../messaging/server_action_generated'
 import { ArenaActionType } from '../messaging/arena_action_generated'
+import * as THREE from "three"
 
 // Data flow in this file:
 // Event comes in from the server -> message_handler
@@ -62,6 +63,8 @@ const game_data = {
   tiles: new Array<{ tile: Tile, id: string }>(),
   selected_tile_location: 0
 }
+
+const pointer: THREE.Vector2 = new THREE.Vector2
 
 function handle_animation(action: Animation) {
   if (action === undefined) {
@@ -249,7 +252,7 @@ onMounted(() => {
   if (!three_canvas.value) return
   initialize_tiles()
 
-  const manager = new Scene(three_canvas.value)
+  const manager = new ThreeJSRenderer(three_canvas.value)
   renderer = manager
   selection_manager = manager
   action_animator = manager
@@ -262,6 +265,8 @@ onMounted(() => {
 
   ArenaMessageBus.register(message_handler)
   ArenaMessageBus.register(debug_message_printer)
+
+  window.addEventListener('pointermove', on_move)
 })
 
 function on_click(event: MouseEvent) {
@@ -312,6 +317,11 @@ function on_window_resize() {
   renderer.window_resize(width, height)
 }
 
+function on_move(event: MouseEvent) {
+		pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+		pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+  }
+
 function animate(t: number, dt: number) {
   renderer.animate_frame(dt)
   animation_id = requestAnimationFrame(new_t => { animate(new_t, new_t - t) })
@@ -323,6 +333,7 @@ onUnmounted(() => {
   }
   window.removeEventListener('resize', on_window_resize)
   window.removeEventListener('click', on_click)
+  window.removeEventListener('pointermove', on_move)
 
   renderer.stop()
 })

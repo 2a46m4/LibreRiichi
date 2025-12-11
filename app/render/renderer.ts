@@ -4,7 +4,7 @@ import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
 import { Raycaster, Selection, Selector } from "./raycaster";
 import { AnimationManager, IAnimationManager, quadratic_interpolator, TileLinearAnimation } from "./animation";
-import { Hand, Naki, NakiCallType } from './hand';
+import { Hand, Naki, NakiCallType } from './objects';
 import { TableIdx } from '../game/arena';
 
 // Animates and manages actions
@@ -192,25 +192,23 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 			this.hands = []
 
 			// Create demo tiles
-			this.hands[0] = new Hand([], this.animation_manager)
-			this.hands[0].position.set(player_position.x, -1.3, player_position.z)
-			this.hands[0].rotation.y = player_position.rotation
-			default_tiles.forEach(tile => {
-				this.hands[0].add_tile(tile)
-			})
-			this.scene.add(this.hands[0])
+			this.hands[0] = new Hand([])
+			this.hands[0].set_position(new THREE.Vector3(player_position.x, -1.3, player_position.z))
+			this.hands[0].set_rotation(player_position.rotation)
+			this.hands[0].add_tiles(default_tiles.map((v, i) => { return { tile: v, location: i } }))
+			this.scene.add(this.hands[0].group)
 
 			// Create blank tile walls for the other players
 			let blank_tile = HiddenTile
 			for (let i = 1; i < 4; i++) {
-				const other_hand = new Hand([], this.animation_manager)
+				const other_hand = new Hand([])
 				for (let j = 0; j < 13; j++) {
-					other_hand.add_tile(blank_tile)
-					other_hand.rotation.y = tile_positions[i - 1].rotation
-					other_hand.position.set(tile_positions[i - 1].x, -1.3, tile_positions[i - 1].z)
+					other_hand.add_tiles([{ tile: blank_tile, location: j }])
+					other_hand.set_rotation(tile_positions[i - 1].rotation)
+					other_hand.set_position(new THREE.Vector3(tile_positions[i - 1].x, -1.3, tile_positions[i - 1].z))
 				}
 				this.hands[i] = other_hand
-				this.scene.add(other_hand)
+				this.scene.add(other_hand.group)
 			}
 		}
 
