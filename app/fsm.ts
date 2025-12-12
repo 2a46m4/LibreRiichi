@@ -38,7 +38,7 @@ export type ExtractCallbackArgs<T> = T extends Event<any, any, any, infer Args>
 export type TransitionType = 'immediate' | 'deferred'
 
 // Enhanced type-safe state interface
-export interface State<Name extends string, Data = {}, FromName extends string = string, ToName extends string = string> {
+export interface State<Name extends string, Data = any, FromName extends string = string, ToName extends string = string> {
     name: Name
     data: Data
     on_enter?: (from_state: State<FromName>) => void

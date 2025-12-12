@@ -5,8 +5,9 @@ import { quadratic_interpolator, TileLinearAnimation } from './animation'
 import { ECS } from './ecs'
 
 export type TileLocation = InHand
-export type InHand = { location: "in-hand", index: number, inhand_index: number }
-export type InHand = { location: "in-hand", index: number, inhand_index: number }
+export type InHand = { location: "hand", index: number, inhand_index: number }
+export type InDiscard = { location: "discard", index: number }
+export type InNaki = { location: "naki", index: number, naki_index: number, in_naki_index: number, orientation: 0 | 1 | 2 }
 
 export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 
@@ -14,6 +15,24 @@ export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 function offset(i: number) {
 	return (-7 * 0.45) + i * 0.45
 }
+
+// Creates a tile entity, adds it to the parent
+function make_tile_entity(tile: Tile, parent: THREE.Group, parent_id: ECS.EntityID) {
+	const tile_entity = ECS.MakeNewTile(tile)
+	const parent_component = ECS.MakeComponent(ECS.Parent, tile_entity.entity.uuid, parent_id)
+	tile_entity.components.push(parent_component)
+	ECS.GlobalRegistry.add_entity(tile_entity.entity, tile_entity.components)
+
+	const tile_object = ECS.GlobalRegistry.find_component(
+		tile_entity.entity.uuid,
+		ECS.Object.ID
+	) as ECS.Object
+
+	parent.add(tile_object.data)
+	return tile_entity
+}
+
+const dora_tile_position = { x: -5, z: 5, y: -1.3 }
 
 const discard_positions = [
 	{ x: 2, z: 0, rotation: Math.PI / 2 }, // East
@@ -30,7 +49,7 @@ export class Hand {
 	public group: THREE.Group = new THREE.Group()
 
 	constructor(tiles: Tile[]) {
-		const { entity: entity } = ECS.MakeNewObject(this.group)
+		const { entity: entity } = ECS.make_new_object(this.group)
 		this.group_entity = entity
 		ECS.GlobalRegistry.add_entity(this.group_entity, [
 			ECS.MakeComponent(ECS.ObjectContainer, this.group_entity.uuid, this.group)])
@@ -44,17 +63,17 @@ export class Hand {
 	set_rotation(rotation: number) {
 		this.group.rotation.y = rotation
 	}
+
 	// Location: the index at which the new tile will end up at
 	// Returns the UUID of the new tile object
 	// TODO: Add a function accepting a Entity parameter
 	add_tiles(tiles: { tile: Tile, location: number }[]) {
 		let tiles_added = 0
 		for (let { tile: tile, location: location } of tiles) {
-			const tile_entity = ECS.MakeNewTile(tile)
-			const parent_component = ECS.MakeComponent(ECS.Parent, tile_entity.entity.uuid, this.group_entity.uuid)
-			tile_entity.components.push(parent_component)
-			ECS.GlobalRegistry.add_entity(tile_entity.entity, tile_entity.components)
+			const tile_entity = make_tile_entity(tile, this.group, this.group_entity.uuid)
+			this.array.splice(location, 0, tile_entity.entity.uuid)
 
+			// Apply an animation to the tiles to the right of the tile
 			const start = new THREE.Vector3(0, 2, -5)
 			const end = new THREE.Vector3(offset(this.array.length), 0, 0)
 			const delay = 50 * tiles_added
@@ -66,10 +85,9 @@ export class Hand {
 				ECS.ApplyAnimation(this.array[i], animation.next_step.bind(animation))
 			}
 
-			this.array.splice(location, 0, tile_entity.entity.uuid)
+			// Apply an animation to the tile
 			const animation = new TileLinearAnimation(start, end, quadratic_interpolator, 300, delay)
 			ECS.ApplyAnimation(tile_entity.entity.uuid, (dt) => animation.next_step(dt))
-			this.group.add(tile_entity.components[0].component.data as THREE.Mesh)
 		}
 	}
 
@@ -121,6 +139,7 @@ export class NakiGroup {
 
 }
 
+// TODO 
 export class Naki {
 	public groups: {
 		type: NakiCallType
@@ -145,7 +164,7 @@ export class Naki {
 }
 
 export class DiscardPile {
-	public tiles: ECS.Entity[] = []
+	public tiles: ECS.EntityID[] = []
 	public group: THREE.Group = new THREE.Group()
 
 	constructor() { }
@@ -157,9 +176,17 @@ export class DiscardPile {
 		const position = this.compute_next_tile_position()
 
 		this.group.add(tile_obj.data)
+		this.tiles.push(tile)
 	}
 
-	remove_from_pile() { }
+	remove_from_pile() : ECS.EntityID {
+		const tile = this.tiles.pop()
+		if (tile === undefined) {
+			throw new Error("DiscardPile is empty")
+		} else {
+			return tile
+		}
+	}
 
 	private compute_next_tile_position(): THREE.Vector3 {
 		const offset = ((this.tiles.length % 6) - 3) * tile_width_gap
@@ -169,10 +196,17 @@ export class DiscardPile {
 }
 
 export class Dora {
+	public tile_list: ECS.EntityID[] = []
+	public group: THREE.Group = new THREE.Group()
+	public e: ECS.Entity = new ECS.Entity()
+
 	constructor() { }
 
-	add() {
+	add_dora(tile: Tile) {
+		const tile_entity = make_tile_entity(tile, this.group, this.e.uuid)
+		this.tile_list.push(tile_entity.entity.uuid)
 
+		// TODO: Animation
 	}
 }
 
@@ -186,12 +220,19 @@ export class SelectedTile {
 
 	constructor(scene: THREE.Scene) {
 		const e = new ECS.Entity()
-		ECS.GlobalRegistry.add_entity(
-			e, [ECS.MakeComponent(ECS.Object, e.uuid, this.mesh)])
+		ECS.GlobalRegistry.add_entity(e, [ECS.MakeComponent(ECS.Object, e.uuid, this.mesh)])
 		scene.add(this.mesh)
 	}
 
 	move(new_position: THREE.Vector3) {
 		this.mesh.position.copy(new_position)
+	}
+
+	show() {
+		this.mesh.visible = true
+	}
+
+	hide() {
+		this.mesh.visible = false
 	}
 }

@@ -265,7 +265,8 @@ export namespace ECS {
 		}
 	}
 
-	export function MakeNewObject(object: any) {
+	// Returns a new mesh entity
+	export function make_new_object(object: any) {
 		const obj = new ECS.Entity()
 		return {
 			entity: obj,

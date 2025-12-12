@@ -4,6 +4,7 @@ import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
 import { DiscardPile, Dora, Hand, Naki, NakiCallType, NakiGroup, SelectedTile } from './objects';
 import { TableIdx } from '../game/arena';
+import { ECS } from './ecs';
 
 const marker_positions = [
 	{ x: 0, z: 4, rotation: 0 },
@@ -25,8 +26,6 @@ const discard_positions = [
 	{ x: 0, z: -2, rotation: Math.PI }, // North
 	{ x: -2, z: 0, rotation: -Math.PI / 2 }, // West
 ]
-
-const dora_tile_position = { x: -5, z: 5, y: -1.3 }
 
 const player_position = { x: 0, z: 5, rotation: 0 }
 
@@ -254,23 +253,6 @@ export class ThreeJSRenderer {
 		this.renderer.setSize(width, height)
 	}
 
-	select(selection: Selection[]) {
-		if (selection.length > 0) {
-			let tile = this.hands[0].find_uuid(selection[0].id)
-			if (tile === undefined) {
-				throw new Error('Tile not found')
-			}
-
-			this.selection.mesh.visible = true
-			tile.getWorldPosition(this.selection.mesh.position)
-			this.selection.tile = tile as TileObject
-		} else {
-			this.selection.mesh.visible = false
-			this.selection.tile = null
-			return
-		}
-	}
-
 	clear_tiles(): void {
 		this.hands[0].remove_all()
 	}
@@ -279,15 +261,12 @@ export class ThreeJSRenderer {
 		this.hands[idx].remove_all()
 	}
 
-	add_tile(tile: Tile, player_idx: number = 0, add_location: number = -1): string {
-		if (add_location >= 0) {
-			return this.hands[player_idx].add_tile(tile, add_location)
-		} else {
-			return this.hands[player_idx].add_tile(tile)
-		}
+	add_tile_to_end(tile: Tile, player_idx: number = 0) {
+		const end_loc = this.hands[player_idx].array.length - 1
+		this.hands[player_idx].add_tiles([{ tile: tile, location: end_loc }])
 	}
 
-	remove_tile(id: string | number, player_idx: number | undefined): void {
+	remove_tile(id: ECS.EntityID | number, player_idx: number | undefined): void {
 		if (player_idx === undefined) {
 			player_idx = 0
 		}
@@ -300,28 +279,7 @@ export class ThreeJSRenderer {
 	}
 
 	add_dora(tile: Tile): void {
-		const dora_tile = new TileObject(tile)
-		this.dora_tiles.push(dora_tile)
-		dora_tile.position.set(
-			dora_tile_position.x, dora_tile_position.y, dora_tile_position.z
-		)
-		this.scene.add(dora_tile)
-	}
-
-	// Assumes clockwise index, with our player starting at 0
-	draw(player_idx: number, tile?: Tile): void {
-		if (player_idx === 0) {
-			if (tile === null || tile === undefined) {
-				throw new Error("Tile can't be null")
-			}
-
-			this.add_tile(tile, player_idx)
-		} else {
-			if (tile === undefined) {
-				tile = HiddenTile
-			}
-			this.add_tile(tile, player_idx)
-		}
+		this.dora_tiles.add_dora(tile)
 	}
 
 	// TODO
