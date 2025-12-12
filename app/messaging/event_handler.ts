@@ -40,7 +40,7 @@ ServerMessageBus.register(
     }
   }),
 )
-export const ClickEventBus = new EventHandler<ECS.EntityID>()
+export const SelectionBus = new EventHandler<ECS.EntityID | null>()
 
 export function register_request(
   msg_idx: number,

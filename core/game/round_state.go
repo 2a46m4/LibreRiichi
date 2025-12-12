@@ -285,7 +285,7 @@ func (roundState *RoundState) discardTile(context context.Context, event *fsm.Ev
 			return
 		}
 
-		err = roundState.tileData.Hands[playerIdx].TestDiscard(action.TileToToss) 
+		err = roundState.tileData.Hands[playerIdx].TestDiscard(action.TileToToss)
 		if err != nil {
 			event.Cancel(errors.New("TestDiscard failed"))
 			panic(action)
@@ -521,8 +521,4 @@ func getRoundSetup(roundData *RoundState) (sendInfos []MessageSendInfo) {
 	}
 
 	return sendInfos
-}
-
-func (roundState *RoundState) GenerateGraphs() string {
-	return fsm.Visualize(roundState.RoundFSM)
 }

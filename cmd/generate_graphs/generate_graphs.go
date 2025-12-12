@@ -1,11 +1,12 @@
 package main
 
 import (
-	"codeberg.org/ijnakashiar/LibreRiichi/core/game"
 	"fmt"
+
+	"codeberg.org/ijnakashiar/LibreRiichi/core/game"
+	"github.com/looplab/fsm"
 )
 
 func main() {
-	fmt.Println(game.InitGameState().GenerateGraphs())
-	// fmt.Println(game.InitRoundState().GenerateGraphs())
+	fmt.Println(fsm.Visualize(game.InitRoundState().RoundFSM))
 }

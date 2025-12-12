@@ -3,6 +3,11 @@ import { Tile } from '../game/tile'
 import { tile_width, TileObject } from './tile'
 import { quadratic_interpolator, TileLinearAnimation } from './animation'
 import { ECS } from './ecs'
+
+export type TileLocation = InHand
+export type InHand = { location: "in-hand", index: number, inhand_index: number }
+export type InHand = { location: "in-hand", index: number, inhand_index: number }
+
 export type NakiCallType = 'pon' | 'chii' | 'ankan' | 'daiminkan'
 
 // Returns the offset of where the tile should be
@@ -66,6 +71,10 @@ export class Hand {
 			ECS.ApplyAnimation(tile_entity.entity.uuid, (dt) => animation.next_step(dt))
 			this.group.add(tile_entity.components[0].component.data as THREE.Mesh)
 		}
+	}
+
+	find_index(entity: ECS.EntityID) {
+		return this.array.find(v => v == entity)
 	}
 
 	remove_all(): ECS.EntityID[] {
@@ -156,5 +165,33 @@ export class DiscardPile {
 		const offset = ((this.tiles.length % 6) - 3) * tile_width_gap
 		const vertical_offset = Math.floor(this.tiles.length / 6) * 0.3
 		return new THREE.Vector3(offset, vertical_offset, 0)
+	}
+}
+
+export class Dora {
+	constructor() { }
+
+	add() {
+
+	}
+}
+
+export class SelectedTile {
+	material: THREE.MeshLambertMaterial = new THREE.MeshLambertMaterial({
+		color: 0xffff00,
+		transparent: true,
+		opacity: 0.5,
+	})
+	mesh: THREE.Mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.26), this.material)
+
+	constructor(scene: THREE.Scene) {
+		const e = new ECS.Entity()
+		ECS.GlobalRegistry.add_entity(
+			e, [ECS.MakeComponent(ECS.Object, e.uuid, this.mesh)])
+		scene.add(this.mesh)
+	}
+
+	move(new_position: THREE.Vector3) {
+		this.mesh.position.copy(new_position)
 	}
 }

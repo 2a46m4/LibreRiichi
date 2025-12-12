@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, render, watch } from 'vue'
 import { HiddenTile, Tile } from '../game/tile'
 import { initialize_tiles } from '../render/tile'
 import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
-import { ArenaMessageBus, register_request } from "../messaging/event_handler";
+import { ArenaMessageBus, register_request, SelectionBus } from "../messaging/event_handler";
 import { ArenaEventType } from "../messaging/arena_event_generated";
 import { ServerEvent, ServerEventType } from "../messaging/server_event_generated";
 import ScoreBoard from "../components/scoreboard.vue"
 import { Action, ActionType } from "../messaging/action_generated";
-import { IActionAnimator, IRenderer, ISelectionManager, ThreeJSRenderer } from "../render/renderer";
+import { ThreeJSRenderer } from "../render/renderer";
 import { GameIdx, TableIdx } from '../game/arena'
 import { create_event, create_fsm_builder, create_state } from "../fsm";
 import { use_websocket_state } from '..'
@@ -17,6 +17,7 @@ import { MessageType } from '../messaging/message'
 import { ServerActionType } from '../messaging/server_action_generated'
 import { ArenaActionType } from '../messaging/arena_action_generated'
 import * as THREE from "three"
+import { ECS } from '../render/ecs'
 
 // Data flow in this file:
 // Event comes in from the server -> message_handler
@@ -223,7 +224,7 @@ const make_fsm = () => {
         handle_game_setup_event(board_event.setup)
         break
       case BoardEventType.GameEndEvent:
-		throw new Error("Not yet implemented: GameEndEvent")
+        throw new Error("Not yet implemented: GameEndEvent")
         break;
     }
 
@@ -233,42 +234,53 @@ const make_fsm = () => {
   return fsm
 }
 
-
 const three_canvas = ref<HTMLCanvasElement>()
 const game_container = ref<HTMLDivElement>()
 const is_fullscreen = ref(false)
 
 const discard_required = ref(false)
-
 let animation_id: number
-
-let renderer: IRenderer
-let selection_manager: ISelectionManager
-let action_animator: IActionAnimator
-
+let renderer: ThreeJSRenderer
 let fsm: ReturnType<typeof make_fsm>
+let currently_selected: ECS.EntityID | null = null
 
 onMounted(() => {
   if (!three_canvas.value) return
   initialize_tiles()
 
-  const manager = new ThreeJSRenderer(three_canvas.value)
-  renderer = manager
-  selection_manager = manager
-  action_animator = manager
+  renderer = new ThreeJSRenderer(three_canvas.value)
   animate(0, 0)
 
   window.addEventListener('resize', on_window_resize)
   window.addEventListener('click', on_click)
+  window.addEventListener('pointermove', on_move)
 
   fsm = make_fsm()
 
   ArenaMessageBus.register(message_handler)
   ArenaMessageBus.register(debug_message_printer)
+  SelectionBus.register(on_select)
 
-  window.addEventListener('pointermove', on_move)
 })
 
+// The entity that the player moused over
+function on_select(id: ECS.EntityID | null): boolean {
+  if (id !== null) {
+    const obj = ECS.GlobalRegistry.find_component(id, ECS.Object.ID) as ECS.Object
+    const position = obj.data.position
+    renderer.selected_tile.show()
+    renderer.selected_tile.move(position)
+    currently_selected = id
+  } else {
+    renderer.selected_tile.hide()
+    currently_selected = null
+  }
+
+  // Move the 
+  return true
+}
+
+// The player clicked
 function on_click(event: MouseEvent) {
   const selection = selection_manager.get_selection()
   if (selection === null) {
@@ -318,12 +330,14 @@ function on_window_resize() {
 }
 
 function on_move(event: MouseEvent) {
-		pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-		pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
-  }
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+}
 
 function animate(t: number, dt: number) {
   renderer.animate_frame(dt)
+  ECS.GlobalRegistry.run_system(ECS.AnimateSystem(dt))
+  ECS.GlobalRegistry.run_system(ECS.SelectSystem(renderer.camera, pointer))
   animation_id = requestAnimationFrame(new_t => { animate(new_t, new_t - t) })
 }
 
@@ -469,13 +483,13 @@ function handle_game_setup_event(setups: Setup[]) {
         })
         break
       case SetupType.DORA:
-        action_animator.add_dora(new Tile(setup.data))
+        renderer.add_dora(new Tile(setup.data))
         break
       case SetupType.STARTING_POINTS:
         arena_data.value.scores = setup.data
         break
       case SetupType.PLAYER_NUMBER:
-		console.log("Player number setup received: ", setup.data)
+        console.log("Player number setup received: ", setup.data)
         arena_data.value.player_idx = setup.data as GameIdx
         break
       case SetupType.PLAYER_ORDER:

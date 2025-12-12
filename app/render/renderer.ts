@@ -2,34 +2,8 @@ import * as THREE from 'three'
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { HiddenTile, Tile } from "../game/tile";
 import { tile_width, TileObject } from "./tile";
-import { Raycaster, Selection, Selector } from "./raycaster";
-import { AnimationManager, IAnimationManager, quadratic_interpolator, TileLinearAnimation } from "./animation";
-import { Hand, Naki, NakiCallType } from './objects';
+import { DiscardPile, Dora, Hand, Naki, NakiCallType, NakiGroup, SelectedTile } from './objects';
 import { TableIdx } from '../game/arena';
-
-// Animates and manages actions
-export interface IActionAnimator {
-	clear_tiles(): void
-	clear_tiles_on(idx: number): void
-	add_tile(tile: Tile, player_idx?: number, location?: number): string
-	remove_tile(idx: string | number, player_idx?: TableIdx): void
-	add_dora(tile: Tile): void
-	draw(player_idx: number, tile?: Tile): void
-	toss(player_idx: number, tile: Tile): void
-	select(selections: Selection[]): void
-	naki_call(called_by: TableIdx, type: NakiCallType): void
-}
-
-// Callable
-export interface IRenderer {
-	animate_frame(dt: number): void
-	stop(): void
-	window_resize(width: number, height: number): void
-}
-
-export interface ISelectionManager {
-	get_selection(): { tile: Tile, id: string, location: number } | null
-}
 
 const marker_positions = [
 	{ x: 0, z: 4, rotation: 0 },
@@ -60,7 +34,7 @@ const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
 	(i) => new Tile(i),
 )
 
-export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionManager {
+export class ThreeJSRenderer {
 
 	scene: THREE.Scene
 	camera: THREE.PerspectiveCamera
@@ -70,21 +44,10 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 
 	table: THREE.Group
 	hands: Hand[]
-	naki_calls: Naki[] = []
-	dora_tiles: THREE.Mesh[] = []
-
-	discard_pile: TileObject[][]
-	last_discard: [number, number] = [-1, -1]
-
-	selection: {
-		material: THREE.MeshLambertMaterial
-		mesh: THREE.Mesh
-		tile: TileObject | null
-	}
-
-	selector: Selector
-
-	animation_manager: IAnimationManager = new AnimationManager()
+	naki_calls: NakiGroup[] = []
+	dora_tiles: Dora = new Dora()
+	discard_pile: DiscardPile[]
+	selected_tile: SelectedTile
 
 	constructor(canvas: HTMLCanvasElement) {
 		// Scene
@@ -240,30 +203,7 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 			this.scene.add(textRing)
 		}
 
-		// Selection
-		{
-			let material = new THREE.MeshLambertMaterial({
-				color: 0xffff00,
-				transparent: true,
-				opacity: 0.5,
-			})
-			let mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.26), material)
-			mesh.visible = false
-			let selected_tile: TileObject | null = null
-
-			this.selection = {
-				material: material,
-				mesh: mesh,
-				tile: selected_tile,
-			}
-
-			this.scene.add(this.selection.mesh)
-		}
-
-		// Selection manager
-		{
-			this.selector = new Raycaster(this)
-		}
+		this.selected_tile = new SelectedTile(this.scene)
 	}
 
 	//TODO
@@ -291,8 +231,6 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 	animate_frame(dt: number): void {
 		this.controls.update()
 		this.renderer.render(this.scene, this.camera)
-		this.animation_manager.animate_step(dt)
-		this.select(this.selector.get_selections())
 	}
 
 	stop(): void {
@@ -308,7 +246,6 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 				}
 			}
 		})
-		this.selector.stop()
 	}
 
 	window_resize(width: number, height: number) {
@@ -369,17 +306,6 @@ export class ThreeJSRenderer implements IRenderer, IActionAnimator, ISelectionMa
 			dora_tile_position.x, dora_tile_position.y, dora_tile_position.z
 		)
 		this.scene.add(dora_tile)
-	}
-
-	get_selection(): { tile: Tile; id: string, location: number } | null {
-		if (this.selection.tile === null) {
-			return null
-		}
-		return {
-			tile: this.selection.tile.tile,
-			id: this.selection.tile.uuid,
-			location: this.hands[0].find_uuid_index(this.selection.tile.uuid)
-		}
 	}
 
 	// Assumes clockwise index, with our player starting at 0
