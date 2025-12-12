@@ -177,6 +177,7 @@ onMounted(() => {
 
 // The entity that the player moused over
 function on_select(id: ECS.EntityID | null): boolean {
+	console.log("Select")
 	if (id !== null) {
 		const obj = ECS.GlobalRegistry.find_component(id, ECS.Object.ID) as ECS.Object
 		const position = obj.data.position
@@ -256,6 +257,7 @@ function on_window_resize() {
 }
 
 function on_move(event: MouseEvent) {
+	console.log("move")
 	pointer.x = (event.clientX / window.innerWidth) * 2 - 1
 	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
 }

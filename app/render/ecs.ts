@@ -86,10 +86,12 @@ export namespace ECS {
 				throw new Error("Could not find system")
 			}
 
-			sys.component_ids
+			const e = sys.component_ids
 				.map(c => new Set(this.components.get(c)?.get_entities()))
 				.reduce((acc, cur) => acc.intersection(cur))
 				.values() // All entities we need to iterate through
+			console.log(this.entities)
+			e
 				.map(e => sys.component_ids.map(c => { // Get all components of an entity
 					const cmp = this.components.get(c)
 					if (cmp === undefined) {
@@ -214,6 +216,7 @@ export namespace ECS {
 	}
 
 	export function AnimateSystem(dt: number) {
+		console.log("Animate system run")
 		return new System([Object.ID, Animation.ID], (...components: Component[]) => {
 			const obj = components[0] as Object
 			const anim = components[1] as Animation
