@@ -8,7 +8,7 @@ export class EventHandler<TIncoming> {
   constructor() {}
 
   handle(data: TIncoming): void {
-    this.listeners.filter((listener) => listener(data))
+    this.listeners = this.listeners.filter((listener) => listener(data))
   }
 
   register(listener: (data: TIncoming) => boolean): number {
@@ -39,6 +39,10 @@ ServerMessageBus.register(
     }
   }),
 )
+export const ClickBus = new EventHandler<MouseEvent>()
+window.addEventListener('click', (event) => {
+  ClickBus.handle(event)
+})
 
 // Registers a wait for a request
 export function register_request(
@@ -78,14 +82,17 @@ export async function get_response(
   }
 }
 
-export async function* make_async_generator_from_event<T>(event_handler: EventHandler<T>) {
-	while (true) {
-		const promise = new Promise<T>((res)=>{
-			event_handler.register((data: T)=>{
-				res(data)
-				return false
-			})	
-		})
-		yield await promise
-	}
+// Generator from an async function
+export async function* make_async_generator_from_event<T>(
+  event_handler: EventHandler<T>,
+) {
+  while (true) {
+    const promise = new Promise<T>((res) => {
+      event_handler.register((data: T) => {
+        res(data)
+        return false
+      })
+    })
+    yield await promise
+  }
 }

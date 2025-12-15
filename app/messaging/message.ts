@@ -1,12 +1,6 @@
-import {
-  ServerAction as ServerActionData,
-  ServerActionType,
-} from './server_action_generated'
-import {
-  ServerResponse as ServerResponseData,
-  ServerResponseType,
-} from './server_response_generated'
-import { ServerEvent as ServerEventData, ServerEventType } from './server_event_generated'
+import { ServerAction as ServerActionData } from './server_action_generated'
+import { ServerResponse as ServerResponseData } from './server_response_generated'
+import { ServerEvent as ServerEventData } from './server_event_generated'
 
 export enum MessageType {
   RESPONSE = 0,

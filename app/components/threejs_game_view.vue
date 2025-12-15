@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, render, watch } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { HiddenTile, Tile } from '../game/tile'
 import { initialize_tiles } from '../render/tile'
 import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import { Setup, SetupType } from '../game/setup'
-import { ArenaMessageBus, register_request } from '../messaging/event_handler'
+import {
+  ArenaMessageBus,
+  ClickBus,
+  make_async_generator_from_event,
+  register_request,
+} from '../messaging/event_handler'
 import { ArenaEventType } from '../messaging/arena_event_generated'
 import {
   ServerEvent,
@@ -14,7 +19,7 @@ import ScoreBoard from '../components/scoreboard.vue'
 import { Action, ActionType } from '../messaging/action_generated'
 import { ThreeJSRenderer } from '../render/renderer'
 import { GameIdx, TableIdx } from '../game/arena'
-import { create_event, create_fsm_builder, create_state } from '../fsm'
+import { create_event, create_state } from '../fsm'
 import { use_websocket_state } from '..'
 import { MessageType } from '../messaging/message'
 import { ServerActionType } from '../messaging/server_action_generated'
@@ -38,9 +43,9 @@ const arena_data = ref({
   players: [],
   player_idx: 0 as GameIdx, // Game idx
   scores: [] as number[],
+  game_should_end: false,
+  round_should_end: false,
 })
-
-const pointer: THREE.Vector2 = new THREE.Vector2()
 
 // Self is table idx 0
 // So if we are player 3, player 0's offset is (4 + 0 - 3) % 4 = 1
@@ -119,21 +124,6 @@ const make_fsm = () => {
       callback: (from, _, naki_calls: Action, from_player: GameIdx) => {},
     },
   )
-
-  const fsm = create_fsm_builder()
-    .add_state(out_of_game)
-    .add_state(awaiting_discard)
-    .add_state(discarded)
-    .add_state(awaiting_naki_calls)
-    .add_state(naki_called)
-    .add_state(round_finished)
-    .add_state(game_finished)
-    .add_event(draw_event)
-    .add_event(discard_event)
-    .add_event(receive_naki_event)
-    .add_event(naki_called_event)
-    .build(out_of_game)
-
   ArenaMessageBus.register((data: ServerEvent) => {
     if (data.arena_message.arenaevent_type != ArenaEventType.ArenaBoardEvent) {
       return true
@@ -170,7 +160,8 @@ const is_fullscreen = ref(false)
 
 let animation_id: number
 let renderer: ThreeJSRenderer
-let fsm: ReturnType<typeof make_fsm>
+let click_channel = make_async_generator_from_event(ClickBus)
+let server_event_channel = make_async_generator_from_event(ArenaMessageBus)
 
 onMounted(() => {
   if (!three_canvas.value) return
@@ -180,10 +171,6 @@ onMounted(() => {
   animate(0, 0)
 
   window.addEventListener('resize', on_window_resize)
-  window.addEventListener('click', on_click)
-  window.addEventListener('pointermove', on_move)
-
-  fsm = make_fsm()
 
   ArenaMessageBus.register(message_handler)
   ArenaMessageBus.register(debug_message_printer)
@@ -192,17 +179,17 @@ onMounted(() => {
 // The player clicked
 function on_click(event: MouseEvent) {
   if (renderer.selector.get_selection() === null) {
-    return
+    return true
   }
   const current_state = fsm.get_current_state()
   if (current_state.name !== 'awaiting_discard') {
     console.error('Not in discarding state')
-    return
+    return true
   }
   const { player_idx: idx } = current_state.data
   if (idx !== arena_data.value.player_idx) {
     console.error('Not our turn')
-    return
+    return true
   }
 
   const tile_value = ECS.GlobalRegistry.find_component(
@@ -259,12 +246,6 @@ function on_window_resize() {
   renderer.window_resize(width, height)
 }
 
-function on_move(event: MouseEvent) {
-  console.log('move')
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
-}
-
 function animate(t: number, dt: number) {
   renderer.animate_frame(dt)
   animation_id = requestAnimationFrame((new_t) => {
@@ -278,7 +259,6 @@ onUnmounted(() => {
   }
   window.removeEventListener('resize', on_window_resize)
   window.removeEventListener('click', on_click)
-  window.removeEventListener('pointermove', on_move)
 
   renderer.stop()
 })
@@ -311,14 +291,6 @@ function debug_message_printer(event: ServerEvent) {
   return true
 }
 
-function message_handler(event: ServerEvent) {
-  switch (event.arena_message.arenaevent_type) {
-    case ArenaEventType.ArenaBoardEvent:
-      handle_board_event(event.arena_message.board_event)
-  }
-  return true
-}
-
 function handle_board_event(new_event: BoardEvent) {
   if (new_event === undefined) {
     throw new Error('Event is undefined')
@@ -336,6 +308,7 @@ function handle_board_event(new_event: BoardEvent) {
       break
     case BoardEventType.GameEndEvent:
       // Handle game end event
+      throw new Error('TODO')
       break
     default:
       throw new Error('Unexpected')
@@ -434,6 +407,55 @@ function handle_game_setup_event(setups: Setup[]) {
         break
     }
   }
+}
+
+const unvoid = function <T>(x: T | void): T {
+  if (!x) throw new Error('Void')
+  else return x
+}
+
+while (!arena_data.value.game_should_end) {
+  const data = await server_event_channel.next()
+  if (!data.value) {
+    throw new Error('Server event returned void')
+  }
+
+  switch (data.value.serverevent_type) {
+    case ServerEventType.ServerArenaEvent:
+      switch (data.value.arena_message.arenaevent_type) {
+        case ArenaEventType.ArenaBoardEvent:
+          handle_board_event(data.value.arena_message.board_event)
+      }
+  }
+  // Get setup above
+
+  while (!arena_data.value.round_should_end) {
+    // Expect player draw or our turn to draw
+    {
+      const data = await server_event_channel.next()
+      const draw = unvoid(data.value)
+      switch (draw.arena_message.arenaevent_type) {
+        case ArenaEventType.PlayerJoinedEvent:
+        case ArenaEventType.PlayerQuitEvent:
+        case ArenaEventType.GameStartedEvent:
+          throw new Error('Unexpected')
+        case ArenaEventType.ArenaBoardEvent:
+      }
+    }
+
+    {
+      // Expect player discarded or we discarded
+      // Need to split this here with mouse events
+      const data = await server_event_channel.next()
+    }
+
+    {
+      // Expect naki called or no naki called event
+      const data = await server_event_channel.next()
+    }
+  }
+
+  // Game end event
 }
 </script>
 
