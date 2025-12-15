@@ -24,4 +24,17 @@
 - Fixed up some issues with ordering
 - Implement ECS
 
-
+* 2025-12-13
+- I think I should do some rethinking of the architecture.
+- Instead of storing state explicitly in the FSM, I should encode the state of the program in the control flow of the server
+    - What this means: Use a coroutine that yields control back when it needs to wait for input or perform an action.
+- On the client side, we can use async/await to handle responses in a linear fashion, but we also need to handle events from the server
+- Every request should have a response indicating its success
+- Can have generic responses, and also specific responses to data
+- Events should be the only ones that can modify the internal state of the client
+** Client
+- Client should use event bus architecture, since what is happening should be driven by the server
+- Server sends out global updates
+- Where does request info come in?
+    - We should have another message class: request info
+    - Request various amounts of information like board state
