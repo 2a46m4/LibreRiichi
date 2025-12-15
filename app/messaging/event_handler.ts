@@ -77,3 +77,15 @@ export async function get_response(
       throw new Error('Expected default response type')
   }
 }
+
+export async function* make_async_generator_from_event<T>(event_handler: EventHandler<T>) {
+	while (true) {
+		const promise = new Promise<T>((res)=>{
+			event_handler.register((data: T)=>{
+				res(data)
+				return false
+			})	
+		})
+		yield await promise
+	}
+}

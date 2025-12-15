@@ -189,28 +189,9 @@ onMounted(() => {
   ArenaMessageBus.register(debug_message_printer)
 })
 
-// The entity that the player moused over
-function on_select(id: ECS.EntityID | null): boolean {
-  console.log('Select')
-  if (id !== null) {
-    const obj = ECS.GlobalRegistry.find_component(
-      id,
-      ECS.Object.ID,
-    ) as ECS.Object
-    const position = obj.data.position
-    renderer.selected_tile.show()
-    renderer.selected_tile.move(position)
-    currently_selected = id
-  } else {
-    renderer.selected_tile.hide()
-    currently_selected = null
-  }
-  return true
-}
-
 // The player clicked
 function on_click(event: MouseEvent) {
-  if (currently_selected === null) {
+  if (renderer.selector.get_selection() === null) {
     return
   }
   const current_state = fsm.get_current_state()
@@ -286,8 +267,6 @@ function on_move(event: MouseEvent) {
 
 function animate(t: number, dt: number) {
   renderer.animate_frame(dt)
-  ECS.GlobalRegistry.run_system(ECS.AnimateSystem(dt))
-  ECS.GlobalRegistry.run_system(ECS.SelectSystem(renderer.camera, pointer))
   animation_id = requestAnimationFrame((new_t) => {
     animate(new_t, new_t - t)
   })

@@ -254,6 +254,15 @@ export class ThreeJSRenderer {
 		this.dora_tiles.animate(dt)
 
 		// Selection
+		const selection = this.selector.get_selection()
+		if (selection !== null) {
+			this.selected_tile.show()
+			const world = new THREE.Vector3()
+			selection.getWorldPosition(world)
+			this.selected_tile.move(world)
+		} else {
+			this.selected_tile.hide()
+		}
 	}
 
 	stop(): void {

@@ -41,4 +41,8 @@
 
 * 2025-12-14
 - Going back on the ECS idea. It's not needed for this type of project
-- 
+- We should use promises/async to handle state
+  - use promise race to handle multiple async sources
+    - user events (mouse, ui)
+    - server events
+  - async await the promises
