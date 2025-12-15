@@ -1,12 +1,11 @@
 import { IncomingMessage, MessageType } from './message'
-import { ServerResponse } from './server_response_generated'
+import { ServerResponse, ServerResponseType } from './server_response_generated'
 import { ServerEvent } from './server_event_generated'
-import { ECS } from '../render/ecs'
 
 export class EventHandler<TIncoming> {
   private listeners: Array<(data: TIncoming) => boolean> = []
 
-  constructor() { }
+  constructor() {}
 
   handle(data: TIncoming): void {
     this.listeners.filter((listener) => listener(data))
@@ -40,8 +39,8 @@ ServerMessageBus.register(
     }
   }),
 )
-export const SelectionBus = new EventHandler<ECS.EntityID | null>()
 
+// Registers a wait for a request
 export function register_request(
   msg_idx: number,
   bus = ServerMessageBus,
@@ -59,4 +58,22 @@ export function register_request(
     }
   })
   return promise
+}
+
+// Registers a wait for a request, and throws an error if the response failed
+export async function get_response(
+  idx: number,
+  bus = ServerMessageBus,
+): Promise<ServerResponse> {
+  let response = await register_request(idx, bus)
+  switch (response.serverresponse_type) {
+    case ServerResponseType.GenericResponse:
+      if (response.success) {
+        console.log('Response success')
+      } else {
+        throw new Error(response.fail_reason)
+      }
+    default:
+      throw new Error('Expected default response type')
+  }
 }

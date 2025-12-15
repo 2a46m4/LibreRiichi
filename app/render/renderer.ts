@@ -1,40 +1,45 @@
 import * as THREE from 'three'
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { HiddenTile, Tile } from "../game/tile";
-import { tile_width, TileObject } from "./tile";
-import { DiscardPile, Dora, Hand, Naki, NakiCallType, NakiGroup, SelectedTile } from './objects';
-import { TableIdx } from '../game/arena';
-import { ECS } from './ecs';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { HiddenTile, Tile } from '../game/tile'
+import { tile_width, TileObject } from './tile'
+import {
+  DiscardPile,
+  Dora,
+  Hand,
+  Naki,
+  NakiCallType,
+  SelectedTile,
+} from './objects'
+import { TableIdx } from '../game/arena'
 
 const marker_positions = [
-	{ x: 0, z: 4, rotation: 0 },
-	{ x: 4, z: 0, rotation: Math.PI / 2 }, // East
-	{ x: 0, z: -4, rotation: Math.PI }, // North
-	{ x: -4, z: 0, rotation: -Math.PI / 2 }, // West
+  { x: 0, z: 4, rotation: 0 },
+  { x: 4, z: 0, rotation: Math.PI / 2 }, // East
+  { x: 0, z: -4, rotation: Math.PI }, // North
+  { x: -4, z: 0, rotation: -Math.PI / 2 }, // West
 ]
 
 const tile_width_gap = tile_width + 0.05
 
 const tile_positions = [
-	{ x: 5, z: 0, rotation: Math.PI / 2 }, // East
-	{ x: 0, z: -5, rotation: Math.PI }, // North
-	{ x: -5, z: 0, rotation: -Math.PI / 2 }, // West
+  { x: 5, z: 0, rotation: Math.PI / 2 }, // East
+  { x: 0, z: -5, rotation: Math.PI }, // North
+  { x: -5, z: 0, rotation: -Math.PI / 2 }, // West
 ]
 
 const discard_positions = [
-	{ x: 2, z: 0, rotation: Math.PI / 2 }, // East
-	{ x: 0, z: -2, rotation: Math.PI }, // North
-	{ x: -2, z: 0, rotation: -Math.PI / 2 }, // West
+  { x: 2, z: 0, rotation: Math.PI / 2 }, // East
+  { x: 0, z: -2, rotation: Math.PI }, // North
+  { x: -2, z: 0, rotation: -Math.PI / 2 }, // West
 ]
 
 const player_position = { x: 0, z: 5, rotation: 0 }
 
 const default_tiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 16, 17, 18, 19].map(
-	(i) => new Tile(i),
+  (i) => new Tile(i),
 )
 
 export class ThreeJSRenderer {
-
 	scene: THREE.Scene
 	camera: THREE.PerspectiveCamera
 	renderer: THREE.WebGLRenderer
@@ -42,11 +47,13 @@ export class ThreeJSRenderer {
 	lights: THREE.Light[] = []
 
 	table: THREE.Group
+
 	hands: Hand[]
-	naki_calls: NakiGroup[] = []
+	naki_calls: Naki[] = []
 	dora_tiles: Dora = new Dora()
 	discard_pile: DiscardPile[]
 	selected_tile: SelectedTile
+	selector: Selector
 
 	constructor(canvas: HTMLCanvasElement) {
 		// Scene
@@ -122,7 +129,9 @@ export class ThreeJSRenderer {
 			table.receiveShadow = true
 
 			const surface_geometry = new THREE.BoxGeometry(12.8, 12.8, 0.1)
-			const surface_material = new THREE.MeshLambertMaterial({ color: 0x0a7c4a })
+			const surface_material = new THREE.MeshLambertMaterial({
+				color: 0x0a7c4a,
+			})
 			const surface = new THREE.Mesh(surface_geometry, surface_material)
 			surface.position.y = -1.7
 			surface.rotation.x = Math.PI / 2
@@ -155,9 +164,15 @@ export class ThreeJSRenderer {
 
 			// Create demo tiles
 			this.hands[0] = new Hand([])
-			this.hands[0].set_position(new THREE.Vector3(player_position.x, -1.3, player_position.z))
+			this.hands[0].set_position(
+				new THREE.Vector3(player_position.x, -1.3, player_position.z),
+			)
 			this.hands[0].set_rotation(player_position.rotation)
-			this.hands[0].add_tiles(default_tiles.map((v, i) => { return { tile: v, location: i } }))
+			this.hands[0].add_tiles(
+				default_tiles.map((v, i) => {
+					return { tile: v, location: i }
+				}),
+			)
 			this.scene.add(this.hands[0].group)
 
 			// Create blank tile walls for the other players
@@ -167,7 +182,13 @@ export class ThreeJSRenderer {
 				for (let j = 0; j < 13; j++) {
 					other_hand.add_tiles([{ tile: blank_tile, location: j }])
 					other_hand.set_rotation(tile_positions[i - 1].rotation)
-					other_hand.set_position(new THREE.Vector3(tile_positions[i - 1].x, -1.3, tile_positions[i - 1].z))
+					other_hand.set_position(
+						new THREE.Vector3(
+							tile_positions[i - 1].x,
+							-1.3,
+							tile_positions[i - 1].z,
+						),
+					)
 				}
 				this.hands[i] = other_hand
 				this.scene.add(other_hand.group)
@@ -202,34 +223,37 @@ export class ThreeJSRenderer {
 			this.scene.add(textRing)
 		}
 
-		this.selected_tile = new SelectedTile(this.scene)
+		this.selected_tile = new SelectedTile()
+		this.scene.add(this.selected_tile)
+		this.selector = new Selector(this.hands[0])
+	}
+
+	get_random_tile_in_hand(player_idx: number): TileObject {
+		return this.hands[player_idx].get_random_tile()
 	}
 
 	//TODO
-	toss(player_idx: number, tile: Tile): void {
-		let pile = this.discard_pile[player_idx]
-
-		let tile_obj = new TileObject(tile)
-
-		// Start a new row
-		if (pile.length % 6 === 0) {
-			const offset = ((pile.length % 6) - 3) * tile_width_gap
-			const vertical_offset = Math.floor(pile.length / 6) * 0.3
-			tile_obj.position.set(
-				discard_positions[player_idx].x - offset * Math.sin(discard_positions[player_idx].rotation),
-				-1.3 + vertical_offset,
-				discard_positions[player_idx].z - offset * Math.cos(discard_positions[player_idx].rotation)
-			)
-			tile_obj.rotation.y = discard_positions[player_idx].rotation
-		}
-		pile.push(tile_obj)
-		this.last_discard = [player_idx, pile.length - 1]
-		this.scene.add(tile_obj)
+	toss(player_idx: number, tile: TileObject): void {
+		this.hands[player_idx].remove_tile(tile)
+		this.discard_pile[player_idx].add_to_pile(tile)
 	}
 
 	animate_frame(dt: number): void {
 		this.controls.update()
 		this.renderer.render(this.scene, this.camera)
+
+		// Animation
+		for (let hand of this.hands) {
+			hand.animate(dt)
+		}
+
+		for (let naki of this.naki_calls) {
+			naki.animate(dt)
+		}
+
+		this.dora_tiles.animate(dt)
+
+		// Selection
 	}
 
 	stop(): void {
@@ -266,16 +290,12 @@ export class ThreeJSRenderer {
 		this.hands[player_idx].add_tiles([{ tile: tile, location: end_loc }])
 	}
 
-	remove_tile(id: ECS.EntityID | number, player_idx: number | undefined): void {
+	remove_tile(id: number, player_idx: number | undefined): void {
 		if (player_idx === undefined) {
 			player_idx = 0
 		}
 
-		if (typeof id === "string") {
-			this.hands[player_idx].remove_tile_id(id)
-		} else {
-			this.hands[player_idx].remove_tile_idx(id)
-		}
+		this.hands[player_idx].remove_tile_idx(id)
 	}
 
 	add_dora(tile: Tile): void {
@@ -283,7 +303,28 @@ export class ThreeJSRenderer {
 	}
 
 	// TODO
-	naki_call(called_by: TableIdx, type: NakiCallType): void {
+	naki_call(called_by: TableIdx, type: NakiCallType): void {}
+}
 
+export class Selector {
+	pointer = new THREE.Vector2()
+	raycaster = new THREE.Raycaster()
+
+	private on_move(event: MouseEvent) {
+		this.pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+		this.pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+	}
+
+	constructor(public player_hand: Hand) {
+		window.addEventListener('pointermove', this.on_move)
+	}
+
+	get_selection(): TileObject | null {
+		const results = this.raycaster.intersectObjects(this.player_hand.array)
+		if (results.length === 0) {
+			return null
+		} else {
+			return results[0].object as TileObject
+		}
 	}
 }

@@ -4,9 +4,8 @@ import { BoxStyling, ButtonStyling, H1Styling, InputStyling } from '../styling'
 import ErrorDisplay from '../components/error_display.vue'
 import { router, use_player_state, use_websocket_state } from '../index'
 import { MessageType } from '../messaging/message'
-import { ServerResponseType } from '../messaging/server_response_generated'
 import { ServerActionType } from '../messaging/server_action_generated'
-import { register_request } from '../messaging/event_handler'
+import { get_response } from '../messaging/event_handler'
 
 const player_state = use_player_state()
 const websocket_state = use_websocket_state()
@@ -22,20 +21,15 @@ async function connect() {
     },
   })
 
-  let message_return = await register_request(return_index)
-  if (
-    message_return.serverresponse_type !== ServerResponseType.GenericResponse
-  ) {
-    status.value = 'Unexpected message type'
-    return
+  try {
+    await get_response(return_index)
+    await router.push({ name: 'connected_page' })
+  } catch (e) {
+    console.error(e)
+    if (e instanceof Error) {
+      status.value = e.message
+    }
   }
-
-  if (!message_return.success) {
-    status.value = message_return.fail_reason
-    return
-  }
-
-  await router.push({ name: 'connected_page' })
 }
 
 // TMP
