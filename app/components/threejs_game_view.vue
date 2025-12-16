@@ -1,37 +1,26 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { HiddenTile, Tile } from '../game/tile'
-import { initialize_tiles } from '../render/tile'
-import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
+import { use_websocket_state } from '..'
+import ScoreBoard from '../components/scoreboard.vue'
+import { GameIdx, TableIdx } from '../game/arena'
 import { Setup, SetupType } from '../game/setup'
+import { Tile } from '../game/tile'
+import { Action, ActionType } from '../messaging/action_generated'
+import { ArenaEvent, ArenaEventType } from '../messaging/arena_event_generated'
+import { BoardEvent, BoardEventType } from '../messaging/board_event_generated'
 import {
   ArenaMessageBus,
   ClickBus,
   make_async_generator_from_event,
   register_request,
+  select,
 } from '../messaging/event_handler'
-import { ArenaEventType } from '../messaging/arena_event_generated'
-import {
-  ServerEvent,
-  ServerEventType,
-} from '../messaging/server_event_generated'
-import ScoreBoard from '../components/scoreboard.vue'
-import { Action, ActionType } from '../messaging/action_generated'
+import { send_action_request } from '../messaging/message'
+import { ServerEvent } from '../messaging/server_event_generated'
 import { ThreeJSRenderer } from '../render/renderer'
-import { GameIdx, TableIdx } from '../game/arena'
-import { create_event, create_state } from '../fsm'
-import { use_websocket_state } from '..'
-import { MessageType } from '../messaging/message'
-import { ServerActionType } from '../messaging/server_action_generated'
-import { ArenaActionType } from '../messaging/arena_action_generated'
-import * as THREE from 'three'
+import { initialize_tiles, TileObject } from '../render/tile'
 
 import { ServerResponseType } from '../messaging/server_response_generated'
-
-// Data flow in this file:
-// Event comes in from the server -> message_handler
-// Message handler dispatches the correct state transition in the FSM
-// State transition callbacks handle the animations and game state updates
 
 const props = defineProps<{ in_game: boolean }>()
 const websocket_state = use_websocket_state()
@@ -45,113 +34,16 @@ const arena_data = ref({
   scores: [] as number[],
   game_should_end: false,
   round_should_end: false,
+  // Hacky, but we need to keep track of this to remember which tile to discard when the player event comes
+  // A better way could be to remove when the server returns a positive result to our request, although that
+  // 	also means that we need to ignore our result when the server event comes.
+  selected: null as TileObject | null,
 })
 
 // Self is table idx 0
 // So if we are player 3, player 0's offset is (4 + 0 - 3) % 4 = 1
 function offset_to_self(other_index: GameIdx): TableIdx {
   return ((4 + arena_data.value.player_idx + other_index) % 4) as TableIdx
-}
-
-const make_fsm = () => {
-  const out_of_game = create_state('out_of_game', {})
-  const awaiting_discard = create_state('awaiting_discard', {
-    player_idx: 0 as GameIdx,
-  })
-  const discarded = create_state('discarded', {
-    discarded_by: 0 as GameIdx,
-    tile_discarded: HiddenTile,
-  })
-  // If the player has calls that he needs to make
-  const awaiting_naki_calls = create_state('awaiting_naki_calls', {})
-  const naki_called = create_state('naki_called', {})
-  const round_finished = create_state('round_finished', {})
-  const game_finished = create_state('game_finished', {})
-
-  // We need to discard some element
-  const draw_event = create_event('draw_event', out_of_game, awaiting_discard, {
-    callback: (_, awaiting_discard, tile_received: Tile, index: GameIdx) => {
-      renderer.add_tile_to_end(tile_received, index)
-      awaiting_discard.player_idx = index
-    },
-  })
-  const discard_event = create_event(
-    'discard_event',
-    awaiting_discard,
-    discarded,
-    {
-      callback: (awaiting, discarded, action: Action, from_player: GameIdx) => {
-        // * Get the value of discarded here
-        const discarded_id = awaiting.discarded_tile
-        discarded.discarded_by = from_player
-        let discard_location: number
-        if (from_player === arena_data.value.player_idx) {
-          if (discarded_id === null) {
-            throw new Error("Couldn't find discarded ID")
-          }
-          renderer.remove_tile(discarded_id, 0)
-        } else {
-          renderer.remove_tile(0, from_player)
-        }
-
-        switch (action.action_type) {
-          case ActionType.Riichi:
-            discarded.tile_discarded = new Tile(action.tile_to_riichi)
-            break
-          case ActionType.Toss:
-            discarded.tile_discarded = new Tile(action.tile_to_toss)
-        }
-      },
-    },
-  )
-  // TODO
-  const receive_naki_event = create_event(
-    'receive_naki_event',
-    discarded,
-    awaiting_naki_calls,
-    {
-      callback: (discarded, __, naki_calls: ActionType[]) => {
-        console.log('Naki calls: ', naki_calls)
-      },
-    },
-  )
-  // TODO
-  const naki_called_event = create_event(
-    'naki_called_event',
-    discarded,
-    naki_called,
-    {
-      callback: (from, _, naki_calls: Action, from_player: GameIdx) => {},
-    },
-  )
-  ArenaMessageBus.register((data: ServerEvent) => {
-    if (data.arena_message.arenaevent_type != ArenaEventType.ArenaBoardEvent) {
-      return true
-    }
-
-    const board_event = data.arena_message.board_event
-    switch (board_event.boardevent_type) {
-      case BoardEventType.PotentialActionEvent:
-        handle_potential_action_event(board_event.actions)
-        break
-      case BoardEventType.PlayerActionEvent:
-        handle_player_action_event(
-          board_event.action_data,
-          board_event.from_player,
-        )
-        break
-      case BoardEventType.GameSetupEvent:
-        handle_game_setup_event(board_event.setup)
-        break
-      case BoardEventType.GameEndEvent:
-        throw new Error('Not yet implemented: GameEndEvent')
-        break
-    }
-
-    return true
-  })
-
-  return fsm
 }
 
 const three_canvas = ref<HTMLCanvasElement>()
@@ -171,68 +63,7 @@ onMounted(() => {
   animate(0, 0)
 
   window.addEventListener('resize', on_window_resize)
-
-  ArenaMessageBus.register(message_handler)
-  ArenaMessageBus.register(debug_message_printer)
 })
-
-// The player clicked
-function on_click(event: MouseEvent) {
-  if (renderer.selector.get_selection() === null) {
-    return true
-  }
-  const current_state = fsm.get_current_state()
-  if (current_state.name !== 'awaiting_discard') {
-    console.error('Not in discarding state')
-    return true
-  }
-  const { player_idx: idx } = current_state.data
-  if (idx !== arena_data.value.player_idx) {
-    console.error('Not our turn')
-    return true
-  }
-
-  const tile_value = ECS.GlobalRegistry.find_component(
-    currently_selected,
-    ECS.TileType.ID,
-  )
-  let msg_idx = websocket_state.conn.send({
-    message_type: MessageType.REQUEST,
-    data: {
-      serveraction_type: ServerActionType.ServerArenaAction,
-      arena_action: {
-        arenaaction_type: ArenaActionType.PlayerActionData,
-        action: {
-          action_type: ActionType.Toss,
-          tile_to_toss: tile_value.data,
-        },
-      },
-    },
-  })
-
-  let ret = register_request(msg_idx)
-  ret
-    .then((response) => {
-      console.log('Discard action acknowledged by server')
-      switch (response.serverresponse_type) {
-        case ServerResponseType.GenericResponse:
-          if (!response.success) {
-            console.error("Couldn't satisfy request")
-          } else {
-            console.log('Success in discarding tile')
-            current_state.data.tile_discarded = currently_selected // * Set the value of discarded here
-          }
-        case ServerResponseType.ListArenasResponse:
-        case ServerResponseType.ArenaInfoResponse:
-        case ServerResponseType.GameInfoResponse:
-          console.error('Unexpected response')
-      }
-    })
-    .catch(() => {
-      console.error('Discard action was not acknowledged by server')
-    })
-  // We don't need to do anything here because the event will be broadcasted.
-}
 
 function on_window_resize() {
   if (!three_canvas.value || !game_container.value) return
@@ -258,62 +89,9 @@ onUnmounted(() => {
     cancelAnimationFrame(animation_id)
   }
   window.removeEventListener('resize', on_window_resize)
-  window.removeEventListener('click', on_click)
 
   renderer.stop()
 })
-
-function debug_message_printer(event: ServerEvent) {
-  const msg = `ServerEvent message: ${ServerEventType[event.serverevent_type]}\n\t`
-
-  const debug_board_event = function (board_event: BoardEvent, msg: string) {
-    msg += `BoardEvent message: ${BoardEventType[board_event.boardevent_type]}\n\t\t`
-    switch (board_event.boardevent_type) {
-      case BoardEventType.PlayerActionEvent:
-        msg += `PlayerActionEvent message: ${ActionType[board_event.action_data.action_type]} from player ${board_event.from_player}`
-        break
-      case BoardEventType.PotentialActionEvent:
-        msg += `PotentialActionEvent message: ${board_event.actions.map((action) => ActionType[action.action_type])}`
-        break
-      case BoardEventType.GameSetupEvent:
-        msg += `GameSetupEvent message: ${board_event.setup.map((setup) => SetupType[setup.setup_type])}`
-        break
-      case BoardEventType.GameEndEvent:
-        msg += `GameEndEvent message: ${board_event.result}`
-    }
-  }
-
-  switch (event.arena_message.arenaevent_type) {
-    case ArenaEventType.ArenaBoardEvent:
-      debug_board_event(event.arena_message.board_event, msg)
-  }
-
-  return true
-}
-
-function handle_board_event(new_event: BoardEvent) {
-  if (new_event === undefined) {
-    throw new Error('Event is undefined')
-  }
-
-  switch (new_event.boardevent_type) {
-    case BoardEventType.PlayerActionEvent:
-      handle_player_action_event(new_event.action_data, new_event.from_player)
-      break
-    case BoardEventType.PotentialActionEvent:
-      handle_potential_action_event(new_event.actions)
-      break
-    case BoardEventType.GameSetupEvent:
-      handle_game_setup_event(new_event.setup)
-      break
-    case BoardEventType.GameEndEvent:
-      // Handle game end event
-      throw new Error('TODO')
-      break
-    default:
-      throw new Error('Unexpected')
-  }
-}
 
 function handle_player_action_event(action: Action, from_player: number) {
   switch (action.action_type) {
@@ -323,21 +101,37 @@ function handle_player_action_event(action: Action, from_player: number) {
     case ActionType.Ron:
       // TODO
       throw new Error('Win')
-    case ActionType.Riichi:
-    case ActionType.Toss:
-      fsm.trigger_event('discard_event', action, from_player as GameIdx)
+    case ActionType.Riichi: // Show the toss animation, handle riichi case
+    case ActionType.Toss: // Special case if we are the one that tossed the tile
+      const tile_value =
+        action.action_type === ActionType.Riichi
+          ? new Tile(action.tile_to_riichi)
+          : new Tile(action.tile_to_toss)
+      let tile_obj: TileObject
+      if (from_player === arena_data.value.player_idx) {
+        if (arena_data.value.selected === null) {
+          throw new Error('Selection is null')
+        }
+        tile_obj = arena_data.value.selected
+      } else {
+        tile_obj = renderer.get_random_tile_in_hand(from_player)
+      }
+      tile_obj.value = tile_value
+      renderer.toss(
+        from_player,
+        tile_obj,
+        action.action_type === ActionType.Riichi,
+      )
       break
     case ActionType.Pon:
+      renderer.naki_call(from_player as TableIdx, 'pon')
     case ActionType.Kan:
+      renderer.naki_call(from_player as TableIdx, 'ankan')
     case ActionType.Chii:
-      fsm.trigger_event('naki_called_event', action, from_player as GameIdx)
+      renderer.naki_call(from_player as TableIdx, 'chii')
       break
     case ActionType.Draw:
-      fsm.trigger_event(
-        'draw_event',
-        new Tile(action.drawn_tile),
-        from_player as GameIdx,
-      )
+      renderer.add_tile_to_end(new Tile(action.drawn_tile), from_player)
       break
     default:
       console.error('Unexpected action performed')
@@ -409,6 +203,72 @@ function handle_game_setup_event(setups: Setup[]) {
   }
 }
 
+function handle_arena_event(arena_message: ArenaEvent) {
+  switch (arena_message.arenaevent_type) {
+    case ArenaEventType.ArenaBoardEvent:
+      handle_board_event(arena_message.board_event)
+      break
+    default:
+      console.log(`Not handling event: ${arena_message}`)
+  }
+}
+
+function handle_board_event(new_event: BoardEvent) {
+  if (new_event === undefined) {
+    throw new Error('Event is undefined')
+  }
+
+  switch (new_event.boardevent_type) {
+    case BoardEventType.PlayerActionEvent:
+      handle_player_action_event(new_event.action_data, new_event.from_player)
+      break
+    case BoardEventType.PotentialActionEvent:
+      handle_potential_action_event(new_event.actions)
+      break
+    case BoardEventType.GameSetupEvent:
+      handle_game_setup_event(new_event.setup)
+      break
+    case BoardEventType.GameEndEvent:
+      // Handle game end event
+      throw new Error('TODO')
+      break
+    default:
+      throw new Error('Unexpected')
+  }
+}
+
+function handle_mouse_event(_: MouseEvent) {
+  const selected = renderer.selector.get_selection()
+
+  if (selected === null) {
+    return
+  }
+
+  let msg_idx = websocket_state.conn.send(
+    send_action_request({
+      action_type: ActionType.Toss,
+      tile_to_toss: selected.value.value,
+    }),
+  )
+
+  register_request(msg_idx)
+    .then((response) => {
+      switch (response.serverresponse_type) {
+        case ServerResponseType.GenericResponse:
+          if (!response.success) {
+            console.error(`Couldn't satisfy request: ${response.fail_reason}`)
+          } else {
+            console.log('Success in discarding tile')
+          }
+        default:
+          console.error('Unexpected response')
+      }
+    })
+    .catch(() => {
+      console.error('Discard action was not acknowledged by server')
+    })
+}
+
 const unvoid = function <T>(x: T | void): T {
   if (!x) throw new Error('Void')
   else return x
@@ -420,38 +280,16 @@ while (!arena_data.value.game_should_end) {
     throw new Error('Server event returned void')
   }
 
-  switch (data.value.serverevent_type) {
-    case ServerEventType.ServerArenaEvent:
-      switch (data.value.arena_message.arenaevent_type) {
-        case ArenaEventType.ArenaBoardEvent:
-          handle_board_event(data.value.arena_message.board_event)
-      }
-  }
-  // Get setup above
-
   while (!arena_data.value.round_should_end) {
-    // Expect player draw or our turn to draw
-    {
-      const data = await server_event_channel.next()
-      const draw = unvoid(data.value)
-      switch (draw.arena_message.arenaevent_type) {
-        case ArenaEventType.PlayerJoinedEvent:
-        case ArenaEventType.PlayerQuitEvent:
-        case ArenaEventType.GameStartedEvent:
-          throw new Error('Unexpected')
-        case ArenaEventType.ArenaBoardEvent:
-      }
-    }
-
-    {
-      // Expect player discarded or we discarded
-      // Need to split this here with mouse events
-      const data = await server_event_channel.next()
-    }
-
-    {
-      // Expect naki called or no naki called event
-      const data = await server_event_channel.next()
+    // Expect player discarded or we discarded
+    // Need to split this here with mouse events
+    const selection = select(server_event_channel, click_channel)
+    const _msg = await selection.next()
+    const msg = unvoid(_msg.value)
+    if (msg.index == 0) {
+      handle_arena_event((msg.value as ServerEvent).arena_message)
+    } else {
+      handle_mouse_event(msg.value as MouseEvent)
     }
   }
 

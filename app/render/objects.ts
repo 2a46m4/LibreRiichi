@@ -36,7 +36,7 @@ export class Hand {
   public group = new THREE.Group()
 
   constructor(tiles: Tile[]) {
-    this.add_tiles_to_last(tiles)
+    this.add_tiles_to_last(...tiles)
   }
 
   set_position(position: THREE.Vector3) {
@@ -47,7 +47,7 @@ export class Hand {
     this.group.rotation.y = rotation
   }
 
-  add_tiles_to_last(tiles: Tile[]) {
+  add_tiles_to_last(...tiles: Tile[]) {
     this.add_tiles(
       tiles.map((t) => {
         return { tile: t, location: this.array.length }
@@ -184,7 +184,7 @@ export class DiscardPile {
 
   constructor() {}
 
-  add_to_pile(tile: TileObject) {
+  add_to_pile(tile: TileObject, riichi: boolean) {
     // TODO: Animation
 
     const position = this.compute_next_tile_position()

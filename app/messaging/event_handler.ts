@@ -96,3 +96,23 @@ export async function* make_async_generator_from_event<T>(
     yield await promise
   }
 }
+
+// Creates a new async generator that waits between multiple generators
+export async function* select(...generators: AsyncGenerator[]) {
+	const gens = generators.map((g, i) => ({ g, i }));
+
+	while (gens.length > 0) {
+		const raced = gens.map(({ g, i }) =>
+			g.next().then(r => ({ i, g, r }))
+		);
+
+		const { i, g, r } = await Promise.race(raced);
+
+		if (r.done) {
+			gens.splice(gens.findIndex(x => x.i === i), 1);
+			continue;
+		}
+
+		yield { index: i, value: r.value };
+	}
+}
