@@ -1,154 +1,116 @@
 package game
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"os"
 
-	"log"
-
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
-	"github.com/looplab/fsm"
 )
 
 // Essentially a thin wrapper over game state and changes the ordering
 type MahjongGame struct {
 	ordering Ordering
-	// We can probably use this for timeout events when waiting
-	// for the user to return some input
-	context context.Context
 	*slog.Logger
-	state      *fsm.FSM
 	roundState RoundState
 }
+
+type startGame struct {}
+type hasGameStarted struct{}
+type startRound struct {}
+type hasRoundStarted struct{}
+type handleEvent struct {
+	event Action
+	from uint8
+}
+type shouldRoundEnd struct {}
+type shouldGameEnd struct{}
+// Retrieve round and game end messages that should be sent
+type roundEndCleanup struct {}
+type gameEndCleanup struct {}
 
 func NewMahjongGame() *MahjongGame {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelDebug,
 	}))
-	return &MahjongGame{
-		state: fsm.NewFSM(
-			"out-of-game",
-			fsm.Events{
-				fsm.EventDesc{
-					Name: "start-game",
-					Src: []string{
-						"out-of-game",
-					},
-					Dst: "in-game",
-				},
-				fsm.EventDesc{
-					Name: "start-round",
-					Src: []string{
-						"in-game",
-					},
-					Dst: "in-round",
-				},
-				fsm.EventDesc{
-					Name: "handle-event",
-					Src: []string{
-						"in-round",
-					},
-					Dst: "in-round",
-				},
-				fsm.EventDesc{
-					Name: "round-end",
-					Src: []string{
-						"in-round",
-					},
-					Dst: "in-game",
-				},
-				fsm.EventDesc{
-					Name: "game-end",
-					Src: []string{
-						"in-game",
-					},
-					Dst: "finished-game",
-				},
-			},
-			fsm.Callbacks{
-				"before_event": func(ctx context.Context, e *fsm.Event) {
-					logger.Info("Transitioning:", "from", e.Src, "to", e.Dst, "event", e.Event)
-				},
-			},
-		),
+	game := &MahjongGame{
 		ordering:   InitRandomOrdering(),
-		context:    context.Background(),
 		Logger:     logger,
 		roundState: InitRoundState(),
 	}
+	go game.roundState.runLoop()
+	return game
 }
 
 func (game *MahjongGame) StartGameAndRound() (messages []MessageSendInfo, err error) {
-	if game.state.Cannot("start-game") {
-		return nil, errors.New("can't start game")
+	game.roundState.Inbox <- startGame{}
+	data := <-game.roundState.Reply
+	switch data := data.(type) {
+	case nil:
+		break
+	case error:
+		return nil, data
+	default:
+		panic("Wrong type returned")
 	}
 
-	err = game.state.Event(game.context, "start-game")
-	if err != nil {
-		return nil, err
+	game.roundState.Inbox <- startRound{}
+	data = <-game.roundState.Reply
+	switch data := data.(type) {
+	case []MessageSendInfo:
+		ChangeToArenaIdx(data, game.ordering)
+		return data, nil
+	case error:
+		return nil, data
+	default:
+		panic("Wrong type returned")
 	}
-
-	err = game.state.Event(game.context, "start-round")
-	if err != nil {
-		return nil, err
-	}
-	sendInfo, err := game.roundState.StartRound()
-	ChangeToArenaIdx(sendInfo, game.ordering)
-	return sendInfo, err
 }
 
 func (game *MahjongGame) ContinueRound() (msgs []MessageSendInfo, err error) {
-	if game.state.Cannot("start-round") {
-		return msgs, errors.New("Can't continue round")
+	game.roundState.Inbox <- startRound{}
+	data := <-game.roundState.Reply
+	switch data := data.(type) {
+	case []MessageSendInfo:
+		ChangeToArenaIdx(data, game.ordering)
+		return data, nil
+	case error:
+		return nil, data
+	default:
+		panic("Wrong type returned")
 	}
-
-	err = game.state.Event(game.context, "start-round")
-	if err != nil {
-		return msgs, err
-	}
-
-	msgs, _ = game.roundState.StartRound()
-	ChangeToArenaIdx(msgs, game.ordering)
-	return msgs, nil
 }
 
 func (game *MahjongGame) HandleEvent(action Action, arenaIdx uint8) (msgs []MessageSendInfo, err error) {
-	if game.state.Cannot("handle-event") {
-		return msgs, errors.New("Cannot handle event")
-	}
-
 	gameIdx := game.ordering.GameIdx(arenaIdx)
-	msgs, err = game.roundState.HandleEvent(action, gameIdx)
-	_, isNoTransition := err.(fsm.NoTransitionError)
-	if !isNoTransition {
-		log.Println("Error occurred: ", err)
-	} else {
-		err = nil
+	game.roundState.Inbox <- handleEvent{
+		event: action,
+		from:  gameIdx,
 	}
-	ChangeToArenaIdx(msgs, game.ordering)
-
-	if game.roundState.RoundEnded() {
-		game.state.Event(game.context, "round-end")
+	data := <-game.roundState.Reply
+	switch data := data.(type) {
+	case []MessageSendInfo:
+		ChangeToArenaIdx(data, game.ordering)
+		return data, nil
+	case error:
+		return nil, data
+	default:
+		panic("Wrong type returned")
 	}
-
-	return msgs, err
 }
 
 func (game *MahjongGame) IsInGame() bool {
-	return game.state.Current() == "in-game"
+	game.roundState.Inbox <- hasGameStarted{}
+	return (<-game.roundState.Reply).(bool)
 }
 
 func (game *MahjongGame) HasRoundEnded() bool {
-	return game.state.Current() != "in-round"
+	game.roundState.Inbox <- hasRoundStarted{}
+	return (<-game.roundState.Reply).(bool)
 }
 
 func (game *MahjongGame) RoundEndCleanup() (msgs []MessageSendInfo, err error) {
-	if !game.state.Is("in-game") {
-		return msgs, errors.New("Wrong state")
-	}
 
 	// Do the increment post-round
 	// TODO
@@ -158,13 +120,12 @@ func (game *MahjongGame) RoundEndCleanup() (msgs []MessageSendInfo, err error) {
 }
 
 func (game *MahjongGame) ShouldContinueRound() bool {
-	return game.state.Current() == "finished-game"
+	game.roundState.Inbox <- shouldRoundEnd{}
+	return !(<-game.roundState.Reply).(bool) // TODO: Fix
 }
 
 // TODO: Send game results
 func (game *MahjongGame) GameEndCleanup() (msgs []MessageSendInfo, err error) {
-	if !game.state.Is("out-of-game") {
-		return msgs, errors.New("Wrong state")
-	}
 	return nil, nil
 }
+

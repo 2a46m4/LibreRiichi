@@ -281,8 +281,6 @@ while (!arena_data.value.game_should_end) {
   }
 
   while (!arena_data.value.round_should_end) {
-    // Expect player discarded or we discarded
-    // Need to split this here with mouse events
     const selection = select(server_event_channel, click_channel)
     const _msg = await selection.next()
     const msg = unvoid(_msg.value)

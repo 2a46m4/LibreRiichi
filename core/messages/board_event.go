@@ -20,6 +20,8 @@ type PotentialActionEvent struct {
 	Actions []Action `json:"actions"` // wrap
 }
 
+type NoNakiEvent struct {}
+
 type GameSetupEvent struct {
 	Setup []Setup `json:"setup"`
 }

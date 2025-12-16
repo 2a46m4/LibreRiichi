@@ -27,6 +27,10 @@ func (set Set[T]) Clear(obj T) {
 	set = Set[T]{}
 }
 
+func (set Set[T]) Empty() bool {
+	return len(set) == 0
+}
+
 func Reduce[T comparable, E any](set Set[T], init E, fn func(acc E, itr T) E) E {
 	for i := range set {
 		init = fn(init, i)
