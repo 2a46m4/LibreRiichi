@@ -196,18 +196,39 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 	}
 
 	if !arena.game.ShouldContinueRound() {
+		// End the round by calling cleanup and sending
+		// the data.
 		infos, err := arena.game.GameEndCleanup()
 		if err != nil {
 			return Unit, err
 		}
 		sendInfos = append(sendInfos, infos...)
-	}
+		for _, sendInfo := range sendInfos {
+			for _, event := range sendInfo.Events {
+				arena.SendBoardEvent(event, sendInfo.SendTo)
+			}
+		}	
 
-	for _, sendInfo := range sendInfos {
-		for _, event := range sendInfo.Events {
-			arena.SendBoardEvent(event, sendInfo.SendTo)
+		// TODO: Cleanup the arena itself
+		return Unit, err
+
+	} else { // Continue the round
+
+		// New round data
+		info, err := arena.game.ContinueRound()
+		if err != nil {
+			return Unit, err
+		}
+		sendInfos = append(sendInfos, info...)
+
+		for _, sendInfo := range sendInfos {
+			for _, event := range sendInfo.Events {
+				arena.SendBoardEvent(event, sendInfo.SendTo)
+			}
 		}
 	}
+
+		
 
 	return Unit, err
 }
@@ -257,6 +278,8 @@ func (arena *Arena) HandleGameInfoActionData(data GameInfoActionData, fromPlayer
 	arena.log.Info("NYI")
 	return Unit, nil
 }
+
+// TODO: Add a finish game section, which cleans up resources and tells the clients that the arena will stop
 
 // Gives a copy of the game
 func (arena *Arena) QueryGame() Game {

@@ -127,18 +127,26 @@ func (roundState *RoundState) drawTile() []MessageSendInfo {
 	return ret
 }
 
-func (roundState *RoundState) discardTile(action Action, playerIdx uint8) ([]MessageSendInfo, error) {
+func (roundState *RoundState) discardTile(action Action, playerIdx uint8) (info []MessageSendInfo, err error, shouldContinue bool) {
 	switch action := action.(type) {
 	case Toss:
-		return roundState.handleToss(action, playerIdx)
+		info, err = roundState.handleToss(action, playerIdx)
+		shouldContinue = true
 	case Riichi:
-		return roundState.handleRiichi(action, playerIdx)
+		info, err = roundState.handleRiichi(action, playerIdx)
+		shouldContinue = true
 	case Tsumo:
-		return roundState.handleTsumo(action, playerIdx)
+		info, err = roundState.handleTsumo(action, playerIdx)
+		if err != nil {
+			shouldContinue = true
+		} else {
+			shouldContinue = false
+		}
+		
 	default:
-		return nil, errors.New("Wrong action")
+		return nil, errors.New("Wrong action"), true
 	}
-
+	return info, err, shouldContinue
 }
 
 func (roundState *RoundState) handleTsumo(action Tsumo, playerIdx uint8) ([]MessageSendInfo, error) {
@@ -267,8 +275,7 @@ func (roundState *RoundState) handleToss(action Toss, playerIdx uint8) ([]Messag
 	return res, nil
 }
 
-// Arguments
-func (roundState *RoundState) handleNaki(action Action, playerIdx uint8) ([]MessageSendInfo, error) {
+func (roundState *RoundState) handleNaki(action Action, playerIdx uint8) ([]MessageSendInfo, error, bool) {
 	// TODO: Handle naki (call) logic
 	// Process player making a call (chi, pon, kan)
 
@@ -280,7 +287,7 @@ func (roundState *RoundState) handleNaki(action Action, playerIdx uint8) ([]Mess
 		roundState.noNaki(action, playerIdx)
 	}
 
-	return nil, nil
+	return nil, nil, true
 }
 
 func (roundState *RoundState) noNaki(skipAction Skip, playerIdx uint8) {
@@ -368,49 +375,87 @@ func getRoundSetup(roundData *RoundState) (sendInfos []MessageSendInfo) {
 	return sendInfos
 }
 
-func (round *RoundState) runLoop() {
-GAME_LOOP:
-	for { // Start game
-		msg := <-round.Inbox
+func (round *RoundState) gameLoop() {
+	// We only loop through the round. Once the rounds are
+	// finished, the game should be finished as well.
+	msg := <- round.Inbox
+	switch msg.(type) {
+	case startGame:
+		round.Reply <- nil
+		round.gameStarted = true
+	default:
+		round.handleOtherReplies(msg)
+	}
+
+	for msg := range round.Inbox { // Round loop
 		switch msg.(type) {
-		case startGame:
-			round.Reply <- nil
-			round.gameStarted = true
+		case startRound:
+			round.roundStarted = true
 		default:
-			round.HandleOtherReplies(msg)
+			round.handleOtherReplies(msg)
+			continue
 		}
 
-	ROUND_LOOP:
-		for { // Start round
-			msg := <-round.Inbox
-			switch msg.(type) {
-			case startRound:
-				round.roundStarted = true
-			default:
-				round.HandleOtherReplies(msg)
+		shouldContinueRound := round.roundLoop()
+
+		// Handle any post round events here
+		// Wait for round cleanup call
+		round.roundStarted = false
+		ROUND_CLEANUP:
+			for cleanup := range round.Inbox {
+				switch cleanup := cleanup.(type) {
+				case roundEndCleanup:
+					// TODO, send replies back about the round results
+					break ROUND_CLEANUP
+				default:
+					round.handleOtherReplies(cleanup)
+					continue
+				}	
 			}
 
-			round.roundLoop()
-
-			break ROUND_LOOP
+		if !shouldContinueRound {
+			break 
 		}
-		break GAME_LOOP
 	}
+
+	// Game ended, compute ending statistics
+	// TODO
+	// Wait for game end check and cleanup message
+	round.gameStarted = false
+	GAME_CLEANUP:
+		for msg = range round.Inbox {
+			switch msg.(type) {
+			case gameEndCleanup:
+				// TODO: Game end cleanup
+				break GAME_CLEANUP
+			default:
+				round.handleOtherReplies(msg)
+			}
+		}
 }
 
-func (round *RoundState) HandleOtherReplies(msg any) {
+// TODO: We can reply to queries that don't modify the round state in here
+func (round *RoundState) handleOtherReplies(msg any) {
 	switch msg.(type) {
 	case hasGameStarted:
 		round.Reply <- round.gameStarted
 	case hasRoundStarted:
 		round.Reply <- round.roundStarted
+	case shouldContinueRound: // Is this right?
+		round.Reply <- round.roundStarted
+	case shouldGameEnd:
+		round.Reply <- round.gameStarted
 	default:
 		round.Reply <- errors.New("Wrong state")
 	}
 }
 
-func (roundState *RoundState) roundLoop() {
+// Returns whether or not we should continue to the next round (game end)
+// Does not handle any round teardown
+func (roundState *RoundState) roundLoop() bool {
+	// The first thing we do is reply, the start round command is waiting for a response
 	setup := getRoundSetup(roundState)
+	ROUND_LOOP:
 	for {
 		// Draw tile, appending setup if needed
 		if setup != nil {
@@ -421,17 +466,21 @@ func (roundState *RoundState) roundLoop() {
 		}
 
 		// Wait for riichi, toss, or tsumo calls
-		ret := <-roundState.Inbox
-		switch ret := ret.(type) {
-		case handleEvent:
-			msg, err := roundState.discardTile(ret.event, ret.from)
-			if err != nil {
-				roundState.Reply <- err
+		for ret := range roundState.Inbox {
+			switch ret := ret.(type) {
+			case handleEvent:
+				msg, err, shouldContinue := roundState.discardTile(ret.event, ret.from)
+				if err != nil {
+					roundState.Reply <- err
+					break
+				}
+				roundState.Reply <- msg 
+				if !shouldContinue {
+					break ROUND_LOOP
+				}
+			default:
+				roundState.handleOtherReplies(ret)
 			}
-
-			roundState.Reply <- msg
-		default:
-			roundState.Reply <- errors.New("Wrong state")
 		}
 
 		// Check any waiting naki calls
@@ -439,9 +488,17 @@ func (roundState *RoundState) roundLoop() {
 			msg := <-roundState.Inbox
 			switch msg := msg.(type) {
 			case handleEvent:
-				roundState.handleNaki(msg.event, msg.from)
+				ret, err, shouldContinue := roundState.handleNaki(msg.event, msg.from)
+				if err != nil {
+					roundState.Reply <- err
+					break
+				}
+				roundState.Reply <- ret
+				if !shouldContinue {
+					break ROUND_LOOP
+				}
 			default:
-				roundState.Reply <- errors.New("Wrong state")
+				roundState.handleOtherReplies(msg)
 			}
 		}
 
@@ -450,9 +507,9 @@ func (roundState *RoundState) roundLoop() {
 		// Otherwise, draw a new tile
 		if roundState.tileData.LiveWall.End() {
 			// Handle draws
-			return
+			break ROUND_LOOP
 		}
 	}
-
-	// Handle any post round events here
+	return false
 }
+

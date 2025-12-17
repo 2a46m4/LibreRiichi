@@ -3,7 +3,8 @@ package game
 import (
 	"log/slog"
 	"os"
-
+	. "codeberg.org/ijnakashiar/LibreRiichi/core/messages"
+	gameresult "codeberg.org/ijnakashiar/LibreRiichi/core/game/game_result"
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
@@ -22,7 +23,7 @@ type handleEvent struct {
 	event Action
 	from  uint8
 }
-type shouldRoundEnd struct{}
+type shouldContinueRound struct{}
 type shouldGameEnd struct{}
 
 // Retrieve round and game end messages that should be sent
@@ -39,7 +40,7 @@ func NewMahjongGame() *MahjongGame {
 		Logger:     logger,
 		roundState: InitRoundState(),
 	}
-	go game.roundState.runLoop()
+	go game.roundState.gameLoop()
 	return game
 }
 
@@ -107,24 +108,38 @@ func (game *MahjongGame) IsInGame() bool {
 
 func (game *MahjongGame) HasRoundEnded() bool {
 	game.roundState.Inbox <- hasRoundStarted{}
-	return (<-game.roundState.Reply).(bool)
+	return !(<-game.roundState.Reply).(bool)
 }
 
 func (game *MahjongGame) RoundEndCleanup() (msgs []MessageSendInfo, err error) {
-
-	// Do the increment post-round
-	// TODO
-	// game.mahjongRound.roundState
-
+	game.roundState.Inbox <- roundEndCleanup{}
+	data := <-game.roundState.Reply
+	switch data := data.(type) {
+	case gameresult.RoundResult:
+		return sendToAll(RoundEndEvent{ RoundResult: data }) , nil
+	case error:
+		panic("Shouldn't be here")
+	}
+	// Do the increment post-round, but probably in the round itself
 	return nil, nil
 }
 
 func (game *MahjongGame) ShouldContinueRound() bool {
-	game.roundState.Inbox <- shouldRoundEnd{}
-	return !(<-game.roundState.Reply).(bool) // TODO: Fix
+	game.roundState.Inbox <- shouldContinueRound{}
+	return (<-game.roundState.Reply).(bool)
 }
 
 // TODO: Send game results
 func (game *MahjongGame) GameEndCleanup() (msgs []MessageSendInfo, err error) {
 	return nil, nil
+}
+
+func sendToAll(events... BoardEvent) (msgs []MessageSendInfo) {
+	for i := range uint8(4) {
+		msgs = append(msgs, MessageSendInfo{
+			Events: events,
+			SendTo: i,
+		})
+	}
+	return msgs
 }

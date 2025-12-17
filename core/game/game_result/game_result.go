@@ -1,7 +1,9 @@
 package gameresult
 
 // TODO
-type RoundResult struct{}
+type RoundResult struct{
+	
+}
 
 // TODO
 type GameResult struct{}
