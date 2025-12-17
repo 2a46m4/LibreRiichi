@@ -159,6 +159,10 @@ func (client *ComputerClient) HandlePlayerActionEvent(event PlayerActionEvent, e
 	return Unit, nil
 }
 
+func (client *ComputerClient) HandleNoNakiEvent(event NoNakiEvent, extraData UnitType) (UnitType, error) {
+	return Unit, nil
+}
+
 func (client *ComputerClient) HandlePotentialActionEvent(event PotentialActionEvent, extraData UnitType) (UnitType, error) {
 	// Immediately do a potential action
 	for _, action := range event.Actions {
@@ -239,6 +243,11 @@ func (client *ComputerClient) HandleGameSetupEvent(event GameSetupEvent, extraDa
 
 func (client *ComputerClient) HandleGameEndEvent(event GameEndEvent, extraData UnitType) (UnitType, error) {
 	log.Printf("ComputerClient %s: Game ended: %+v", client.Name, event.GameResult)
+	return Unit, nil
+}
+
+func (client *ComputerClient) HandleRoundEndEvent(event RoundEndEvent, extraData UnitType) (UnitType, error) {
+	// TODO: Handle round end for AI
 	return Unit, nil
 }
 

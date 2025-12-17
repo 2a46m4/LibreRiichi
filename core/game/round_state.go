@@ -1,7 +1,6 @@
 package game
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -40,7 +39,7 @@ type RoundState struct {
 }
 
 func InitRoundState() RoundState {
-	roundState := RoundState{
+	return RoundState{
 		log: slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 			Level:     slog.LevelDebug,
@@ -51,129 +50,9 @@ func InitRoundState() RoundState {
 		outgoingRequests: util.NewSet[OutgoingNakiRequest](),
 		gameStarted:      false,
 		roundStarted:     false,
+		Inbox:            make(chan any),
+		Reply:            make(chan any),
 	}
-
-	// TODO: Decouple the receiver functions and move this in the constructor
-	roundState.RoundFSM = fsm.NewFSM(
-		"out-of-round",
-		fsm.Events{
-			fsm.EventDesc{
-				Name: "start-round",
-				Src: []string{
-					"out-of-round",
-				},
-				Dst: "pre-draw",
-			},
-			fsm.EventDesc{
-				Name: "draw-tile",
-				Src: []string{
-					"pre-draw",
-					"no-naki-state",
-				},
-				Dst: "waiting-discard",
-			},
-			fsm.EventDesc{
-				Name: "discard-tile",
-				Src: []string{
-					"waiting-discard",
-				},
-				Dst: "waiting-naki",
-			},
-			fsm.EventDesc{
-				Name: "call-naki",
-				Src: []string{
-					"waiting-naki",
-				},
-				Dst: "waiting-discard",
-			},
-			fsm.EventDesc{
-				Name: "no-naki",
-				Src: []string{
-					"waiting-naki",
-				},
-				Dst: "no-naki-state",
-			},
-			fsm.EventDesc{
-				Name: "round-draw",
-				Src: []string{
-					"no-naki-state",
-				},
-				Dst: "out-of-round",
-			},
-			fsm.EventDesc{
-				Name: "round-win",
-				Src: []string{
-					"waiting-discard",
-					"waiting-naki",
-				},
-				Dst: "out-of-round",
-			},
-		},
-		fsm.Callbacks{
-			"start-round":         roundState.startRound,
-			"draw-tile":           roundState.drawTile,
-			"before_discard-tile": roundState.discardTile,
-			"call-naki":           roundState.callNaki,
-			"before_no-naki":      roundState.noNaki,
-			"round-draw":          roundState.roundDraw,
-			"round-win":           roundState.roundWin,
-			"before_event": func(ctx context.Context, event *fsm.Event) {
-				roundState.log.Info("Transitioning:",
-					"from", event.Src,
-					"to", event.Dst,
-					"event", event.Event)
-			},
-		},
-	)
-
-	return roundState
-}
-
-func (roundState *RoundState) StartRound() ([]MessageSendInfo, error) {
-	err := roundState.Transition("start-round")
-	ret, _ := roundState.GetReturn()
-	return ret, err
-}
-
-// Handles an event by dispatching it to the right handler in roundState and returns an error if there is an invalid transition
-func (roundState *RoundState) HandleEvent(action Action, gameIdx uint8) (msg []MessageSendInfo, err error) {
-	roundState.log.Info("Handling event:", "action", fmt.Sprintf("%#v", action), "playeridx", gameIdx)
-	var call string
-	switch action.(type) {
-	case Chii:
-		call = "call-naki"
-	case Kan:
-		call = "call-naki"
-	case Pon:
-		call = "call-naki"
-	case Ron:
-		call = "call-naki"
-	case Skip:
-		call = "no-naki"
-	case Riichi:
-		call = "discard-tile"
-	case Toss:
-		call = "discard-tile"
-	case Tsumo:
-		call = "discard-tile"
-	case Draw:
-		roundState.log.Error("Wrong action: %#v", "action", action)
-	default:
-		roundState.log.Error("unexpected core.Action: %#v", "action", action)
-		panic(fmt.Sprintf("unexpected core.Action: %#v", action))
-	}
-
-	err = roundState.Transition(call, action, gameIdx)
-	if err != nil {
-		panic(fmt.Sprintf("Error: %s\nAction:%#v\nFromPlayerGameIdx:%#v", err.Error(), action, gameIdx))
-	}
-
-	ret, _ := roundState.GetReturn()
-	return ret, err
-}
-
-func (roundState *RoundState) Transition(event string, args ...any) error {
-	return roundState.RoundFSM.Event(roundState.context, event, args...)
 }
 
 // Transition to a await toss state
@@ -258,8 +137,7 @@ func (roundState *RoundState) discardTile(action Action, playerIdx uint8) ([]Mes
 		return roundState.handleTsumo(action, playerIdx)
 	default:
 		return nil, errors.New("Wrong action")
-	}	
-	
+	}
 
 }
 
@@ -375,7 +253,7 @@ func (roundState *RoundState) handleToss(action Toss, playerIdx uint8) ([]Messag
 			res = append(res, MessageSendInfo{
 				Events: []BoardEvent{NoNakiEvent{}},
 				SendTo: i,
-			})	
+			})
 		}
 
 		res = append(res, MessageSendInfo{
@@ -390,25 +268,22 @@ func (roundState *RoundState) handleToss(action Toss, playerIdx uint8) ([]Messag
 }
 
 // Arguments
-func (roundState *RoundState) callNaki() ([]MessageSendInfo, error) {
-	roundState.log.Info("CallNaki called")
-	panic("TODO")
+func (roundState *RoundState) handleNaki(action Action, playerIdx uint8) ([]MessageSendInfo, error) {
 	// TODO: Handle naki (call) logic
 	// Process player making a call (chi, pon, kan)
+
+	switch action := action.(type) {
+	case Chii:
+	case Pon:
+	case Kan:
+	case Skip:
+		roundState.noNaki(action, playerIdx)
+	}
+
+	return nil, nil
 }
 
-// Two possible ways to trigger no naki event:
-//
-//  1. Skip (Can fail the transition if there are more naki calls
-//     waiting for a return message)
-//  2. There are no naki calls possible.
-//
-// Arguments:
-//   - Skip: the action itself (Can be defaulted in case 2)
-//   - uint8: the player that performed the skip
-func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) {
-	skipAction := event.Args[0].(Skip)
-	playerIdx := event.Args[1].(uint8)
+func (roundState *RoundState) noNaki(skipAction Skip, playerIdx uint8) {
 	if isOutgoingRequest(OutgoingNakiRequest{
 		Action: skipAction,
 		Player: playerIdx,
@@ -418,39 +293,19 @@ func (roundState *RoundState) noNaki(context context.Context, event *fsm.Event) 
 			Player: playerIdx,
 		})
 	}
-
-	if len(roundState.outgoingRequests) >= 0 {
-		event.Cancel()
-	}
-
-	// Checks whether or not the game should end.
-	// This happens when there are no more draws left.
-	// Otherwise, draw a new tile
-	if roundState.tileData.LiveWall.End() {
-		err := roundState.RoundFSM.Event(context, "round-draw")
-		util.PanicIf(err)
-		return
-	}
-
-	err := roundState.RoundFSM.Event(context, "draw-tile")
-	util.PanicIf(err)
 }
 
-func (roundState *RoundState) roundDraw(context context.Context, event *fsm.Event) {
+func (roundState *RoundState) roundDraw() {
 	// TODO: Handle round draw logic
 	// Process exhaustive draw scenario
 
 	panic("TODO")
 }
 
-func (roundState *RoundState) roundWin(context context.Context, event *fsm.Event) {
+func (roundState *RoundState) roundWin() {
 	// TODO: Handle round win logic
 	// Process player winning the round (tsumo/ron)
 	roundState.turnData.NextRound(false)
-}
-
-func (roundState *RoundState) RoundEnded() bool {
-	return roundState.RoundFSM.Is("out-of-round")
 }
 
 // Returns true if the request was in the outgoing set
@@ -575,22 +430,29 @@ func (roundState *RoundState) roundLoop() {
 			}
 
 			roundState.Reply <- msg
-		default: 
+		default:
 			roundState.Reply <- errors.New("Wrong state")
 		}
 
 		// Check any waiting naki calls
 		for !roundState.outgoingRequests.Empty() {
-			msg := <- roundState.Inbox
-			// TODO: Handle msg
-
-			// Need to handle naki here, otherwise skip to the end
+			msg := <-roundState.Inbox
+			switch msg := msg.(type) {
+			case handleEvent:
+				roundState.handleNaki(msg.event, msg.from)
+			default:
+				roundState.Reply <- errors.New("Wrong state")
+			}
 		}
 
 		// Check if the round should still continue
-
+		// This happens when there are no more draws left.
+		// Otherwise, draw a new tile
+		if roundState.tileData.LiveWall.End() {
+			// Handle draws
+			return
+		}
 	}
 
 	// Handle any post round events here
 }
-

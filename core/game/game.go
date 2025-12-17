@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"log/slog"
 	"os"
 
@@ -15,19 +14,20 @@ type MahjongGame struct {
 	roundState RoundState
 }
 
-type startGame struct {}
+type startGame struct{}
 type hasGameStarted struct{}
-type startRound struct {}
+type startRound struct{}
 type hasRoundStarted struct{}
 type handleEvent struct {
 	event Action
-	from uint8
+	from  uint8
 }
-type shouldRoundEnd struct {}
+type shouldRoundEnd struct{}
 type shouldGameEnd struct{}
+
 // Retrieve round and game end messages that should be sent
-type roundEndCleanup struct {}
-type gameEndCleanup struct {}
+type roundEndCleanup struct{}
+type gameEndCleanup struct{}
 
 func NewMahjongGame() *MahjongGame {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -128,4 +128,3 @@ func (game *MahjongGame) ShouldContinueRound() bool {
 func (game *MahjongGame) GameEndCleanup() (msgs []MessageSendInfo, err error) {
 	return nil, nil
 }
-
