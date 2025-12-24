@@ -8,7 +8,7 @@ import (
 	. "codeberg.org/ijnakashiar/LibreRiichi/core/game_data"
 )
 
-// Essentially a thin wrapper over game state and changes the ordering
+// MahjongGame implements the Game interface in arena.go
 type MahjongGame struct {
 	ordering Ordering
 	*slog.Logger

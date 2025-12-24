@@ -1,0 +1,18 @@
+   classDiagram
+    Message <|-- ServerResponse
+    Message <|-- ServerEvent
+    Message <|-- ServerRequest
+    Message : MessageType uint8
+    Message : MessageIndex uint
+    Message: Data any
+    class ServerResponse{
+   
+    }
+    class ServerEvent{
+      -int sizeInFeet
+      -canEat()
+    }
+    class ServerRequest{
+      +bool is_wild
+      +run()
+    }

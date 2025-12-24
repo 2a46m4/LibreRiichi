@@ -22,6 +22,8 @@ type Client interface {
 	IsAI() bool
 }
 
+// A game that the arena handles. The arena calls into the methods in
+// order to drive the game. It expects either
 type Game interface {
 	StartGameAndRound() ([]MessageSendInfo, error)
 	ContinueRound() ([]MessageSendInfo, error)
@@ -35,8 +37,7 @@ type Game interface {
 	GameEndCleanup() ([]MessageSendInfo, error)
 }
 
-// A location where players gather. Controls the flow of the game,
-// directing messages to players, requesting input/ouput
+// A game
 type Arena struct {
 	agents     []Client
 	spectators []Client
