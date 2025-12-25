@@ -29,16 +29,17 @@ The frontend element is written in [VueJS](https://vuejs.org/) and [Typescript](
 ### Code Structure
 The frontend code is in the `app` directory. 
 - `components` store reusable Vue components. These are things like pop-up bars, scoreboards, elements that are really their own thing.
-  - TODO: This needs a cleanup. There's a lot of random + unused code here.
+  - TODO: This needs a cleanup. There's a lot of random + unused code here. Also need to add call popups
   - The most important file is `threejs_game_view.vue`. This handles game messages from the server and coordinates the rendering.
-- `game` contains data structures in the game.
-  - TODO: It's actually all pretty unfinished at the moment. 
+- `game` contains data structures in the game. There's a lot unfinished but not much to work on currently since the game doesn't need these yet
   - `setup.ts` contains the data types that will be sent to the client when the game starts.
   - `tile.ts` contains the tile data type, and extra functions to deserialize off the "wire".
 - `messaging` contains the data structures which the server and client use to communicate with each other. 
   - Some files are auto-generated from `generate_messages.go`. These shouldn't be edited. 
 - `render` contains everything needed for the rendering.
   - TODO: A lot of functionality is still missing
+  - This is probably the most important piece in the frontend. I'm not entirely sure if this structure will hold up well. The renderer holds all tile objects in the scene and coordinates moving between different sections on the board.
+  - Animation is done by storing a callback for each tile and then calling the callback for an updated position every frame. Probably horrendously slow but there's not that many tiles on board.
 - `views` are pages, essentially. The entrypoint of the frontend is in login.vue.
 
 ### Game loop
@@ -47,18 +48,24 @@ The game loop is done somewhat but I haven't tried making it work again yet. Ori
 Now it's essentially a big async/await function that awaits for messages from either user or server and then does stuff based on the message received. The code path is a lot more linear that way (you can see what happens to the message right after it gets received, and all the logic is contained in one section). 
 
 ## Backend
-The backend is written in Go. All code is stored in `core`. The folder structure is pretty crappy, I should really merge `game` and `game_data`. 
+The backend is written in Go. All code is stored in `core`. The folder structure is pretty crappy, I should really merge `game` and `game_data`.
 
 When a client connects, they are represented as a `HumanClient`. They use Go channels wrapped over a websocket to communicate to the actual client. The code in `client.go` handles messages generally and also handles joining/leaving/searching for arenas. It forwards any arena-specific code to the arena struct.
 
-The arena struct exists during the lifetime of a single game. I'm still kind of thinking this section through, it's really messy. The arena's purpose is to coordinate between different clients and the game object itself. The arena gets called when clients send a message to the server. The handle methods are functions that get called when the arena receives that particular message. 
+The arena struct exists during the lifetime of a single game. I'm still kind of thinking this section through, it's really messy. The arena's purpose is to coordinate between different clients and the game object itself. The arena gets called when clients send a message to the server. The handle* methods are functions that get called when the arena receives that particular message from the client. 
 
-calls into the game object Originally I had a goroutine (basically lightweight threads). Then I switched to an explicit state machine, and this was super messy and buggy, so I switched to a goroutine model again. 
+Currently the game is only driven by client messages. You can see this by the fact that the handle functions are the only thing that modify the game; the game cannot communicate anything to the arena directly. For example, the only way for the arena to even know that the game ends is from querying the game object again after the client sends a message. This is probably a bad design, so a big TODO here is to refactor this.
+
+One way refactor this is to have the arena be its own coroutine and have it communicate with the game and clients independently. You'd have to make sure that the arena doesn't deadlock. I have to think about this more but I'll probably need to work on this before any more work can be done
+
+The actual game is also pretty unfinished. There's a lot of action validators that still need to be written. I think the general control flow is there (located in roundState -- roundLoop controls the state of a single round) but a lot of the functions need to be filled in, like the yaku checks for example, in yaku_testing.go
 
 ### game/game_data
 stores the actual game data and game loop. 
 - meld_finder has functions that help find melds (a triplet sequence of tiles).
 - action_testing tests whether a particular action from a client is legal. 
+- score stores score calculations
+- yaku stores datatypes related to yaku
 
 
 ## Message structure {#message-structure}
@@ -80,4 +87,5 @@ Additionally the generator generates some code that helps the messages look a bi
 Generated messages have a `_generated` suffix in their file name. They shouldn't be edited as they will be overwritten when generated again.
 
 # TODOS
+- Just rewrite Arena/Game
 - Separate the different types of kans in messages
