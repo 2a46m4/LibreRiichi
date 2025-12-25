@@ -208,7 +208,7 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 			for _, event := range sendInfo.Events {
 				arena.SendBoardEvent(event, sendInfo.SendTo)
 			}
-		}	
+		}
 
 		// TODO: Cleanup the arena itself
 		return Unit, err
@@ -228,8 +228,6 @@ func (arena *Arena) HandlePlayerActionData(data PlayerActionData, fromPlayer uin
 			}
 		}
 	}
-
-		
 
 	return Unit, err
 }
